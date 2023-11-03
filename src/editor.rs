@@ -1,9 +1,7 @@
 use std::sync::Mutex;
 
 use egui::{FontDefinitions, FontData, FontFamily};
-use egui_tiles::TileId;
-
-use crate::{pane::{Pane, create_pane_tree}, tile_manager::{TileManager, tile_manager_tree_ui}};
+use crate::{pane::{Pane, create_pane_tree}, tile_manager::TileManager};
 
 #[derive(Default)]
 pub struct GraspEditor {
@@ -46,9 +44,33 @@ impl GraspEditor {
 
     pub fn update_topbar(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         egui::TopBottomPanel::top("topbar").show(ctx, |ui| {
-            egui::menu::bar(ui, |ui| {
+            egui::menu::bar(ui, |ui| {                
                 ui.menu_button("≡", |ui| {
+                    if ui.button("New View").clicked() {
+                        let new_child = self.tree.tiles.insert_pane(Pane::new(self.next_frame()));
+                        if let Some(root) = self.tree.root() {
+                            match self.tree.tiles.get_mut(root) {
+
+                                Some(egui_tiles::Tile::Container(egui_tiles::Container::Tabs(tabs))) => 
+                                    tabs.add_child(new_child),
+
+                                Some(egui_tiles::Tile::Container(egui_tiles::Container::Linear(lin))) => 
+                                    lin.add_child(new_child),
+
+                                Some(egui_tiles::Tile::Container(egui_tiles::Container::Grid(grid))) =>
+                                    grid.add_child(new_child),
+
+                                _ => {}
+                            }
+                        }
+
+                        ui.close_menu();
+                    }
+
+                    ui.separator();
+
                     if ui.button("Exit").clicked() {
+                        ui.close_menu();
                         frame.close();
                     }
                 });
@@ -56,41 +78,35 @@ impl GraspEditor {
         });
     }
 
-    pub fn update_left_sidebar(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
-        egui::SidePanel::left("tree").show(ctx, |ui| {
-            if ui.button("Reset").clicked() {
-                *self = Default::default();
-            }
-            self.tile_manager.ui(ui);
-            ui.separator();
-
-            if let Some(root) = self.tree.root() {
-                tile_manager_tree_ui(ui, &mut self.tile_manager, &mut self.tree.tiles, root);
-            }
-
+    pub fn update_left_sidebar(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) { 
+        egui::SidePanel::left("tree")
+            .default_width(200.0)
+            .resizable(true)
+            .show(ctx, |ui| {
             if let Some(parent) = self.tile_manager.add_child_to.take() {
                 let index = self.next_frame();
                 let new_child = self.tree.tiles.insert_pane(Pane::new(index));
                 if let Some(egui_tiles::Tile::Container(egui_tiles::Container::Tabs(tabs))) =
-                    self.tree.tiles.get_mut(parent)
-                {
+                    self.tree.tiles.get_mut(parent) {
                     tabs.add_child(new_child);
                     tabs.set_active(new_child);
                 }
             }
 
-            if let Some(parent) = self.tile_manager.remove_child_from.take() {
-                
-                if let Some(egui_tiles::Tile::Container(egui_tiles::Container::Tabs(tabs))) = self.tree.tiles.get_mut(parent) {
+            if let Some(parent) = self.tile_manager.remove_child_from.take() {   
+                if let Some(egui_tiles::Tile::Container(egui_tiles::Container::Tabs(tabs))) = 
+                    self.tree.tiles.get_mut(parent) {
                     if let Some(tab) = tabs.active {
                         self.tree.tiles.remove(tab);
                     }
                 }
             }
+
+            ui.separator();
         });
     }
 
-    pub fn update_editors(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+    pub fn update_editors(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
             if let Some(parent) = self.tile_manager.add_child_to.take() {
                 let mut frame = self.frame_count.lock().unwrap();

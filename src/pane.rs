@@ -2,6 +2,7 @@ use egui::Ui;
 
 use crate::tile_manager::TileManager;
 
+#[derive(Debug)]
 pub struct Pane { 
     pub(crate) number: usize, 
 }
@@ -17,9 +18,8 @@ impl Pane {
 
         let response = ui.allocate_rect(ui.max_rect(), egui::Sense::click_and_drag());
 
-        if response.on_hover_cursor(egui::CursorIcon::Grab)
-            .dragged_by(egui::PointerButton::Middle) {
-
+        if response.dragged_by(egui::PointerButton::Middle) {
+            response.on_hover_cursor(egui::CursorIcon::Grab);
             return egui_tiles::UiResponse::DragStarted;
         } else {
             egui_tiles::UiResponse::None
@@ -37,7 +37,7 @@ impl egui_tiles::Behavior<Pane> for Pane {
     }
 }
 
-pub fn create_pane_tree<'a, 'b>(frame: &mut usize, manager: &TileManager) -> egui_tiles::Tree<Pane> {
+pub fn create_pane_tree<'a, 'b>(frame: &mut usize, _manager: &TileManager) -> egui_tiles::Tree<Pane> {
     let mut gen_pane = || {
         let pane = Pane { number: *frame, };
         *frame += 1;
@@ -47,14 +47,6 @@ pub fn create_pane_tree<'a, 'b>(frame: &mut usize, manager: &TileManager) -> egu
     let mut tiles = egui_tiles::Tiles::default();
 
     let mut tabs = vec![];
-    // tabs.push({
-    //     let children = (0..7).map(|_| tiles.insert_pane(gen_pane())).collect();
-    //     tiles.insert_horizontal_tile(children)
-    // });
-    // tabs.push({
-    //     let cells = (0..11).map(|_| tiles.insert_pane(gen_pane())).collect();
-    //     tiles.insert_grid_tile(cells)
-    // });
     tabs.push(tiles.insert_pane(gen_pane()));
 
     let root = tiles.insert_tab_tile(tabs);

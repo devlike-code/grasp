@@ -114,8 +114,7 @@ impl egui_tiles::Behavior<Pane> for TileManager {
     }
 }
 
-
-pub fn tile_manager_tree_ui(
+fn tile_manager_tree_ui(
     ui: &mut egui::Ui,
     behavior: &mut dyn egui_tiles::Behavior<Pane>,
     tiles: &mut egui_tiles::Tiles<Pane>,
