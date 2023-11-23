@@ -1,38 +1,43 @@
-
 use eframe::{egui, NativeOptions};
 use ini::Ini;
 
-use crate::editor::GraspEditor;
+use crate::editor::{GraspEditor, GraspEditorCreationContext};
 
 fn create_native_options() -> NativeOptions {
     if Ini::load_from_file("config.ini").is_err() {
         let mut conf = Ini::new();
-        
+
         conf.with_section(Some("Window"))
             .set("maximized", "true")
             .set("width", "1920")
             .set("height", "1080");
         conf.write_to_file("config.ini").unwrap();
     }
-    
+
     let config = Ini::load_from_file("config.ini").unwrap();
 
     let mut options = eframe::NativeOptions::default();
 
     options.maximized = config
         .get_from(Some("Window"), "maximized")
-        .unwrap_or("true").parse().unwrap_or(true);
+        .unwrap_or("true")
+        .parse()
+        .unwrap_or(true);
 
     if !options.maximized {
         let w = config
             .get_from(Some("Window"), "width")
-            .unwrap_or("1920").parse().unwrap_or(1920.0f32);
+            .unwrap_or("1920")
+            .parse()
+            .unwrap_or(1920.0f32);
         let h = config
             .get_from(Some("Window"), "height")
-            .unwrap_or("1080").parse().unwrap_or(1080.0f32);
+            .unwrap_or("1080")
+            .parse()
+            .unwrap_or(1080.0f32);
         options.initial_window_size = Some(egui::Vec2 { x: w, y: h });
     }
-    
+
     options
 }
 
@@ -43,8 +48,6 @@ pub fn create_grasp_editor() -> Result<(), eframe::Error> {
     eframe::run_native(
         app_name,
         native_options,
-        Box::new(|cc| 
-            Box::new(GraspEditor::new(cc))
-        )
+        Box::new(|cc| Box::new(GraspEditorCreationContext::new(cc))),
     )
 }

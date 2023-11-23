@@ -5,7 +5,7 @@ use crate::{
     tile_manager::TileManager,
 };
 use egui::{FontData, FontDefinitions, FontFamily};
-use grasp::internals::Mosaic;
+use grasp::internals::{Mosaic, MosaicTypelevelCRUD};
 
 pub struct GraspEditor {
     pub frame_count: Mutex<usize>,
@@ -14,15 +14,10 @@ pub struct GraspEditor {
     pub mosaic: Arc<Mosaic>,
 }
 
-impl Default for GraspEditor {
-    fn default() -> Self {
-        Self {
-            mosaic: Mosaic::new(),
-            frame_count: Default::default(),
-            tree: Default::default(),
-            tile_manager: Default::default(),
-        }
-    }
+pub trait GraspEditorIO {
+    fn update_topbar(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame);
+    fn update_left_sidebar(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame);
+    fn update_editors(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame);
 }
 
 impl GraspEditor {
@@ -56,28 +51,43 @@ impl GraspEditor {
         cc.egui_ctx.set_pixels_per_point(1.0);
     }
 
-    pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
+    pub fn new(cc: &eframe::CreationContext<'_>) -> Arc<Mutex<Self>> {
         Self::initialize_font(cc);
 
         let mut frame_count = 0;
         let tile_manager = TileManager::default();
-        let tree = create_pane_tree(&mut frame_count, &tile_manager);
-        Self {
+        let tree = create_pane_tree(&mut frame_count);
+        let editor = Arc::new(Mutex::new(Self {
             tree,
             tile_manager,
             frame_count: Mutex::new(frame_count),
             mosaic: Mosaic::new(),
-        }
-    }
+        }));
 
-    pub fn update_topbar(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+        let binding = Arc::clone(&editor);
+        let mut editor_ptr = binding.lock().unwrap();
+        editor_ptr
+            .mosaic
+            .new_type("Position : {x : f32 , y: f32, is_selected: bool};");
+        let frame = editor_ptr.next_frame();
+        let new_child = editor_ptr.tree.tiles.insert_pane(Pane::new(frame, &editor));
+
+        editor
+    }
+}
+
+impl GraspEditorIO for Arc<Mutex<GraspEditor>> {
+    fn update_topbar(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         egui::TopBottomPanel::top("topbar").show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
                 ui.menu_button("≡", |ui| {
                     if ui.button("New View").clicked() {
-                        let new_child = self.tree.tiles.insert_pane(Pane::new(self.next_frame()));
-                        if let Some(root) = self.tree.root() {
-                            match self.tree.tiles.get_mut(root) {
+                        let mut editor = self.lock().unwrap();
+                        let frame = editor.next_frame();
+                        let tree = &mut editor.tree;
+                        let new_child = tree.tiles.insert_pane(Pane::new(frame, self));
+                        if let Some(root) = tree.root() {
+                            match tree.tiles.get_mut(root) {
                                 Some(egui_tiles::Tile::Container(egui_tiles::Container::Tabs(
                                     tabs,
                                 ))) => tabs.add_child(new_child),
@@ -108,28 +118,32 @@ impl GraspEditor {
         });
     }
 
-    pub fn update_left_sidebar(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    fn update_left_sidebar(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::SidePanel::left("tree")
             .default_width(200.0)
             .resizable(true)
             .show(ctx, |ui| {
-                if let Some(parent) = self.tile_manager.add_child_to.take() {
-                    let index = self.next_frame();
-                    let new_child = self.tree.tiles.insert_pane(Pane::new(index));
+                let mut editor = self.lock().unwrap();
+
+                if let Some(parent) = editor.tile_manager.add_child_to.take() {
+                    let index = editor.next_frame();
+                    let tree = &mut editor.tree;
+                    let new_child = tree.tiles.insert_pane(Pane::new(index, self));
                     if let Some(egui_tiles::Tile::Container(egui_tiles::Container::Tabs(tabs))) =
-                        self.tree.tiles.get_mut(parent)
+                        tree.tiles.get_mut(parent)
                     {
                         tabs.add_child(new_child);
                         tabs.set_active(new_child);
                     }
                 }
 
-                if let Some(parent) = self.tile_manager.remove_child_from.take() {
+                if let Some(parent) = editor.tile_manager.remove_child_from.take() {
+                    let tree = &mut editor.tree;
                     if let Some(egui_tiles::Tile::Container(egui_tiles::Container::Tabs(tabs))) =
-                        self.tree.tiles.get_mut(parent)
+                        tree.tiles.get_mut(parent)
                     {
                         if let Some(tab) = tabs.active {
-                            self.tree.tiles.remove(tab);
+                            tree.tiles.remove(tab);
                         }
                     }
                 }
@@ -138,29 +152,40 @@ impl GraspEditor {
             });
     }
 
-    pub fn update_editors(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    fn update_editors(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
-            if let Some(parent) = self.tile_manager.add_child_to.take() {
-                let mut frame = self.frame_count.lock().unwrap();
-                let new_child = self.tree.tiles.insert_pane(Pane::new(*frame));
-                *frame += 1;
+            let mut editor = self.lock().unwrap();
+            if let Some(parent) = editor.tile_manager.add_child_to.take() {
+                let frame = editor.next_frame();
+                let tree = &mut editor.tree;
+                let new_child = tree.tiles.insert_pane(Pane::new(frame, self));
                 if let Some(egui_tiles::Tile::Container(egui_tiles::Container::Tabs(tabs))) =
-                    self.tree.tiles.get_mut(parent)
+                    tree.tiles.get_mut(parent)
                 {
                     tabs.add_child(new_child);
                     tabs.set_active(new_child);
                 }
             }
-
-            self.tree.ui(&mut self.tile_manager, ui);
+            editor.tree.ui(editor.tile_manager, ui);
         });
     }
 }
 
-impl eframe::App for GraspEditor {
+pub struct GraspEditorCreationContext {
+    pub editor: Arc<Mutex<GraspEditor>>,
+}
+
+impl GraspEditorCreationContext {
+    pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
+        let editor = GraspEditor::new(cc);
+        GraspEditorCreationContext { editor: editor }
+    }
+}
+
+impl eframe::App for GraspEditorCreationContext {
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
-        self.update_topbar(ctx, frame);
-        self.update_left_sidebar(ctx, frame);
-        self.update_editors(ctx, frame);
+        self.editor.update_topbar(ctx, frame);
+        self.editor.update_left_sidebar(ctx, frame);
+        self.editor.update_editors(ctx, frame);
     }
 }

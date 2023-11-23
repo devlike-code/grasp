@@ -1,34 +1,29 @@
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::sync::Arc;
+use std::sync::Mutex;
 
 use egui::{Color32, Key, Pos2, Rect, Sense, Ui, Vec2};
 use grasp::internals::TileFieldGetter;
 use grasp::internals::TileFieldSetter;
 use grasp::{
-    internals::{default_vals, Mosaic, MosaicIO, MosaicTypelevelCRUD, TileGetById, Value},
+    internals::{default_vals, MosaicIO, MosaicTypelevelCRUD},
     iterators::{component_selectors::ComponentSelectors, tile_filters::TileFilters},
 };
 
-use crate::{grasp_data::GraspMetaData, tile_manager::TileManager};
+use crate::editor::GraspEditor;
+use crate::tile_manager::TileManager;
 
-#[derive(Debug)]
 pub struct Pane {
     pub(crate) number: usize,
-    pub grasp_data: GraspMetaData,
     pub drag_start_postion: Vec2,
+    pub editor: Arc<Mutex<GraspEditor>>,
 }
 
 impl Pane {
-    pub fn new(number: usize) -> Pane {
-        let meta = GraspMetaData::default();
-        meta.mosaic
-            .new_type("Position : {x : f32 , y: f32, is_selected: bool};")
-            .unwrap();
-        // meta.mosaic.new_object("Position", default_vals());
-        // meta.mosaic.get_all().filter_objects().include_component("Position").for_each(|node|{println!("Isao");});
+    pub fn new(number: usize, editor: &Arc<Mutex<GraspEditor>>) -> Pane {
         Pane {
-            number: number,
-            grasp_data: meta,
+            number,
             drag_start_postion: Default::default(),
+            editor: Arc::clone(editor),
         }
     }
 
@@ -60,7 +55,7 @@ impl Pane {
 
         if response.dragged_by(egui::PointerButton::Middle) {
             response.on_hover_cursor(egui::CursorIcon::Grab);
-            return egui_tiles::UiResponse::DragStarted;
+            egui_tiles::UiResponse::DragStarted
         } else {
             if response.double_clicked_by(egui::PointerButton::Primary) {
                 println!("view clicked");
@@ -91,7 +86,7 @@ impl Pane {
     pub fn mockup_test(&mut self, ui: &mut Ui) {
         let mut is_selection_dragged = false;
         let mut position_delta = Vec2::new(0.0, 0.0);
-        let scope = ui.scope(|ui| {
+        let _scope = ui.scope(|ui| {
             let new_button: egui::Response = ui.put(
                 Rect {
                     min: Pos2 { x: 300.0, y: 100.0 },
@@ -100,17 +95,17 @@ impl Pane {
                 egui::Button::new("Add node").sense(Sense::click()),
             );
 
+            let editor = self.editor.lock().unwrap();
+            let mosaic = editor.mosaic;
+
             if new_button.clicked() {
-                let tile = self
-                    .grasp_data
-                    .mosaic
-                    .new_object("Position", default_vals());
+                let _tile = editor.mosaic.new_object("Position", default_vals());
             }
 
             let mut count = 0;
             // let x = (f)
-            // self.grasp_data.graps_objects.iter_mut().for_each
-            self.grasp_data
+            // editor.graps_objects.iter_mut().for_each
+            editor
                 .mosaic
                 .get_all()
                 .filter_objects()
@@ -193,7 +188,9 @@ impl Pane {
         });
 
         if is_selection_dragged {
-            self.grasp_data
+            self.editor
+                .lock()
+                .unwrap()
                 .mosaic
                 .get_all()
                 .filter_objects()
@@ -225,20 +222,10 @@ impl egui_tiles::Behavior<Pane> for Pane {
     }
 }
 
-pub fn create_pane_tree<'a, 'b>(
-    frame: &mut usize,
-    _manager: &TileManager,
-) -> egui_tiles::Tree<Pane> {
-    let mut gen_pane = || {
-        let pane = Pane::new(0);
-        *frame += 1;
-        pane
-    };
-
+pub fn create_pane_tree<'a, 'b>(frame: &mut usize) -> egui_tiles::Tree<Pane> {
     let mut tiles = egui_tiles::Tiles::default();
 
     let mut tabs = vec![];
-    tabs.push(tiles.insert_pane(gen_pane()));
 
     let root = tiles.insert_tab_tile(tabs);
 

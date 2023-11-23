@@ -87,10 +87,8 @@ impl egui_tiles::Behavior<Pane> for TileManager {
         tile_id: egui_tiles::TileId,
         _tabs: &egui_tiles::Tabs,
     ) {
-        if tiles.len() > 1 {
-            if ui.button("✖️").clicked() {
-                self.remove_child_from = Some(tile_id);
-            }
+        if tiles.len() > 1 && ui.button("✖️").clicked() {
+            self.remove_child_from = Some(tile_id);
         }
 
         if ui.button("➕").clicked() {
