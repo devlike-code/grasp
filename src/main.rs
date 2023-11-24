@@ -2,7 +2,7 @@ use std::{
     ops::{Add, Sub},
     sync::Arc,
 };
-
+use itertools::Itertools;
 use ::grasp::{
     internals::{
         self_val, EntityId, Mosaic, MosaicCRUD, MosaicIO, MosaicTypelevelCRUD, TileFieldGetter,
@@ -147,10 +147,11 @@ impl TabViewer for GraspEditorTabs {
                     .dimensions((1, 1))
                     .build()
                     .unwrap();
-                let quadtree = &tab.quadtree;
-                let mut result = quadtree.query(region_c);
 
-                if let Some(entry) = result.next() {
+                let mut to_remove = vec![];
+                let result = tab.quadtree.query(region_c).collect_vec();
+
+                if let Some(entry) = result.first() {
                     let entity_id = entry.value_ref();
 
                     println!("Mosaic: {:?}", tab.document_mosaic.get_all());
@@ -163,15 +164,19 @@ impl TabViewer for GraspEditorTabs {
                         println!("Relative Mouse position:{:?} ", relative_pos);
 
                         if let Some(area_id) = tab.node_area.get(&tile.id) {
-                            if let Some(entry) = quadtree.get(*area_id) {
+                            if let Some(entry) = tab.quadtree.get(*area_id) {
                                 println!("Area anchor: {:?}", entry.area().anchor());
-                                let mut quad = &tab.quadtree;
-                                let ancor = entry.area();
-                                quad.delete(ancor);
+                                let anchor = entry.area();
+                                to_remove.push(anchor);
                             }
                         }
                     }
                     println!("{:?}", result);
+                }
+
+                
+                for rem in to_remove {
+                    tab.quadtree.delete(rem);
                 }
 
                 if i.modifiers.alt {}
