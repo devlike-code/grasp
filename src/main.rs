@@ -19,6 +19,7 @@ use egui_dock::{DockArea, DockState, Style, TabViewer};
 use grasp::create_native_options;
 use quadtree_rs::{area::AreaBuilder, point::Point, Quadtree};
 mod grasp;
+mod editor_state_machine;
 
 pub struct GraspEditorTab {
     pub name: String,
@@ -173,7 +174,6 @@ impl TabViewer for GraspEditorTabs {
                     }
                     println!("{:?}", result);
                 }
-
                 
                 for rem in to_remove {
                     tab.quadtree.delete(rem);
