@@ -1,17 +1,30 @@
-use std::{sync::Arc, ops::{Add, Sub}};
+use std::{
+    ops::{Add, Sub},
+    sync::Arc,
+};
 
-use egui::{WidgetText, Ui, Color32, Sense, Vec2, Align2, FontId};
+use ::grasp::{
+    internals::{
+        self_val, EntityId, Mosaic, MosaicCRUD, MosaicIO, MosaicTypelevelCRUD, TileFieldGetter,
+        TileFieldSetter, Value,
+    },
+    iterators::{
+        component_selectors::ComponentSelectors, tile_filters::TileFilters,
+        tile_getters::TileGetters,
+    },
+};
+use egui::{ahash::HashMap, Align2, Color32, FontId, Sense, Ui, Vec2, WidgetText};
+use egui::{Pos2, Stroke};
 use egui_dock::{DockArea, DockState, Style, TabViewer};
 use grasp::create_native_options;
-use ::grasp::{internals::{Mosaic, MosaicIO, MosaicTypelevelCRUD, TileFieldGetter, Value, MosaicCRUD, self_val, EntityId}, iterators::{tile_getters::TileGetters, component_selectors::ComponentSelectors, tile_filters::TileFilters}};
-use egui::Pos2;
-use quadtree_rs::Quadtree;
+use quadtree_rs::{area::AreaBuilder, point::Point, Quadtree};
 mod grasp;
 
 pub struct GraspEditorTab {
     pub name: String,
     pub quadtree: Quadtree<i32, EntityId>,
     pub document_mosaic: Arc<Mosaic>,
+    pub node_area: HashMap<EntityId, u64>,
     pub pan: Vec2,
 }
 
@@ -37,41 +50,133 @@ impl TabViewer for GraspEditorTabs {
     }
 
     // Defines the contents of a given `tab`.
-    fn ui(&mut self, ui: &mut Ui, tab: &mut Self::Tab) {        
+    fn ui(&mut self, ui: &mut Ui, tab: &mut Self::Tab) {
         let xy = ui.clip_rect().left_top();
         let painter = ui.painter();
 
         // Rendering
 
-        for node in tab.document_mosaic.get_all().filter_objects().include_component("Position") {
+        for node in tab
+            .document_mosaic
+            .get_all()
+            .filter_objects()
+            .include_component("Position")
+        {
             // Draw node
             let pos = Pos2::new(node.get("x").as_f32(), node.get("y").as_f32());
             painter.circle_filled(pos.add(tab.pan).add(xy.to_vec2()), 10.0, Color32::WHITE);
 
             // Maybe draw label
-            if let Some(label) = node.into_iter().get_descriptors().include_component("Label").next() {
-                painter.text(pos.add(Vec2::new(10.0, 10.0)).add(tab.pan).add(xy.to_vec2()), 
-                    Align2::LEFT_CENTER, 
-                    label.get("self").as_s32().to_string(), 
-                    FontId::default(), Color32::WHITE);
+            if let Some(label) = node
+                .into_iter()
+                .get_descriptors()
+                .include_component("Label")
+                .next()
+            {
+                painter.text(
+                    pos.add(Vec2::new(10.0, 10.0))
+                        .add(tab.pan)
+                        .add(xy.to_vec2()),
+                    Align2::LEFT_CENTER,
+                    label.get("self").as_s32().to_string(),
+                    FontId::default(),
+                    Color32::WHITE,
+                );
             }
         }
 
         // TODO: render arrows between nodes
 
+        // painter.arrow(
+        //     Pos2::new(200.0, 200.0),
+        //     Vec2::new(100.0, 100.0),
+        //     Stroke::new(1.0, Color32::WHITE),
+        // );
+
+        // for arrow in tab
+        //     .document_mosaic
+        //     .get_all()
+        //     .filter_arrows()
+        //     .include_component("Position")
+        // {
+        //     println!("{:?}", arrow);
+        // }
+
         // Sense
 
-        let (resp, _) = ui.allocate_painter(ui.available_size(), Sense::click());
+        let (resp, _) = ui.allocate_painter(ui.available_size(), Sense::click_and_drag());
         // TODO: check against quadtree to see whether we're selecting or deselecting
         if resp.double_clicked() {
-            let pos = resp.interact_pointer_pos().unwrap().sub(tab.pan).sub(xy.to_vec2());
-            let obj = tab.document_mosaic.new_object("Position", vec![ 
-                ("x".into(), Value::F32(pos.x)), 
-                ("y".into(), Value::F32(pos.y)) 
-            ]);
-            tab.document_mosaic.new_descriptor(&obj, "Label", self_val(Value::S32("Label!".into())));
+            let pos = resp
+                .interact_pointer_pos()
+                .unwrap()
+                .sub(tab.pan)
+                .sub(xy.to_vec2());
+            let obj = tab.document_mosaic.new_object(
+                "Position",
+                vec![
+                    ("x".into(), Value::F32(pos.x)),
+                    ("y".into(), Value::F32(pos.y)),
+                ],
+            );
+            tab.document_mosaic.new_descriptor(
+                &obj,
+                "Label",
+                self_val(Value::S32("Label!".into())),
+            );
+            let mouse_pos = resp.interact_pointer_pos().unwrap();
+            let region_a = AreaBuilder::default()
+                .anchor(Point {
+                    x: mouse_pos.x as i32 - 50,
+                    y: mouse_pos.y as i32 - 50,
+                })
+                .dimensions((50, 50))
+                .build()
+                .unwrap();
+            if let Some(area_id) = tab.quadtree.insert(region_a, obj.id) {
+                tab.node_area.insert(obj.id, area_id);
+            }
+
             // TODO: insert point into quadtree
         }
+        ui.input(|i| {
+            if resp.dragged_by(egui::PointerButton::Primary) {
+                let mouse_pos = resp.interact_pointer_pos().unwrap();
+                let region_c = AreaBuilder::default()
+                    .anchor((mouse_pos.x as i32, mouse_pos.y as i32).into())
+                    .dimensions((1, 1))
+                    .build()
+                    .unwrap();
+                let quadtree = &tab.quadtree;
+                let mut result = quadtree.query(region_c);
+
+                if let Some(entry) = result.next() {
+                    let entity_id = entry.value_ref();
+
+                    println!("Mosaic: {:?}", tab.document_mosaic.get_all());
+                    if let Some(mut tile) = tab.document_mosaic.get(*entity_id) {
+                        println!("Selected tile: {:?}", tile);
+                        let relative_pos = mouse_pos.sub(tab.pan).sub(xy);
+                        println!("Mouse position:{:?} ", mouse_pos);
+                        tile.set("x", relative_pos.x);
+                        tile.set("y", relative_pos.y);
+                        println!("Relative Mouse position:{:?} ", relative_pos);
+
+                        if let Some(area_id) = tab.node_area.get(&tile.id) {
+                            if let Some(entry) = quadtree.get(*area_id) {
+                                println!("Area anchor: {:?}", entry.area().anchor());
+                                let mut quad = &tab.quadtree;
+                                let ancor = entry.area();
+                                quad.delete(ancor);
+                            }
+                        }
+                    }
+                    println!("{:?}", result);
+                }
+
+                if i.modifiers.alt {}
+            }
+        })
 
         // TODO: create new sense painter to check for drag _if_ there were no clicks, to check for pan/move
     }
@@ -81,18 +186,24 @@ impl TabViewer for GraspEditorTabs {
 struct GraspEditorState {
     document_mosaic: Arc<Mosaic>,
     tabs: GraspEditorTabs,
-    dock_state: DockState<GraspEditorTab>
+    dock_state: DockState<GraspEditorTab>,
 }
 
 impl GraspEditorState {
     pub fn new() -> Self {
         let document_mosaic = Mosaic::new();
         document_mosaic.new_type("Label: s32;").unwrap();
-        document_mosaic.new_type("Position: { x: f32, y: f32 };").unwrap();
+        document_mosaic
+            .new_type("Position: { x: f32, y: f32 };")
+            .unwrap();
         document_mosaic.new_type("Selection: unit;").unwrap();
-        
+
         let dock_state = DockState::new(vec![]);
-        let mut state = Self { document_mosaic, dock_state, tabs: GraspEditorTabs::default() };
+        let mut state = Self {
+            document_mosaic,
+            dock_state,
+            tabs: GraspEditorTabs::default(),
+        };
 
         let tab = state.new_tab();
         state.dock_state.main_surface_mut().push_to_first_leaf(tab);
@@ -102,17 +213,18 @@ impl GraspEditorState {
 
     pub fn new_tab(&mut self) -> GraspEditorTab {
         GraspEditorTab {
-            name: format!("Untitled {}", self.tabs.increment()), 
+            name: format!("Untitled {}", self.tabs.increment()),
             quadtree: Quadtree::new(16),
             document_mosaic: Arc::clone(&self.document_mosaic),
             pan: Vec2::ZERO,
+            node_area: Default::default(),
         }
     }
 
     fn tabs(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         DockArea::new(&mut self.dock_state)
-        .style(Style::from_egui(ctx.style().as_ref()))
-        .show(ctx, &mut self.tabs);
+            .style(Style::from_egui(ctx.style().as_ref()))
+            .show(ctx, &mut self.tabs);
     }
 
     fn left_sidebar(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
@@ -157,10 +269,10 @@ impl eframe::App for GraspEditorState {
 
 fn main() -> Result<(), eframe::Error> {
     env_logger::init();
-    
+
     let app_name = "GRASP";
     let native_options = create_native_options();
-    
+
     eframe::run_native(
         app_name,
         native_options,
