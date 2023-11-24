@@ -14,7 +14,11 @@ use egui::{ahash::HashMap, Align2, Color32, FontId, Sense, Ui, Vec2, WidgetText}
 use egui_dock::{DockArea, DockState, Style, TabViewer};
 use grasp::create_native_options;
 use itertools::Itertools;
-use quadtree_rs::{area::AreaBuilder, point::Point, Quadtree};
+use quadtree_rs::{
+    area::{Area, AreaBuilder},
+    point::Point,
+    Quadtree,
+};
 use std::{
     ops::{Add, Sub},
     sync::Arc,
@@ -40,9 +44,14 @@ pub struct GraspEditorTab {
 }
 
 impl GraspEditorTab {
-    fn offset(&self, v: Pos2) -> Pos2 {
+    fn pos_into_editor(&self, v: Pos2) -> Pos2 {
         v.add(self.editor_data.pan)
             .add(self.editor_data.tab_offset.to_vec2())
+    }
+
+    fn pos_from_editor(&self, v: Pos2) -> Pos2 {
+        v.sub(self.editor_data.pan)
+            .sub(self.editor_data.tab_offset.to_vec2())
     }
 
     pub fn render(&mut self, ui: &mut Ui) {
@@ -58,7 +67,7 @@ impl GraspEditorTab {
         {
             // Draw node
             let pos = Pos2::new(node.get("x").as_f32(), node.get("y").as_f32());
-            painter.circle_filled(self.offset(pos), 5.0, Color32::WHITE);
+            painter.circle_filled(self.pos_into_editor(pos), 5.0, Color32::WHITE);
 
             // Maybe draw label
             if let Some(label) = node
@@ -68,7 +77,7 @@ impl GraspEditorTab {
                 .next()
             {
                 painter.text(
-                    self.offset(pos.add(Vec2::new(10.0, 10.0))),
+                    self.pos_into_editor(pos.add(Vec2::new(10.0, 10.0))),
                     Align2::LEFT_CENTER,
                     label.get("self").as_s32().to_string(),
                     FontId::default(),
@@ -77,22 +86,63 @@ impl GraspEditorTab {
             }
         }
 
-        // TODO: render arrows between nodes
+        for arrow in self
+            .document_mosaic
+            .get_all()
+            .filter_arrows()
+            .include_component("Position")
+        {
+            // painter.arrow(
+            //     Pos2::new(200.0, 200.0),
+            //     Vec2::new(100.0, 100.0),
+            //     Stroke::new(1.0, Color32::WHITE),
+            // );
+        }
+    }
 
-        // painter.arrow(
-        //     Pos2::new(200.0, 200.0),
-        //     Vec2::new(100.0, 100.0),
-        //     Stroke::new(1.0, Color32::WHITE),
-        // );
+    pub fn sense(&mut self, ui: &mut Ui) {
+        let (resp, _) = ui.allocate_painter(ui.available_size(), Sense::click_and_drag());
 
-        // for arrow in tab
-        //     .document_mosaic
-        //     .get_all()
-        //     .filter_arrows()
-        //     .include_component("Position")
-        // {
-        //     println!("{:?}", arrow);
-        // }
+        if let Some(pos) = resp.hover_pos() {
+            self.editor_data.cursor = self.pos_from_editor(pos);
+        }
+
+        let result = self
+            .quadtree
+            .query(build_area(self.editor_data.cursor))
+            .collect_vec();
+
+        if resp.double_clicked() && result.is_empty() {
+            self.trigger(EditorStateTrigger::DblClickToCreate);
+        } else if resp.drag_started_by(egui::PointerButton::Primary) && !result.is_empty() {
+            let entity = self
+                .document_mosaic
+                .get(*result.first().unwrap().value_ref())
+                .unwrap();
+            self.editor_data.selected = vec![entity];
+            self.trigger(EditorStateTrigger::DragToMove);
+        } else if resp.drag_started_by(egui::PointerButton::Primary) && result.is_empty() {
+            self.editor_data.selected = vec![];
+            self.trigger(EditorStateTrigger::DragToSelect);
+        } else if resp.drag_started_by(egui::PointerButton::Secondary) {
+            self.trigger(EditorStateTrigger::DragToPan);
+        }
+    }
+
+    pub fn update(&mut self, ui: &mut Ui) {
+        match &self.state {
+            EditorState::Idle => {}
+            EditorState::Move => {
+                let pos = self.editor_data.cursor;
+                for tile in &mut self.editor_data.selected {
+                    tile.set("x", pos.x);
+                    tile.set("y", pos.y);
+                }
+            }
+            EditorState::Pan => todo!(),
+            EditorState::Link => todo!(),
+            EditorState::Rect => todo!(),
+        }
     }
 }
 
@@ -105,6 +155,7 @@ impl GraspEditorTab {
                 ("y".into(), Value::F32(pos.y)),
             ],
         );
+
         self.document_mosaic
             .new_descriptor(&obj, "Label", self_val(Value::S32("Label!".into())));
 
@@ -127,48 +178,33 @@ impl StateMachine for GraspEditorTab {
     type Trigger = EditorStateTrigger;
     type State = EditorState;
 
-    fn trigger(&self, trigger: EditorStateTrigger) -> Option<EditorState> {
-        match (self.state, trigger) {
-            (EditorState::Idle, EditorStateTrigger::DblClickToCreate) => Some(EditorState::Idle),
-            (EditorState::Idle, EditorStateTrigger::MouseDownOverNode) => Some(EditorState::Idle),
-            (EditorState::Idle, EditorStateTrigger::ClickToSelect) => Some(EditorState::Idle),
-            (EditorState::Idle, EditorStateTrigger::ClickToDeselect) => Some(EditorState::Idle),
-            (EditorState::Idle, EditorStateTrigger::DragToPan) => Some(EditorState::Pan),
-            (EditorState::Idle, EditorStateTrigger::DragToLink) => Some(EditorState::Link),
-            (EditorState::Idle, EditorStateTrigger::DragToMove) => Some(EditorState::Move),
-            (EditorState::Idle, EditorStateTrigger::DragToSelect) => Some(EditorState::Rect),
-            (EditorState::Pan, EditorStateTrigger::EndDrag) => Some(EditorState::Idle),
-            (EditorState::Link, EditorStateTrigger::EndDrag) => Some(EditorState::Idle),
-            (EditorState::Move, EditorStateTrigger::EndDrag) => Some(EditorState::Idle),
-            (EditorState::Rect, EditorStateTrigger::EndDrag) => Some(EditorState::Idle),
-
-            _ => None,
-        }
-    }
-
-    fn on_transition(&mut self, from: Self::State, trigger: Self::Trigger, next: Self::State) {
-        match (from, trigger, next) {
-            (_, EditorStateTrigger::DblClickToCreate, _) => {
+    fn on_transition(&mut self, from: Self::State, trigger: Self::Trigger) -> Option<EditorState> {
+        println!("{:?} {:?}", from, trigger);
+        match (from, trigger) {
+            (_, EditorStateTrigger::DblClickToCreate) => {
                 self.create_new_object(self.editor_data.cursor);
+                Some(EditorState::Idle)
             }
-            (_, EditorStateTrigger::MouseDownOverNode, _) => {}
-            (_, EditorStateTrigger::ClickToSelect, _) => {}
-            (_, EditorStateTrigger::ClickToDeselect, _) => {}
-            (EditorState::Idle, EditorStateTrigger::DragToPan, EditorState::Pan) => {}
-            (EditorState::Idle, EditorStateTrigger::DragToLink, EditorState::Link) => {}
-            (EditorState::Idle, EditorStateTrigger::DragToMove, EditorState::Move) => {}
-            (EditorState::Idle, EditorStateTrigger::DragToSelect, EditorState::Rect) => {}
-            (EditorState::Pan, EditorStateTrigger::EndDrag, _) => {}
-            (EditorState::Link, EditorStateTrigger::EndDrag, _) => {}
-            (EditorState::Move, EditorStateTrigger::EndDrag, _) => {}
-            (EditorState::Rect, EditorStateTrigger::EndDrag, _) => {}
-            _ => {}
+
+            (_, EditorStateTrigger::MouseDownOverNode) => None,
+            (_, EditorStateTrigger::ClickToSelect) => None,
+            (_, EditorStateTrigger::ClickToDeselect) => None,
+            (EditorState::Idle, EditorStateTrigger::DragToPan) => None,
+            (EditorState::Idle, EditorStateTrigger::DragToLink) => None,
+            (EditorState::Idle, EditorStateTrigger::DragToMove) => None,
+            (EditorState::Idle, EditorStateTrigger::DragToSelect) => None,
+            (EditorState::Pan, EditorStateTrigger::EndDrag) => None,
+            (EditorState::Link, EditorStateTrigger::EndDrag) => None,
+            (EditorState::Move, EditorStateTrigger::EndDrag) => None,
+            (EditorState::Rect, EditorStateTrigger::EndDrag) => None,
+            _ => None,
         }
     }
 
     fn get_current_state(&self) -> Self::State {
         self.state
     }
+
     fn move_to(&mut self, next: Self::State) {
         self.state = next;
     }
@@ -186,6 +222,14 @@ impl GraspEditorTabs {
     }
 }
 
+fn build_area(pos: Pos2) -> Area<i32> {
+    AreaBuilder::default()
+        .anchor((pos.x as i32, pos.y as i32).into())
+        .dimensions((1, 1))
+        .build()
+        .unwrap()
+}
+
 impl TabViewer for GraspEditorTabs {
     // This associated type is used to attach some data to each tab.
     type Tab = GraspEditorTab;
@@ -199,85 +243,13 @@ impl TabViewer for GraspEditorTabs {
     fn ui(&mut self, ui: &mut Ui, tab: &mut Self::Tab) {
         let xy = ui.clip_rect().left_top();
         tab.editor_data.tab_offset = xy;
+
         tab.render(ui);
-
-        // Sense
-
-        let (resp, _) = ui.allocate_painter(ui.available_size(), Sense::click_and_drag());
-        // TODO: check against quadtree to see whether we're selecting or deselecting
-
-        if let Some(pos) = resp.hover_pos() {
-            tab.editor_data.cursor = pos.sub(tab.editor_data.pan).sub(xy.to_vec2());
-        }
-
-        let mouse_region = AreaBuilder::default()
-            .anchor(
-                (
-                    tab.editor_data.cursor.x as i32,
-                    tab.editor_data.cursor.y as i32,
-                )
-                    .into(),
-            )
-            .dimensions((1, 1))
-            .build()
-            .unwrap();
-
-        let result = tab.quadtree.query(mouse_region);
-
-        if resp.double_clicked() {
-            if result.count() == 0 {
-                tab.trigger(EditorStateTrigger::DblClickToCreate);
-            }
-        }
-
-        ui.input(|i| {
-            if resp.dragged_by(egui::PointerButton::Primary) {
-                let mouse_pos = resp.interact_pointer_pos().unwrap();
-                let region_c = AreaBuilder::default()
-                    .anchor((mouse_pos.x as i32, mouse_pos.y as i32).into())
-                    .dimensions((1, 1))
-                    .build()
-                    .unwrap();
-
-                let mut to_remove = vec![];
-                let result = tab.quadtree.query(region_c).collect_vec();
-
-                if let Some(entry) = result.first() {
-                    let entity_id = entry.value_ref();
-
-                    println!("Mosaic: {:?}", tab.document_mosaic.get_all());
-                    if let Some(mut tile) = tab.document_mosaic.get(*entity_id) {
-                        println!("Selected tile: {:?}", tile);
-                        let relative_pos = mouse_pos.sub(tab.editor_data.pan).sub(xy);
-                        println!("Mouse position:{:?} ", mouse_pos);
-                        tile.set("x", relative_pos.x);
-                        tile.set("y", relative_pos.y);
-                        println!("Relative Mouse position:{:?} ", relative_pos);
-
-                        if let Some(area_id) = tab.node_area.get(&tile.id) {
-                            if let Some(entry) = tab.quadtree.get(*area_id) {
-                                println!("Area anchor: {:?}", entry.area().anchor());
-                                let anchor = entry.area();
-                                to_remove.push(anchor);
-                            }
-                        }
-                    }
-                    println!("{:?}", result);
-                }
-
-                for rem in to_remove {
-                    tab.quadtree.delete(rem);
-                }
-
-                if i.modifiers.alt {}
-            }
-        })
-
-        // TODO: create new sense painter to check for drag _if_ there were no clicks, to check for pan/move
+        tab.sense(ui);
+        tab.update(ui);
     }
 }
 
-// Here is a simple example of how you can manage a `DockState` of your application.
 struct GraspEditorState {
     document_mosaic: Arc<Mosaic>,
     tabs: GraspEditorTabs,

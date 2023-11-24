@@ -1,5 +1,5 @@
 #[allow(clippy::large_enum_variant)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum EditorState {
     Idle,
     Pan,
@@ -9,7 +9,7 @@ pub enum EditorState {
 }
 
 #[allow(dead_code)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum EditorStateTrigger {
     MouseDownOverNode,
 
@@ -29,15 +29,15 @@ pub trait StateMachine {
     type Trigger: Copy;
     type State: Copy;
 
-    fn on_transition(&mut self, from: Self::State, trigger: Self::Trigger, next: Self::State);
-    fn trigger(&self, trigger: Self::Trigger) -> Option<Self::State>;
+    fn on_transition(&mut self, from: Self::State, trigger: Self::Trigger) -> Option<Self::State>;
 
     fn get_current_state(&self) -> Self::State;
     fn move_to(&mut self, next: Self::State);
 
-    fn transition(&mut self, trigger: Self::Trigger, next: Self::State) {
-        self.on_transition(self.get_current_state(), trigger, next);
-        self.move_to(next);
+    fn trigger(&mut self, trigger: Self::Trigger) {
+        if let Some(next) = self.on_transition(self.get_current_state(), trigger) {
+            self.move_to(next);
+        }
     }
 }
 
