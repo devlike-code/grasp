@@ -9,7 +9,6 @@ edition = "2021"
 grasp = { path = "../grasp" }
 egui = "0.23.0"
 eframe = "0.23.0"
-egui_tiles = "0.3.1"
 egui_wgpu_backend = "0.27.0"
 egui_winit_platform = "0.20.0"
 winit = "0.29.3"
@@ -18,3 +17,9 @@ env_logger = "0.10.0"
 serde = "1.0.190"
 rust-ini = "0.20.0"
 log = "0.4.20"
+rand = "0.8.5"
+egui_dock = "0.8"
+egui_ui_refresh = "0.1.0"
+egui_extras = { version = "*", features = ["all_loaders"] }
+image = { version = "0.24", features = ["jpeg", "png"] }
+quadtree_rs = "0.1.3"

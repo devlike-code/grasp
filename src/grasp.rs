@@ -1,9 +1,8 @@
 use eframe::{egui, NativeOptions};
 use ini::Ini;
 
-use crate::editor::{GraspEditor, GraspEditorCreationContext};
-
-fn create_native_options() -> NativeOptions {
+#[allow(clippy::field_reassign_with_default)]
+pub fn create_native_options() -> NativeOptions {
     if Ini::load_from_file("config.ini").is_err() {
         let mut conf = Ini::new();
 
@@ -41,13 +40,3 @@ fn create_native_options() -> NativeOptions {
     options
 }
 
-pub fn create_grasp_editor() -> Result<(), eframe::Error> {
-    let app_name = "GRASP";
-    let native_options = create_native_options();
-
-    eframe::run_native(
-        app_name,
-        native_options,
-        Box::new(|cc| Box::new(GraspEditorCreationContext::new(cc))),
-    )
-}
