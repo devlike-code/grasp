@@ -1,5 +1,3 @@
-use std::sync::{Arc, Mutex};
-
 #[allow(clippy::large_enum_variant)]
 #[derive(Clone, Copy)]
 pub enum EditorState {
@@ -15,6 +13,7 @@ pub enum EditorState {
 pub enum EditorStateTrigger {
     MouseDownOverNode,
 
+    DblClickToCreate,
     ClickToSelect,
     ClickToDeselect,
 
@@ -22,80 +21,26 @@ pub enum EditorStateTrigger {
     DragToSelect,
     DragToMove,
     DragToLink,
-    
+
     EndDrag,
 }
 
 pub trait StateMachine {
-    type Trigger : Copy;
-    type State;
+    type Trigger: Copy;
+    type State: Copy;
 
+    fn on_transition(&mut self, from: Self::State, trigger: Self::Trigger, next: Self::State);
     fn trigger(&self, trigger: Self::Trigger) -> Option<Self::State>;
-    fn transition(&mut self, trigger: Self::Trigger, next: Self::State);
 
-    fn subscribe(&mut self, sub: Arc<Mutex<dyn StateMachineSubscriber<Self::State, Self::Trigger>>>);
-}
+    fn get_current_state(&self) -> Self::State;
+    fn move_to(&mut self, next: Self::State);
 
-pub trait StateMachineSubscriber<S, T> {
-    fn on_transition(&mut self, from: S, trigger: T, to: S);
+    fn transition(&mut self, trigger: Self::Trigger, next: Self::State) {
+        self.on_transition(self.get_current_state(), trigger, next);
+        self.move_to(next);
+    }
 }
 
 pub struct EditorStateMachine {
     pub state: EditorState,
-    pub(crate) subscribers: Vec<Arc<Mutex<dyn StateMachineSubscriber<EditorState, EditorStateTrigger>>>>,
-}
-
-impl StateMachine for EditorStateMachine {
-    type Trigger = EditorStateTrigger;
-    type State = EditorState;
-    
-    fn trigger(&self, trigger: EditorStateTrigger) -> Option<EditorState> {
-        match (self.state, trigger) {
-            (EditorState::Idle, EditorStateTrigger::MouseDownOverNode) => Some(EditorState::Idle),
-            (EditorState::Idle, EditorStateTrigger::ClickToSelect) => Some(EditorState::Idle),
-            (EditorState::Idle, EditorStateTrigger::ClickToDeselect) => Some(EditorState::Idle),
-            (EditorState::Idle, EditorStateTrigger::DragToPan) => Some(EditorState::Pan),
-            (EditorState::Idle, EditorStateTrigger::DragToLink) => Some(EditorState::Link),
-            (EditorState::Idle, EditorStateTrigger::DragToMove) => Some(EditorState::Move),
-            (EditorState::Idle, EditorStateTrigger::DragToSelect) => Some(EditorState::Rect),
-            (EditorState::Pan, EditorStateTrigger::EndDrag) => Some(EditorState::Idle),
-            (EditorState::Link, EditorStateTrigger::EndDrag) => Some(EditorState::Idle),
-            (EditorState::Move, EditorStateTrigger::EndDrag) => Some(EditorState::Idle),
-            (EditorState::Rect, EditorStateTrigger::EndDrag) => Some(EditorState::Idle),
-            
-            _ => None
-        }
-    }
-
-    fn transition(&mut self, trigger: Self::Trigger, next: Self::State) {
-        for sub in &self.subscribers {
-            sub.lock().unwrap().on_transition(self.state, trigger, next);
-        }
-        self.state = next;
-    }
-
-    fn subscribe(&mut self, sub: Arc<Mutex<dyn StateMachineSubscriber<Self::State, Self::Trigger>>>) {
-        self.subscribers.push(Arc::clone(&sub));
-    }
-
-}
-
-pub struct EditorStateSubscriber {}
-impl StateMachineSubscriber<EditorState, EditorStateTrigger> for EditorStateSubscriber {
-    fn on_transition(&mut self, from: EditorState, trigger: EditorStateTrigger, to: EditorState) {
-        match (from, trigger, to) {
-            (EditorState::Idle, EditorStateTrigger::MouseDownOverNode, EditorState::Idle) => {}
-            (EditorState::Idle, EditorStateTrigger::ClickToSelect, EditorState::Idle) => {}
-            (EditorState::Idle, EditorStateTrigger::ClickToDeselect, EditorState::Idle) => {}
-            (EditorState::Idle, EditorStateTrigger::DragToPan, EditorState::Pan) => {}
-            (EditorState::Idle, EditorStateTrigger::DragToLink, EditorState::Link) => {}
-            (EditorState::Idle, EditorStateTrigger::DragToMove, EditorState::Move) => {}
-            (EditorState::Idle, EditorStateTrigger::DragToSelect, EditorState::Rect) => {}
-            (EditorState::Pan, EditorStateTrigger::EndDrag, EditorState::Idle) => {}
-            (EditorState::Link, EditorStateTrigger::EndDrag, EditorState::Idle) => {}
-            (EditorState::Move, EditorStateTrigger::EndDrag, EditorState::Idle) => {}
-            (EditorState::Rect, EditorStateTrigger::EndDrag, EditorState::Idle) => {}
-            _ => {}
-        }
-    }
 }
