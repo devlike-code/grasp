@@ -18,6 +18,7 @@ pub struct GraspEditorState {
 impl GraspEditorState {
     pub fn new() -> Self {
         let document_mosaic = Mosaic::new();
+        document_mosaic.new_type("Arrow: unit;").unwrap();
         document_mosaic.new_type("Label: s32;").unwrap();
         document_mosaic
             .new_type("Position: { x: f32, y: f32 };")

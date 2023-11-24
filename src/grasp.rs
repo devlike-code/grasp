@@ -1,4 +1,5 @@
 use eframe::{egui, NativeOptions};
+use grasp::internals::default_vals;
 use ini::Ini;
 
 #[allow(clippy::field_reassign_with_default)]
@@ -75,6 +76,8 @@ pub struct GraspEditorData {
     pub cursor: Pos2,
     pub cursor_delta: Vec2,
     pub tab_offset: Pos2,
+    pub link_start_pos: Option<Pos2>,
+    pub link_end: Option<Tile>,
 }
 
 pub struct GraspEditorTab {
@@ -155,17 +158,19 @@ impl GraspEditorTab {
             }
         }
 
-        for arrow in self
-            .document_mosaic
-            .get_all()
-            .filter_arrows()
-            .include_component("Position")
-        {
-            // painter.arrow(
-            //     Pos2::new(200.0, 200.0),
-            //     Vec2::new(100.0, 100.0),
-            //     Stroke::new(1.0, Color32::WHITE),
-            // );
+        for arrow in self.document_mosaic.get_all().filter_arrows() {
+            let source_pos = self.pos_into_editor(
+                get_pos_from_tile(&self.document_mosaic.get(arrow.source_id()).unwrap()).unwrap(),
+            );
+            let target_pos = self.pos_into_editor(
+                get_pos_from_tile(&self.document_mosaic.get(arrow.target_id()).unwrap()).unwrap(),
+            );
+
+            painter.arrow(
+                source_pos,
+                target_pos - source_pos,
+                Stroke::new(1.0, Color32::WHITE),
+            );
         }
 
         self.draw_debug(ui);
@@ -188,11 +193,28 @@ impl GraspEditorTab {
         if resp.double_clicked() && result.is_empty() {
             self.trigger(EditorStateTrigger::DblClickToCreate);
         } else if resp.drag_started_by(egui::PointerButton::Primary) && !result.is_empty() {
-            self.editor_data.selected = result
-                .into_iter()
-                .flat_map(|next| self.document_mosaic.get(*next.value_ref()))
-                .collect_vec();
-            self.trigger(EditorStateTrigger::DragToMove);
+            let is_alt_down = {
+                let mut alt_down = false;
+                ui.input(|input_state| {
+                    alt_down = input_state.modifiers.alt;
+                });
+                alt_down
+            };
+
+            println!("{:?}", is_alt_down);
+            if is_alt_down {
+                self.editor_data.selected = vec![self
+                    .document_mosaic
+                    .get(*result.first().unwrap().value_ref())
+                    .unwrap()];
+                self.trigger(EditorStateTrigger::DragToLink);
+            } else {
+                self.editor_data.selected = result
+                    .into_iter()
+                    .flat_map(|next| self.document_mosaic.get(*next.value_ref()))
+                    .collect_vec();
+                self.trigger(EditorStateTrigger::DragToMove);
+            }
         } else if resp.drag_started_by(egui::PointerButton::Primary) && result.is_empty() {
             self.editor_data.selected = vec![];
             self.trigger(EditorStateTrigger::DragToSelect);
@@ -234,7 +256,29 @@ impl GraspEditorTab {
                 ui.ctx().set_cursor_icon(CursorIcon::Move);
                 self.editor_data.pan += self.editor_data.cursor_delta;
             }
-            EditorState::Link => {}
+            EditorState::Link => {
+                if let Some(start_pos) = self.editor_data.link_start_pos {
+                    let mut end_pos = self.editor_data.cursor;
+                    if let Some(end) = &self.editor_data.link_end {
+                        end_pos = get_pos_from_tile(end).unwrap();
+                    }
+
+                    ui.painter().arrow(
+                        self.pos_into_editor(start_pos),
+                        end_pos - start_pos,
+                        Stroke::new(2.0, Color32::RED),
+                    )
+                }
+
+                let region = build_area(self.editor_data.cursor, 1);
+                let query = self.quadtree.query(region).collect_vec();
+                if !query.is_empty() {
+                    let tile_id = query.first().unwrap().value_ref();
+                    self.editor_data.link_end = self.document_mosaic.get(*tile_id);
+                } else {
+                    self.editor_data.link_end = None;
+                }
+            }
             EditorState::Rect => {}
         }
     }
@@ -259,6 +303,14 @@ impl GraspEditorTab {
             self.node_area.insert(obj.id, area_id);
         }
     }
+
+    pub fn create_new_arrow(&mut self, source: &Tile, target: &Tile) {
+        let arr = self
+            .document_mosaic
+            .new_arrow(source, target, "Arrow", default_vals());
+
+        // TODO: add quadtree representation
+    }
 }
 
 impl StateMachine for GraspEditorTab {
@@ -280,11 +332,24 @@ impl StateMachine for GraspEditorTab {
                 Some(EditorState::Idle)
             }
             (EditorState::Idle, EditorStateTrigger::DragToPan) => Some(EditorState::Pan),
-            (EditorState::Idle, EditorStateTrigger::DragToLink) => None,
+            (EditorState::Idle, EditorStateTrigger::DragToLink) => {
+                self.editor_data.link_start_pos =
+                    get_pos_from_tile(self.editor_data.selected.first().unwrap());
+                Some(EditorState::Link)
+            }
             (EditorState::Idle, EditorStateTrigger::DragToMove) => Some(EditorState::Move),
             (EditorState::Idle, EditorStateTrigger::DragToSelect) => None,
             (EditorState::Pan, EditorStateTrigger::EndDrag) => Some(EditorState::Idle),
-            (EditorState::Link, EditorStateTrigger::EndDrag) => None,
+            (EditorState::Link, EditorStateTrigger::EndDrag) => {
+                if let Some(tile) = self.editor_data.link_end.take() {
+                    let start = self.editor_data.selected.first().unwrap().clone();
+                    self.create_new_arrow(&start, &tile);
+                }
+                self.editor_data.selected = vec![];
+                self.editor_data.link_start_pos = None;
+                self.editor_data.link_end = None;
+                Some(EditorState::Idle)
+            }
             (EditorState::Move, EditorStateTrigger::EndDrag) => {
                 self.update_selected_position(self.editor_data.cursor);
                 self.update_selected_quadtree();
@@ -323,6 +388,14 @@ fn build_area(pos: Pos2, size: i32) -> Area<i32> {
         .dimensions((size * 2, size * 2))
         .build()
         .unwrap()
+}
+
+fn get_pos_from_tile(tile: &Tile) -> Option<Pos2> {
+    if let (Value::F32(x), Value::F32(y)) = tile.get(("x", "y")) {
+        Some(Pos2::new(x, y))
+    } else {
+        None
+    }
 }
 
 impl TabViewer for GraspEditorTabs {
