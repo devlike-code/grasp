@@ -5,6 +5,7 @@ pub enum EditorState {
     Pan,
     Move,
     Link,
+    #[allow(dead_code)]
     Rect,
 }
 
@@ -39,8 +40,4 @@ pub trait StateMachine {
             self.move_to(next);
         }
     }
-}
-
-pub struct EditorStateMachine {
-    pub state: EditorState,
 }

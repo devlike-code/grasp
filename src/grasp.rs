@@ -43,24 +43,20 @@ pub fn create_native_options() -> NativeOptions {
 
 use ::grasp::{
     internals::{
-        self_val, EntityId, Mosaic, MosaicCRUD, MosaicIO, MosaicTypelevelCRUD, Tile,
-        TileFieldGetter, TileFieldSetter, Value,
+        self_val, EntityId, Mosaic, MosaicCRUD, MosaicIO, Tile, TileFieldGetter, TileFieldSetter,
+        Value,
     },
     iterators::{
         component_selectors::ComponentSelectors, tile_filters::TileFilters,
         tile_getters::TileGetters,
     },
 };
-use egui::{
-    ahash::HashMap, Align2, Color32, CursorIcon, FontId, PlatformOutput, Sense, Ui, Vec2,
-    WidgetText,
-};
+use egui::{ahash::HashMap, Align2, Color32, CursorIcon, FontId, Sense, Ui, Vec2, WidgetText};
 use egui::{Pos2, Rect, Rounding, Stroke};
-use egui_dock::{DockArea, DockState, Style, TabViewer};
+use egui_dock::TabViewer;
 use itertools::Itertools;
 use quadtree_rs::{
     area::{Area, AreaBuilder},
-    point::Point,
     Quadtree,
 };
 use std::{
@@ -305,7 +301,7 @@ impl GraspEditorTab {
     }
 
     pub fn create_new_arrow(&mut self, source: &Tile, target: &Tile) {
-        let arr = self
+        let _arr = self
             .document_mosaic
             .new_arrow(source, target, "Arrow", default_vals());
 
