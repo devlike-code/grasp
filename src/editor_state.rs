@@ -89,6 +89,7 @@ impl GraspEditorState {
 
 impl eframe::App for GraspEditorState {
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+        ctx.set_visuals(egui::Visuals::dark());
         self.menu_bar(ctx, frame);
         self.left_sidebar(ctx, frame);
         self.tabs(ctx, frame);

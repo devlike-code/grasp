@@ -95,6 +95,35 @@ impl GraspEditorTab {
         v.sub(self.editor_data.pan)
             .sub(self.editor_data.tab_offset.to_vec2())
     }
+    pub(crate) fn draw_arrow(
+        painter: &egui::Painter,
+        origin: Pos2,
+        vec: Vec2,
+        stroke: Stroke,
+        start_offset: f32,
+        end_offset: f32,
+    ) {
+        let rot = egui::emath::Rot2::from_angle(std::f32::consts::TAU / 15.0);
+        let tip_length = 15.0;
+        let dir = vec.normalized();
+        println!("{:?}", dir);
+        let a_start: Pos2 = origin + dir * start_offset;
+        let tip = a_start + vec - dir * (start_offset + end_offset);
+        let middle = a_start.lerp(tip, 0.5);
+
+        let shape = egui::epaint::QuadraticBezierShape {
+            points: [a_start, middle, tip],
+            closed: false,
+            fill: Color32::TRANSPARENT,
+            stroke: Stroke {
+                width: 2.0,
+                color: Color32::LIGHT_BLUE,
+            },
+        };
+        painter.add(shape);
+        painter.line_segment([tip, tip - tip_length * (rot * dir)], stroke);
+        painter.line_segment([tip, tip - tip_length * (rot.inverse() * dir)], stroke);
+    }
 
     pub fn draw_debug(&mut self, ui: &mut Ui) {
         let painter = ui.painter();
@@ -117,7 +146,7 @@ impl GraspEditorTab {
                 },
                 Rounding::ZERO,
                 Color32::TRANSPARENT,
-                Stroke::new(1.0, Color32::RED),
+                Stroke::new(1.0, Color32::GOLD),
             );
         });
     }
@@ -135,7 +164,7 @@ impl GraspEditorTab {
         {
             // Draw node
             let pos = Pos2::new(node.get("x").as_f32(), node.get("y").as_f32());
-            painter.circle_filled(self.pos_into_editor(pos), 5.0, Color32::WHITE);
+            painter.circle_filled(self.pos_into_editor(pos), 10.0, Color32::GRAY);
 
             // Maybe draw label
             if let Some(label) = node
@@ -149,7 +178,7 @@ impl GraspEditorTab {
                     Align2::LEFT_CENTER,
                     label.get("self").as_s32().to_string(),
                     FontId::default(),
-                    Color32::WHITE,
+                    Color32::BLACK,
                 );
             }
         }
@@ -162,10 +191,13 @@ impl GraspEditorTab {
                 get_pos_from_tile(&self.document_mosaic.get(arrow.target_id()).unwrap()).unwrap(),
             );
 
-            painter.arrow(
+            Self::draw_arrow(
+                &painter,
                 source_pos,
                 target_pos - source_pos,
-                Stroke::new(1.0, Color32::WHITE),
+                Stroke::new(1.0, Color32::LIGHT_BLUE),
+                10.0,
+                10.0,
             );
         }
 
@@ -233,7 +265,7 @@ impl GraspEditorTab {
             if let Some(area_id) = self.node_area.get(&tile.id) {
                 self.quadtree.delete_by_handle(*area_id);
 
-                let region = build_area(self.editor_data.cursor, 5);
+                let region = build_area(self.editor_data.cursor, 10);
                 if let Some(area_id) = self.quadtree.insert(region, tile.id) {
                     self.node_area.insert(tile.id, area_id);
                 }
@@ -255,14 +287,19 @@ impl GraspEditorTab {
             EditorState::Link => {
                 if let Some(start_pos) = self.editor_data.link_start_pos {
                     let mut end_pos = self.editor_data.cursor;
+                    let mut end_offset = 0.0;
                     if let Some(end) = &self.editor_data.link_end {
                         end_pos = get_pos_from_tile(end).unwrap();
+                        end_offset = 10.0;
                     }
 
-                    ui.painter().arrow(
+                    Self::draw_arrow(
+                        ui.painter(),
                         self.pos_into_editor(start_pos),
                         end_pos - start_pos,
-                        Stroke::new(2.0, Color32::RED),
+                        Stroke::new(2.0, Color32::LIGHT_GREEN),
+                        10.0,
+                        end_offset,
                     )
                 }
 
@@ -293,7 +330,7 @@ impl GraspEditorTab {
         self.document_mosaic
             .new_descriptor(&obj, "Label", self_val(Value::S32("Label!".into())));
 
-        let region = build_area(pos, 5);
+        let region = build_area(pos, 10);
 
         if let Some(area_id) = self.quadtree.insert(region, obj.id) {
             self.node_area.insert(obj.id, area_id);
