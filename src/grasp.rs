@@ -1,6 +1,6 @@
 use eframe::{egui, NativeOptions};
-use grasp::internals::default_vals;
 use ini::Ini;
+use mosaic::internals::default_vals;
 
 #[allow(clippy::field_reassign_with_default)]
 pub fn create_native_options() -> NativeOptions {
@@ -41,7 +41,7 @@ pub fn create_native_options() -> NativeOptions {
     options
 }
 
-use ::grasp::{
+use ::mosaic::{
     internals::{
         self_val, EntityId, Mosaic, MosaicCRUD, MosaicIO, Tile, TileFieldGetter, TileFieldSetter,
         Value,
