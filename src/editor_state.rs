@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use egui_dock::{DockArea, DockState, Style};
-use grasp::internals::{Mosaic, MosaicTypelevelCRUD};
+use mosaic::internals::{Mosaic, MosaicTypelevelCRUD};
 use quadtree_rs::Quadtree;
 
 use crate::{

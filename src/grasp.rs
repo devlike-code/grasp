@@ -1,6 +1,6 @@
 use eframe::{egui, NativeOptions};
-use grasp::internals::default_vals;
 use ini::Ini;
+use mosaic::{capabilities::SelectionCapability, internals::default_vals};
 
 #[allow(clippy::field_reassign_with_default)]
 pub fn create_native_options() -> NativeOptions {
@@ -41,7 +41,7 @@ pub fn create_native_options() -> NativeOptions {
     options
 }
 
-use ::grasp::{
+use ::mosaic::{
     internals::{
         self_val, EntityId, Mosaic, MosaicCRUD, MosaicIO, Tile, TileFieldGetter, TileFieldSetter,
         Value,
@@ -69,11 +69,14 @@ use crate::editor_state_machine::{EditorState, EditorStateTrigger, StateMachine}
 pub struct GraspEditorData {
     pub pan: Vec2,
     pub selected: Vec<Tile>,
+    //pub selection_owner: Option<Tile>,
     pub cursor: Pos2,
     pub cursor_delta: Vec2,
+    pub rect_delta: Option<Vec2>,
     pub tab_offset: Pos2,
     pub link_start_pos: Option<Pos2>,
     pub link_end: Option<Tile>,
+    pub rect_start_pos: Option<Pos2>,
 }
 
 pub struct GraspEditorTab {
@@ -82,6 +85,7 @@ pub struct GraspEditorTab {
     pub quadtree: Quadtree<i32, EntityId>,
     pub document_mosaic: Arc<Mosaic>,
     pub node_area: HashMap<EntityId, u64>,
+
     pub editor_data: GraspEditorData,
 }
 
@@ -200,8 +204,25 @@ impl GraspEditorTab {
                 10.0,
             );
         }
+        // if let Some(owner) = &self.editor_data.selection_owner {
+        for selected in &self.editor_data.selected {
+            let stroke = Stroke {
+                width: 0.5,
+                color: Color32::LIGHT_GREEN,
+            };
+            println!("SELECTED {:?}", selected);
+            let selected_pos = Pos2::new(selected.get("x").as_f32(), selected.get("y").as_f32());
 
-        self.draw_debug(ui);
+            painter.circle(
+                self.pos_into_editor(selected_pos),
+                11.0,
+                Color32::TRANSPARENT,
+                stroke,
+            );
+            // }
+        }
+
+        //self.draw_debug(ui);
     }
 
     pub fn sense(&mut self, ui: &mut Ui) {
@@ -212,6 +233,13 @@ impl GraspEditorTab {
         }
 
         self.editor_data.cursor_delta = resp.drag_delta();
+
+        if let Some(mut rect_delta) = self.editor_data.rect_delta {
+            rect_delta += resp.drag_delta();
+            self.editor_data.rect_delta = Some(rect_delta);
+        } else {
+            self.editor_data.rect_delta = Some(resp.drag_delta());
+        }
 
         let result = self
             .quadtree
@@ -241,10 +269,14 @@ impl GraspEditorTab {
                     .into_iter()
                     .flat_map(|next| self.document_mosaic.get(*next.value_ref()))
                     .collect_vec();
+
                 self.trigger(EditorStateTrigger::DragToMove);
             }
         } else if resp.drag_started_by(egui::PointerButton::Primary) && result.is_empty() {
             self.editor_data.selected = vec![];
+
+            self.editor_data.rect_start_pos = Some(self.pos_into_editor(self.editor_data.cursor));
+
             self.trigger(EditorStateTrigger::DragToSelect);
         } else if resp.drag_started_by(egui::PointerButton::Secondary) {
             self.trigger(EditorStateTrigger::DragToPan);
@@ -253,14 +285,14 @@ impl GraspEditorTab {
         }
     }
 
-    fn update_selected_position(&mut self, pos: Pos2) {
+    fn update_position_for_selected(&mut self, pos: Pos2) {
         for tile in &mut self.editor_data.selected {
             tile.set("x", pos.x);
             tile.set("y", pos.y);
         }
     }
 
-    fn update_selected_quadtree(&mut self) {
+    fn update_quadtree_for_selected(&mut self) {
         for tile in &mut self.editor_data.selected {
             if let Some(area_id) = self.node_area.get(&tile.id) {
                 self.quadtree.delete_by_handle(*area_id);
@@ -274,11 +306,12 @@ impl GraspEditorTab {
     }
 
     pub fn update(&mut self, ui: &mut Ui) {
+        println!("self.state {:?}", self.state);
         match &self.state {
             EditorState::Idle => {}
             EditorState::Move => {
                 // TODO: delta
-                self.update_selected_position(self.editor_data.cursor);
+                self.update_position_for_selected(self.editor_data.cursor);
             }
             EditorState::Pan => {
                 ui.ctx().set_cursor_icon(CursorIcon::Move);
@@ -312,7 +345,39 @@ impl GraspEditorTab {
                     self.editor_data.link_end = None;
                 }
             }
-            EditorState::Rect => {}
+            EditorState::Rect => {
+                if let Some(min) = self.editor_data.rect_start_pos {
+                    if let Some(delta) = self.editor_data.rect_delta {
+                        let end_pos = min + delta;
+                        let rect = Rect::from_two_pos(min, end_pos);
+                        let semi_transparent_light_yellow =
+                            Color32::from_rgba_unmultiplied(255, 255, 120, 2);
+
+                        let stroke = Stroke {
+                            width: 0.5,
+                            color: Color32::LIGHT_BLUE,
+                        };
+
+                        ui.painter().rect(
+                            rect,
+                            Rounding::default(),
+                            semi_transparent_light_yellow,
+                            stroke,
+                        );
+
+                        let region = build_rect_area(rect);
+                        let query = self.quadtree.query(region).collect_vec();
+                        if !query.is_empty() {
+                            self.editor_data.selected = query
+                                .into_iter()
+                                .flat_map(|e| self.document_mosaic.get(e.value_ref().clone()))
+                                .collect_vec();
+                        } else {
+                            self.editor_data.selected = vec![];
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -371,25 +436,39 @@ impl StateMachine for GraspEditorTab {
                 Some(EditorState::Link)
             }
             (EditorState::Idle, EditorStateTrigger::DragToMove) => Some(EditorState::Move),
-            (EditorState::Idle, EditorStateTrigger::DragToSelect) => None,
+            (EditorState::Idle, EditorStateTrigger::DragToSelect) => Some(EditorState::Rect),
             (EditorState::Pan, EditorStateTrigger::EndDrag) => Some(EditorState::Idle),
             (EditorState::Link, EditorStateTrigger::EndDrag) => {
                 if let Some(tile) = self.editor_data.link_end.take() {
                     let start = self.editor_data.selected.first().unwrap().clone();
                     self.create_new_arrow(&start, &tile);
                 }
-                self.editor_data.selected = vec![];
+                self.editor_data.selected.clear();
                 self.editor_data.link_start_pos = None;
                 self.editor_data.link_end = None;
                 Some(EditorState::Idle)
             }
             (EditorState::Move, EditorStateTrigger::EndDrag) => {
-                self.update_selected_position(self.editor_data.cursor);
-                self.update_selected_quadtree();
+                self.update_position_for_selected(self.editor_data.cursor);
+                self.update_quadtree_for_selected();
 
                 Some(EditorState::Idle)
             }
-            (EditorState::Rect, EditorStateTrigger::EndDrag) => None,
+            (EditorState::Rect, EditorStateTrigger::EndDrag) => {
+                self.editor_data.rect_start_pos = None;
+                self.editor_data.rect_delta = None;
+                // if let Some(owner) = &self.editor_data.selection_owner {
+                //     self.document_mosaic
+                //         .fill_selection(owner, self.editor_data.selected.as_slice())
+                // } else {
+                //     let owner = self.document_mosaic.make_selection();
+                //     self.document_mosaic
+                //         .fill_selection(&owner, &self.editor_data.selected.as_slice());
+                //     self.editor_data.selection_owner = Some(owner);
+                // }
+
+                Some(EditorState::Idle)
+            }
             _ => None,
         }
     }
@@ -419,6 +498,14 @@ fn build_area(pos: Pos2, size: i32) -> Area<i32> {
     AreaBuilder::default()
         .anchor((pos.x as i32 - size, pos.y as i32 - size).into())
         .dimensions((size * 2, size * 2))
+        .build()
+        .unwrap()
+}
+
+fn build_rect_area(rect: Rect) -> Area<i32> {
+    AreaBuilder::default()
+        .anchor((rect.min.x as i32, rect.min.y as i32).into())
+        .dimensions((rect.max.x as i32, rect.max.y as i32))
         .build()
         .unwrap()
 }
