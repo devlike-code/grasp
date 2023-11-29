@@ -150,7 +150,7 @@ impl GraspEditorTab {
                 },
                 Rounding::ZERO,
                 Color32::TRANSPARENT,
-                Stroke::new(1.0, Color32::GOLD),
+                Stroke::new(1.0, Color32::BLUE),
             );
         });
     }
@@ -208,7 +208,7 @@ impl GraspEditorTab {
         for selected in &self.editor_data.selected {
             let stroke = Stroke {
                 width: 0.5,
-                color: Color32::LIGHT_GREEN,
+                color: Color32::RED,
             };
             println!("SELECTED {:?}", selected);
             let selected_pos = Pos2::new(selected.get("x").as_f32(), selected.get("y").as_f32());
@@ -216,7 +216,7 @@ impl GraspEditorTab {
             painter.circle(
                 self.pos_into_editor(selected_pos),
                 11.0,
-                Color32::TRANSPARENT,
+                Color32::RED,
                 stroke,
             );
             // }
@@ -257,7 +257,6 @@ impl GraspEditorTab {
                 alt_down
             };
 
-            println!("{:?}", is_alt_down);
             if is_alt_down {
                 self.editor_data.selected = vec![self
                     .document_mosaic
@@ -269,13 +268,13 @@ impl GraspEditorTab {
                     .into_iter()
                     .flat_map(|next| self.document_mosaic.get(*next.value_ref()))
                     .collect_vec();
-
                 self.trigger(EditorStateTrigger::DragToMove);
             }
+            println!("---------------DRAAAG");
         } else if resp.drag_started_by(egui::PointerButton::Primary) && result.is_empty() {
             self.editor_data.selected = vec![];
 
-            self.editor_data.rect_start_pos = Some(self.pos_into_editor(self.editor_data.cursor));
+            self.editor_data.rect_start_pos = Some(self.editor_data.cursor);
 
             self.trigger(EditorStateTrigger::DragToSelect);
         } else if resp.drag_started_by(egui::PointerButton::Secondary) {
@@ -352,19 +351,32 @@ impl GraspEditorTab {
                         let rect = Rect::from_two_pos(min, end_pos);
                         let semi_transparent_light_yellow =
                             Color32::from_rgba_unmultiplied(255, 255, 120, 2);
+                        let semi_transparent_light_blue =
+                            Color32::from_rgba_unmultiplied(255, 120, 255, 2);
 
                         let stroke = Stroke {
                             width: 0.5,
                             color: Color32::LIGHT_BLUE,
                         };
 
-                        ui.painter().rect(
-                            rect,
-                            Rounding::default(),
-                            semi_transparent_light_yellow,
-                            stroke,
+                        // ui.painter().rect(
+                        //     rect,
+                        //     Rounding::default(),
+                        //     semi_transparent_light_yellow,
+                        //     stroke,
+                        // );
+
+                        let rect_area = Rect::from_two_pos(
+                            self.pos_into_editor(min),
+                            self.pos_into_editor(end_pos),
                         );
 
+                        ui.painter().rect(
+                            rect_area,
+                            Rounding::default(),
+                            semi_transparent_light_blue,
+                            stroke,
+                        );
                         let region = build_rect_area(rect);
                         let query = self.quadtree.query(region).collect_vec();
                         if !query.is_empty() {
@@ -503,9 +515,15 @@ fn build_area(pos: Pos2, size: i32) -> Area<i32> {
 }
 
 fn build_rect_area(rect: Rect) -> Area<i32> {
+    let dim_x = rect.max.x - rect.min.x;
+    let dim_y = rect.max.y - rect.min.y;
+    println!("{:?}, {:?}", dim_x, dim_y);
     AreaBuilder::default()
         .anchor((rect.min.x as i32, rect.min.y as i32).into())
-        .dimensions((rect.max.x as i32, rect.max.y as i32))
+        .dimensions((
+            (rect.max.x - rect.min.x).abs() as i32 + 1,
+            (rect.max.y - rect.min.y).abs() as i32 + 1,
+        ))
         .build()
         .unwrap()
 }
