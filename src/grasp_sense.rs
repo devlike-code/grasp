@@ -1,16 +1,15 @@
 use std::ops::Sub;
 
-use egui::{Sense, Ui, Vec2};
+use egui::{Response, Sense, Ui, Vec2};
 use itertools::Itertools;
-use mosaic::internals::MosaicIO;
 
 use crate::{
     editor_state_machine::{EditorStateTrigger, StateMachine},
-    grasp_common::GraspEditorTab,
+    grasp_common::{GraspEditorTab, QuadTreeFetch, UiKeyDownExtract},
 };
 
 impl GraspEditorTab {
-    pub fn sense(&mut self, ui: &mut Ui) {
+    fn sense_begin_frame(&mut self, ui: &mut Ui) -> Response {
         let (resp, _) = ui.allocate_painter(ui.available_size(), Sense::click_and_drag());
 
         if let Some(pos) = resp.hover_pos() {
@@ -26,46 +25,57 @@ impl GraspEditorTab {
             self.editor_data.rect_delta = Some(Vec2::ZERO);
         }
 
-        let result = self
-            .quadtree
-            .query(self.build_circle_area(self.editor_data.cursor, 1))
-            .collect_vec();
+        resp
+    }
 
-        if resp.double_clicked() && result.is_empty() {
-            self.trigger(EditorStateTrigger::DblClickToCreate);
-        } else if resp.drag_started_by(egui::PointerButton::Primary) && !result.is_empty() {
-            let is_alt_down = {
-                let mut alt_down = false;
-                ui.input(|input_state| {
-                    alt_down = input_state.modifiers.alt;
-                });
-                alt_down
-            };
+    pub fn sense(&mut self, ui: &mut Ui) {
+        use egui::PointerButton::*;
+        use EditorStateTrigger::*;
 
-            if is_alt_down {
-                self.editor_data.selected = vec![self
-                    .document_mosaic
-                    .get(*result.first().unwrap().value_ref())
-                    .unwrap()];
-                self.trigger(EditorStateTrigger::DragToLink);
-            } else {
-                self.editor_data.selected = result
-                    .into_iter()
-                    .flat_map(|next| self.document_mosaic.get(*next.value_ref()))
-                    .collect_vec();
-                self.trigger(EditorStateTrigger::DragToMove);
+        let mouse = self.sense_begin_frame(ui);
+        let under_cursor = self.quadtree.query(self.build_cursor_area()).collect_vec();
+
+        if mouse.double_clicked() && under_cursor.is_empty() {
+            //
+            self.trigger(DblClickToCreate);
+            //
+        } else if mouse.clicked() && under_cursor.is_empty() {
+            //
+            self.trigger(ClickToDeselect);
+            //
+        } else if mouse.clicked() && !under_cursor.is_empty() {
+            //
+            self.editor_data.selected = under_cursor.fetch_tiles(&self.document_mosaic);
+            self.trigger(ClickToSelect);
+            //
+        } else if mouse.drag_started_by(Primary) && !under_cursor.is_empty() && ui.alt_down() {
+            //
+            let tile_under_mouse = under_cursor.fetch_tile(&self.document_mosaic);
+            self.editor_data.selected = vec![tile_under_mouse];
+            self.trigger(DragToLink);
+            //
+        } else if mouse.drag_started_by(Primary) && !under_cursor.is_empty() {
+            //
+            let tile_under_mouse = under_cursor.fetch_tile(&self.document_mosaic);
+            if !self.editor_data.selected.contains(&tile_under_mouse) {
+                self.editor_data.selected = vec![tile_under_mouse];
             }
-            println!("---------------DRAAAG");
-        } else if resp.drag_started_by(egui::PointerButton::Primary) && result.is_empty() {
+            self.trigger(DragToMove);
+            //
+        } else if mouse.drag_started_by(egui::PointerButton::Primary) && under_cursor.is_empty() {
+            //
             self.editor_data.selected = vec![];
-
             self.editor_data.rect_start_pos = Some(self.editor_data.cursor);
-
-            self.trigger(EditorStateTrigger::DragToSelect);
-        } else if resp.drag_started_by(egui::PointerButton::Secondary) {
-            self.trigger(EditorStateTrigger::DragToPan);
-        } else if resp.drag_released() {
-            self.trigger(EditorStateTrigger::EndDrag);
+            self.trigger(DragToSelect);
+            //
+        } else if mouse.drag_started_by(egui::PointerButton::Secondary) {
+            //
+            self.trigger(DragToPan);
+            //
+        } else if mouse.drag_released() {
+            //
+            self.trigger(EndDrag);
+            //
         }
     }
 }

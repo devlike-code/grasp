@@ -1,5 +1,5 @@
 use egui::{Pos2, Vec2};
-use mosaic::internals::TileFieldSetter;
+use mosaic::internals::{TileFieldGetter, TileFieldSetter, Value};
 
 use crate::{
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
@@ -11,7 +11,7 @@ impl StateMachine for GraspEditorTab {
     type State = EditorState;
 
     fn on_transition(&mut self, from: Self::State, trigger: Self::Trigger) -> Option<EditorState> {
-        println!("{:?} {:?}", from, trigger);
+        println!("ON TRANSITION {:?} --{:?}--> ", from, trigger);
         match (from, trigger) {
             (_, EditorStateTrigger::DblClickToCreate) => {
                 self.create_new_object(self.editor_data.cursor);
@@ -19,9 +19,10 @@ impl StateMachine for GraspEditorTab {
             }
 
             (_, EditorStateTrigger::MouseDownOverNode) => None,
-            (_, EditorStateTrigger::ClickToSelect) => None,
+            (_, EditorStateTrigger::ClickToSelect) => Some(EditorState::Idle),
             (_, EditorStateTrigger::ClickToDeselect) => {
                 self.editor_data.selected.clear();
+
                 Some(EditorState::Idle)
             }
             (EditorState::Idle, EditorStateTrigger::DragToPan) => {
@@ -34,6 +35,7 @@ impl StateMachine for GraspEditorTab {
                 Some(EditorState::Link)
             }
             (EditorState::Idle, EditorStateTrigger::DragToMove) => Some(EditorState::Move),
+
             (EditorState::Idle, EditorStateTrigger::DragToSelect) => {
                 self.editor_data.rect_delta = Some(Vec2::ZERO);
                 self.editor_data.rect_start_pos = Some(self.editor_data.cursor);
@@ -51,7 +53,7 @@ impl StateMachine for GraspEditorTab {
                 Some(EditorState::Idle)
             }
             (EditorState::Move, EditorStateTrigger::EndDrag) => {
-                self.update_position_for_selected(self.editor_data.cursor);
+                self.update_selected_positions_by(self.editor_data.cursor_delta);
                 self.update_quadtree_for_selected();
                 Some(EditorState::Idle)
             }
@@ -74,21 +76,25 @@ impl StateMachine for GraspEditorTab {
 }
 
 impl GraspEditorTab {
-    pub fn update_position_for_selected(&mut self, pos: Pos2) {
+    pub fn update_selected_positions_by(&mut self, dp: Vec2) {
         for tile in &mut self.editor_data.selected {
-            tile.set("x", pos.x);
-            tile.set("y", pos.y);
+            if let (Value::F32(x), Value::F32(y)) = tile.get(("x", "y")) {
+                tile.set("x", x + dp.x);
+                tile.set("y", y + dp.y);
+            }
         }
     }
 
     pub fn update_quadtree_for_selected(&mut self) {
         for tile in &self.editor_data.selected {
-            if let Some(area_id) = self.node_area.get(&tile.id) {
-                self.quadtree.delete_by_handle(*area_id);
+            if let (Value::F32(x), Value::F32(y)) = tile.get(("x", "y")) {
+                if let Some(area_id) = self.node_area.get(&tile.id) {
+                    self.quadtree.delete_by_handle(*area_id);
 
-                let region = self.build_circle_area(self.editor_data.cursor, 10);
-                if let Some(area_id) = self.quadtree.insert(region, tile.id) {
-                    self.node_area.insert(tile.id, area_id);
+                    let region = self.build_circle_area(Pos2::new(x, y), 10);
+                    if let Some(area_id) = self.quadtree.insert(region, tile.id) {
+                        self.node_area.insert(tile.id, area_id);
+                    }
                 }
             }
         }

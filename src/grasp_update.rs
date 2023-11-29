@@ -1,10 +1,10 @@
-use egui::{Color32, CursorIcon, Rect, Stroke, Ui};
+use egui::{CursorIcon, Rect, Ui};
 use itertools::Itertools;
 use mosaic::internals::MosaicIO;
 
 use crate::{
     editor_state_machine::EditorState,
-    grasp_common::{get_pos_from_tile, GraspEditorTab},
+    grasp_common::{GraspEditorTab, QuadTreeFetch},
 };
 
 impl GraspEditorTab {
@@ -13,7 +13,7 @@ impl GraspEditorTab {
             EditorState::Idle => {}
 
             EditorState::Move => {
-                self.update_position_for_selected(self.editor_data.cursor);
+                self.update_selected_positions_by(self.editor_data.cursor_delta);
             }
 
             EditorState::Pan => {
@@ -22,24 +22,6 @@ impl GraspEditorTab {
             }
 
             EditorState::Link => {
-                if let Some(start_pos) = self.editor_data.link_start_pos {
-                    let mut end_pos = self.editor_data.cursor;
-                    let mut end_offset = 0.0;
-                    if let Some(end) = &self.editor_data.link_end {
-                        end_pos = get_pos_from_tile(end).unwrap();
-                        end_offset = 10.0;
-                    }
-
-                    Self::draw_arrow(
-                        ui.painter(),
-                        start_pos,
-                        end_pos - start_pos,
-                        Stroke::new(2.0, Color32::LIGHT_GREEN),
-                        10.0,
-                        end_offset,
-                    )
-                }
-
                 let region = self.build_circle_area(self.editor_data.cursor, 1);
                 let query = self.quadtree.query(region).collect_vec();
                 if !query.is_empty() {
@@ -59,10 +41,7 @@ impl GraspEditorTab {
                         let region = self.build_rect_area(rect);
                         let query = self.quadtree.query(region).collect_vec();
                         if !query.is_empty() {
-                            self.editor_data.selected = query
-                                .into_iter()
-                                .flat_map(|e| self.document_mosaic.get(*e.value_ref()))
-                                .collect_vec();
+                            self.editor_data.selected = query.fetch_tiles(&self.document_mosaic);
                         } else {
                             self.editor_data.selected = vec![];
                         }

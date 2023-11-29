@@ -2,6 +2,21 @@ use eframe::{egui, NativeOptions};
 use ini::Ini;
 use mosaic::internals::default_vals;
 
+use crate::editor_state_machine::EditorState;
+use ::mosaic::internals::{
+    self_val, EntityId, Mosaic, MosaicCRUD, MosaicIO, Tile, TileFieldGetter, Value,
+};
+use egui::{ahash::HashMap, Ui, Vec2, WidgetText};
+use egui::{Pos2, Rect};
+use egui_dock::TabViewer;
+use itertools::Itertools;
+use quadtree_rs::entry::Entry;
+use quadtree_rs::{
+    area::{Area, AreaBuilder},
+    Quadtree,
+};
+use std::{ops::Add, sync::Arc};
+
 #[allow(clippy::field_reassign_with_default)]
 pub fn create_native_options() -> NativeOptions {
     if Ini::load_from_file("config.ini").is_err() {
@@ -41,25 +56,11 @@ pub fn create_native_options() -> NativeOptions {
     options
 }
 
-use ::mosaic::internals::{
-    self_val, EntityId, Mosaic, MosaicCRUD, MosaicIO, Tile, TileFieldGetter, Value,
-};
-use egui::{ahash::HashMap, Ui, Vec2, WidgetText};
-use egui::{Pos2, Rect};
-use egui_dock::TabViewer;
-use quadtree_rs::{
-    area::{Area, AreaBuilder},
-    Quadtree,
-};
-use std::{ops::Add, sync::Arc};
-
-use crate::editor_state_machine::EditorState;
 #[derive(Default)]
 pub struct GraspEditorData {
     pub pan: Vec2,
     pub previous_pan: Vec2,
     pub selected: Vec<Tile>,
-    //pub selection_owner: Option<Tile>,
     pub cursor: Pos2,
     pub cursor_delta: Vec2,
     pub rect_delta: Option<Vec2>,
@@ -79,6 +80,37 @@ pub struct GraspEditorTab {
     pub editor_data: GraspEditorData,
 }
 
+pub trait QuadTreeFetch {
+    fn fetch_tiles(&self, mosaic: &Arc<Mosaic>) -> Vec<Tile>;
+    fn fetch_tile(&self, mosaic: &Arc<Mosaic>) -> Tile;
+}
+
+impl QuadTreeFetch for Vec<&Entry<i32, EntityId>> {
+    fn fetch_tiles(&self, mosaic: &Arc<Mosaic>) -> Vec<Tile> {
+        self.iter()
+            .flat_map(|next| mosaic.get(*next.value_ref()))
+            .collect_vec()
+    }
+
+    fn fetch_tile(&self, mosaic: &Arc<Mosaic>) -> Tile {
+        mosaic.get(*self.first().unwrap().value_ref()).unwrap()
+    }
+}
+
+pub trait UiKeyDownExtract {
+    fn alt_down(&self) -> bool;
+}
+
+impl UiKeyDownExtract for Ui {
+    fn alt_down(&self) -> bool {
+        let mut alt_down = false;
+        self.input(|input_state| {
+            alt_down = input_state.modifiers.alt;
+        });
+        alt_down
+    }
+}
+
 impl GraspEditorTab {
     pub fn pos_add_editor_offset(&self, v: Pos2) -> Pos2 {
         v.add(self.editor_data.tab_offset.to_vec2())
@@ -91,6 +123,10 @@ impl GraspEditorTab {
             .dimensions((size * 2, size * 2))
             .build()
             .unwrap()
+    }
+
+    pub fn build_cursor_area(&self) -> Area<i32> {
+        self.build_circle_area(self.editor_data.cursor, 1)
     }
 
     pub fn build_rect_area(&self, rect: Rect) -> Area<i32> {

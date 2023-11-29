@@ -1,5 +1,5 @@
 #[allow(clippy::large_enum_variant)]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum EditorState {
     Idle,
     Pan,
