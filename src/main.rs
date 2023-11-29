@@ -1,11 +1,23 @@
-mod pane;
-mod editor;
-mod grasp;
-mod tile_manager;
+use editor_state::GraspEditorState;
+use grasp_common::create_native_options;
 
-use grasp::create_grasp_editor;
+mod editor_state;
+mod editor_state_machine;
+mod grasp_common;
+mod grasp_render;
+mod grasp_sense;
+mod grasp_transitions;
+mod grasp_update;
 
 fn main() -> Result<(), eframe::Error> {
     env_logger::init();
-    create_grasp_editor()
+
+    let app_name = "GRASP";
+    let native_options = create_native_options();
+
+    eframe::run_native(
+        app_name,
+        native_options,
+        Box::new(|_| Box::new(GraspEditorState::new())),
+    )
 }
