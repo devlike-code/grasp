@@ -1,9 +1,13 @@
 use editor_state::GraspEditorState;
-use grasp::create_native_options;
+use grasp_common::create_native_options;
 
 mod editor_state;
 mod editor_state_machine;
-mod grasp;
+mod grasp_common;
+mod grasp_render;
+mod grasp_sense;
+mod grasp_transitions;
+mod grasp_update;
 
 fn main() -> Result<(), eframe::Error> {
     env_logger::init();

@@ -6,7 +6,7 @@ use quadtree_rs::Quadtree;
 
 use crate::{
     editor_state_machine::EditorState,
-    grasp::{GraspEditorTab, GraspEditorTabs},
+    grasp_common::{GraspEditorTab, GraspEditorTabs},
 };
 
 pub struct GraspEditorState {
