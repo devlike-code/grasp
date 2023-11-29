@@ -5,8 +5,8 @@ pub enum EditorState {
     Pan,
     Move,
     Link,
-    #[allow(dead_code)]
     Rect,
+    Rename,
 }
 
 #[allow(dead_code)]
@@ -15,6 +15,7 @@ pub enum EditorStateTrigger {
     MouseDownOverNode,
 
     DblClickToCreate,
+    DblClickToRename,
     ClickToSelect,
     ClickToDeselect,
 

@@ -1,6 +1,6 @@
 use std::ops::Add;
 
-use egui::{Align2, Color32, FontId, Painter, Pos2, Rect, Rounding, Stroke, Ui, Vec2};
+use egui::{Align2, Color32, FontId, Painter, Pos2, Rect, Rounding, Stroke, TextEdit, Ui, Vec2};
 use mosaic::{
     internals::{MosaicIO, Tile, TileFieldGetter},
     iterators::{
@@ -27,7 +27,6 @@ impl GraspEditorTab {
         let rot = egui::emath::Rot2::from_angle(std::f32::consts::TAU / 15.0);
         let tip_length = 15.0;
         let dir = vec.normalized();
-        println!("{:?}", dir);
         let a_start: Pos2 = origin + dir * start_offset;
         let tip = a_start + vec - dir * (start_offset + end_offset);
         let middle = a_start.lerp(tip, 0.5);
@@ -65,25 +64,41 @@ impl GraspEditorTab {
         );
     }
 
-    fn draw_node(&mut self, painter: &Painter, node: &Tile) {
+    fn draw_node(&mut self, ui: &mut Ui, node: &Tile) {
+        let painter = ui.painter();
+
         // Draw node
         let pos = self.pos_with_pan(Pos2::new(node.get("x").as_f32(), node.get("y").as_f32()));
         painter.circle_filled(pos, 10.0, Color32::GRAY);
 
-        // Maybe draw label
         if let Some(label) = node
             .iter()
             .get_descriptors()
             .include_component("Label")
             .next()
         {
-            painter.text(
-                pos.add(Vec2::new(10.0, 10.0)),
-                Align2::LEFT_CENTER,
-                label.get("self").as_s32().to_string(),
-                FontId::default(),
-                Color32::GRAY,
-            );
+            let floating_pos = pos.add(Vec2::new(10.0, 10.0));
+
+            if self.state == EditorState::Rename && self.editor_data.renaming == Some(node.id) {
+                let text_edit = TextEdit::singleline(&mut self.editor_data.text)
+                    .char_limit(30)
+                    .cursor_at_end(true);
+                ui.put(
+                    Rect::from_two_pos(
+                        floating_pos.add(Vec2::new(0.0, -5.0)),
+                        floating_pos.add(Vec2::new(60.0, 20.0)),
+                    ),
+                    text_edit,
+                );
+            } else {
+                painter.text(
+                    floating_pos,
+                    Align2::LEFT_CENTER,
+                    label.get("self").as_s32().to_string(),
+                    FontId::default(),
+                    Color32::GRAY,
+                );
+            }
         }
     }
 
@@ -104,7 +119,7 @@ impl GraspEditorTab {
                 painter,
                 start_pos,
                 end_pos - start_pos,
-                Stroke::new(2.0, Color32::LIGHT_GREEN),
+                Stroke::new(2.0, Color32::WHITE),
                 10.0,
                 end_offset,
             )
@@ -153,17 +168,16 @@ impl GraspEditorTab {
     }
 
     pub fn render(&mut self, ui: &mut Ui) {
-        let painter = ui.painter();
-
-        // Rendering
         for node in self
             .document_mosaic
             .get_all()
             .filter_objects()
             .include_component("Position")
         {
-            self.draw_node(painter, &node);
+            self.draw_node(ui, &node);
         }
+
+        let painter = ui.painter();
 
         for arrow in self.document_mosaic.get_all().filter_arrows() {
             self.draw_arrow(painter, &arrow);

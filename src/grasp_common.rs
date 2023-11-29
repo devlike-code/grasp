@@ -68,6 +68,8 @@ pub struct GraspEditorData {
     pub link_start_pos: Option<Pos2>,
     pub link_end: Option<Tile>,
     pub rect_start_pos: Option<Pos2>,
+    pub renaming: Option<EntityId>,
+    pub text: String,
 }
 
 pub struct GraspEditorTab {
@@ -209,8 +211,8 @@ impl TabViewer for GraspEditorTabs {
         let xy = ui.clip_rect().left_top();
         tab.editor_data.tab_offset = xy;
 
-        tab.render(ui);
         tab.sense(ui);
+        tab.render(ui);
         tab.update(ui);
     }
 }

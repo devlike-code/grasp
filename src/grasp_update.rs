@@ -48,6 +48,8 @@ impl GraspEditorTab {
                     }
                 }
             }
+
+            EditorState::Rename => {}
         }
     }
 }

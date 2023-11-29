@@ -2,6 +2,10 @@ use std::ops::Sub;
 
 use egui::{Response, Sense, Ui, Vec2};
 use itertools::Itertools;
+use mosaic::{
+    internals::{TileFieldGetter, Value},
+    iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
+};
 
 use crate::{
     editor_state_machine::{EditorStateTrigger, StateMachine},
@@ -38,6 +42,22 @@ impl GraspEditorTab {
         if mouse.double_clicked() && under_cursor.is_empty() {
             //
             self.trigger(DblClickToCreate);
+            //
+        } else if mouse.double_clicked() && !under_cursor.is_empty() {
+            //
+            let tile = under_cursor.fetch_tile(&self.document_mosaic);
+            if let Some(Value::S32(label)) = tile
+                .iter()
+                .get_descriptors()
+                .include_component("Label")
+                .next()
+                .map(|tile| tile.get("self"))
+            {
+                self.editor_data.renaming = Some(tile.id);
+                self.editor_data.selected = vec![tile];
+                self.editor_data.text = label.to_string();
+                self.trigger(DblClickToRename);
+            }
             //
         } else if mouse.clicked() && under_cursor.is_empty() {
             //

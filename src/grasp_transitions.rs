@@ -1,5 +1,8 @@
 use egui::{Pos2, Vec2};
-use mosaic::internals::{TileFieldGetter, TileFieldSetter, Value};
+use mosaic::{
+    internals::{MosaicIO, TileFieldGetter, TileFieldSetter, Value, S32},
+    iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
+};
 
 use crate::{
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
@@ -18,29 +21,31 @@ impl StateMachine for GraspEditorTab {
                 Some(EditorState::Idle)
             }
 
+            (_, EditorStateTrigger::DblClickToRename) => Some(EditorState::Rename),
+
             (_, EditorStateTrigger::MouseDownOverNode) => None,
             (_, EditorStateTrigger::ClickToSelect) => Some(EditorState::Idle),
             (_, EditorStateTrigger::ClickToDeselect) => {
                 self.editor_data.selected.clear();
-
                 Some(EditorState::Idle)
             }
-            (EditorState::Idle, EditorStateTrigger::DragToPan) => {
+            (_, EditorStateTrigger::DragToPan) => {
                 self.editor_data.previous_pan = self.editor_data.pan;
                 Some(EditorState::Pan)
             }
-            (EditorState::Idle, EditorStateTrigger::DragToLink) => {
+            (_, EditorStateTrigger::DragToLink) => {
                 self.editor_data.link_start_pos =
                     get_pos_from_tile(self.editor_data.selected.first().unwrap());
                 Some(EditorState::Link)
             }
-            (EditorState::Idle, EditorStateTrigger::DragToMove) => Some(EditorState::Move),
+            (_, EditorStateTrigger::DragToMove) => Some(EditorState::Move),
 
             (EditorState::Idle, EditorStateTrigger::DragToSelect) => {
                 self.editor_data.rect_delta = Some(Vec2::ZERO);
                 self.editor_data.rect_start_pos = Some(self.editor_data.cursor);
                 Some(EditorState::Rect)
             }
+
             (EditorState::Pan, EditorStateTrigger::EndDrag) => Some(EditorState::Idle),
             (EditorState::Link, EditorStateTrigger::EndDrag) => {
                 if let Some(tile) = self.editor_data.link_end.take() {
@@ -62,7 +67,35 @@ impl StateMachine for GraspEditorTab {
                 self.editor_data.rect_delta = None;
                 Some(EditorState::Idle)
             }
-            _ => None,
+
+            (EditorState::Rename, _) => {
+                if let Some(tile) = self.editor_data.renaming {
+                    if let Some(mut label) = self
+                        .document_mosaic
+                        .get(tile)
+                        .unwrap()
+                        .iter()
+                        .get_descriptors()
+                        .include_component("Label")
+                        .next()
+                    {
+                        TileFieldSetter::<S32>::set(
+                            &mut label,
+                            "self",
+                            self.editor_data.text.as_str().into(),
+                        )
+                    }
+                }
+
+                self.editor_data.renaming = None;
+                self.editor_data.text.clear();
+                Some(EditorState::Idle)
+            }
+
+            (s, t) => {
+                println!("TRANSITION NOT DEALT WITH: {:?} {:?}!", s, t);
+                None
+            }
         }
     }
 
