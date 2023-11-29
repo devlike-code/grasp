@@ -83,13 +83,15 @@ impl GraspEditorTab {
                 let text_edit = TextEdit::singleline(&mut self.editor_data.text)
                     .char_limit(30)
                     .cursor_at_end(true);
-                ui.put(
+                let text_edit_response = ui.put(
                     Rect::from_two_pos(
                         floating_pos.add(Vec2::new(0.0, -5.0)),
                         floating_pos.add(Vec2::new(60.0, 20.0)),
                     ),
                     text_edit,
                 );
+
+                text_edit_response.request_focus();
             } else {
                 painter.text(
                     floating_pos,
