@@ -1,6 +1,6 @@
-use std::ops::Add;
-
-use egui::{Align2, Color32, FontId, Painter, Pos2, Rect, Rounding, Stroke, TextEdit, Ui, Vec2};
+use egui::{
+    Align2, Color32, FontId, Painter, Pos2, Rangef, Rect, Rounding, Stroke, TextEdit, Ui, Vec2,
+};
 use mosaic::{
     internals::{MosaicIO, Tile, TileFieldGetter},
     iterators::{
@@ -8,6 +8,7 @@ use mosaic::{
         tile_getters::TileGetters,
     },
 };
+use std::ops::Add;
 
 use crate::{
     editor_state_machine::EditorState,
@@ -169,6 +170,107 @@ impl GraspEditorTab {
         }
     }
 
+    pub fn draw_ruler(&mut self, ui: &mut Ui) {
+        let painter = ui.painter();
+        let max_rect = ui.max_rect();
+        let pan = self.editor_data.pan;
+        let min_x = max_rect.min.x;
+        let max_x = max_rect.max.x;
+        let min_y = max_rect.min.y;
+        let max_y = max_rect.max.y;
+
+        // Draw horizontal ruler
+        {
+            painter.rect_filled(
+                Rect {
+                    min: (min_x, min_y).into(),
+                    max: (max_x, min_y + 20.0).into(),
+                },
+                Rounding::default(),
+                Color32::DARK_GRAY,
+            );
+
+            let step = 50;
+            let low_bound = (min_x - pan.x) as i32 / step;
+            let upper_bound = (max_x - pan.x) as i32 / step;
+            let range_y = Rangef::new(min_y + 10.0 as f32, 20.0);
+            for i in low_bound..(upper_bound + 1) {
+                painter.vline(
+                    (i * step) as f32 + pan.x,
+                    range_y,
+                    Stroke::new(2.0, Color32::WHITE),
+                );
+                painter.text(
+                    ((i * step) as f32 + pan.x, min_y + 10.0).into(),
+                    Align2::CENTER_CENTER,
+                    format!("{}", i * step),
+                    FontId::default(),
+                    Color32::WHITE,
+                );
+            }
+        }
+
+        // Draw vertical ruler
+        {
+            painter.rect_filled(
+                Rect {
+                    min: (min_x, min_y).into(),
+                    max: (min_x + 20.0, max_y).into(),
+                },
+                Rounding::default(),
+                Color32::DARK_GRAY,
+            );
+
+            let step = 50;
+            let low_bound = (min_y - pan.y) as i32 / step;
+            let upper_bound = (max_y - pan.y) as i32 / step;
+            let range_x = Rangef::new(min_x + 20.0, 20.0);
+            for i in low_bound..(upper_bound + 1) {
+                painter.hline(
+                    range_x,
+                    (i * step) as f32 + pan.y,
+                    Stroke::new(2.0, Color32::WHITE),
+                );
+                painter.text(
+                    (min_x + 15.0, (i * step) as f32 + pan.y).into(),
+                    Align2::CENTER_CENTER,
+                    format!("{}", i * step),
+                    FontId::default(),
+                    Color32::WHITE,
+                );
+            }
+        }
+
+        self.draw_pointer_position(painter, min_x, min_y);
+    }
+
+    pub fn draw_pointer_position(&mut self, painter: &Painter, min_x: f32, min_y: f32) {
+        painter.rect_filled(
+            Rect {
+                min: (min_x, min_y).into(),
+                max: (min_x + 35.0, min_y + 20.0).into(),
+            },
+            Rounding::default(),
+            Color32::DARK_GRAY,
+        );
+
+        painter.text(
+            (min_x, min_y).into(),
+            Align2::LEFT_TOP,
+            format!("({:.2},", self.editor_data.cursor.x),
+            FontId::proportional(7.0),
+            Color32::WHITE,
+        );
+
+        painter.text(
+            (min_x, min_y + 10.0).into(),
+            Align2::LEFT_TOP,
+            format!("{:.2})", self.editor_data.cursor.y),
+            FontId::proportional(7.0),
+            Color32::WHITE,
+        );
+    }
+
     pub fn render(&mut self, ui: &mut Ui) {
         for node in self
             .document_mosaic
@@ -188,5 +290,6 @@ impl GraspEditorTab {
         self.draw_link(painter);
         self.draw_selected(painter);
         self.draw_rect_select(painter);
+        // self.draw_ruler(ui);
     }
 }
