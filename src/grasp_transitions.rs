@@ -88,6 +88,7 @@ impl StateMachine for GraspEditorTab {
                 }
 
                 self.editor_data.renaming = None;
+                self.editor_data.previous_text.clear();
                 self.editor_data.text.clear();
                 Some(EditorState::Idle)
             }

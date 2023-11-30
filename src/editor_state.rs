@@ -2,14 +2,17 @@ use std::sync::Arc;
 
 use egui::Ui;
 use egui_dock::{DockArea, DockState, Style};
-use mosaic::internals::{Mosaic, MosaicTypelevelCRUD};
+use mosaic::{
+    internals::{Mosaic, MosaicTypelevelCRUD, Tile},
+    iterators::tile_getters::TileGetters,
+};
 use quadtree_rs::Quadtree;
 
 use crate::{
     editor_state_machine::EditorState,
     grasp_common::{GraspEditorTab, GraspEditorTabs},
 };
-
+#[derive(Debug)]
 pub struct GraspEditorState {
     document_mosaic: Arc<Mosaic>,
     tabs: GraspEditorTabs,
@@ -54,7 +57,7 @@ impl GraspEditorState {
         }
     }
 
-    fn tabs(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    fn show_tabs(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         DockArea::new(&mut self.dock_state)
             .style(Style::from_egui(ctx.style().as_ref()))
             .show(ctx, &mut self.tabs);
@@ -65,6 +68,24 @@ impl GraspEditorState {
             .default_width(200.0)
             .resizable(true)
             .show(ctx, |ui| {
+                ui.separator();
+            });
+    }
+    fn right_sidebar(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        egui::SidePanel::right("properties")
+            .default_width(250.0)
+            .resizable(true)
+            .show(ctx, |ui| {
+                if let Some((_, tab)) = self.dock_state.find_active_focused() {
+                    let selected = &tab.editor_data.selected;
+                    for t in selected {
+                        for d in t.iter().get_descriptors() {
+                            if d.component.to_string() == "Label"{
+                                Self::draw_label_property(ui, &d);
+                            }
+                        }
+                    }
+                }
                 ui.separator();
             });
     }
@@ -123,6 +144,12 @@ impl GraspEditorState {
             }
         });
     }
+    
+    fn draw_label_property(ui: &mut Ui, d: &Tile){
+        ui.horizontal(|ui| {
+            ui.label(format!("{} --> {:?}", d.component.to_string(), d.data));
+        });
+    }
 }
 
 impl eframe::App for GraspEditorState {
@@ -130,6 +157,7 @@ impl eframe::App for GraspEditorState {
         ctx.set_visuals(egui::Visuals::dark());
         self.menu_bar(ctx, frame);
         self.left_sidebar(ctx, frame);
-        self.tabs(ctx, frame);
+        self.right_sidebar(ctx, frame);
+        self.show_tabs(ctx, frame);
     }
 }

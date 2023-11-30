@@ -56,7 +56,7 @@ pub fn create_native_options() -> NativeOptions {
     options
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct GraspEditorData {
     pub pan: Vec2,
     pub previous_pan: Vec2,
@@ -70,8 +70,10 @@ pub struct GraspEditorData {
     pub rect_start_pos: Option<Pos2>,
     pub renaming: Option<EntityId>,
     pub text: String,
+    pub previous_text: String,
 }
 
+#[derive(Debug)]
 pub struct GraspEditorTab {
     pub name: String,
     pub state: EditorState,
@@ -180,7 +182,7 @@ impl GraspEditorTab {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct GraspEditorTabs {
     pub current_tab: u32,
 }

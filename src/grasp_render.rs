@@ -11,7 +11,7 @@ use mosaic::{
 use std::ops::Add;
 
 use crate::{
-    editor_state_machine::EditorState,
+    editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
     grasp_common::{get_pos_from_tile, GraspEditorTab},
 };
 
@@ -93,6 +93,13 @@ impl GraspEditorTab {
                 );
 
                 text_edit_response.request_focus();
+
+                if ui.input(|i| i.key_pressed(egui::Key::Enter)) {
+                    self.trigger(EditorStateTrigger::EndDrag);
+                } else if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+                    self.editor_data.text = self.editor_data.previous_text.clone();
+                    self.trigger(EditorStateTrigger::EndDrag);
+                }
             } else {
                 painter.text(
                     floating_pos,

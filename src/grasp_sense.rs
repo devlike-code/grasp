@@ -56,6 +56,8 @@ impl GraspEditorTab {
                 self.editor_data.renaming = Some(tile.id);
                 self.editor_data.selected = vec![tile];
                 self.editor_data.text = label.to_string();
+                self.editor_data.previous_text = label.to_string();
+            
                 self.trigger(DblClickToRename);
             }
             //
