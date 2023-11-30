@@ -297,6 +297,8 @@ impl GraspEditorTab {
         self.draw_link(painter);
         self.draw_selected(painter);
         self.draw_rect_select(painter);
-        // self.draw_ruler(ui);
+        if self.ruler_visible { 
+            self.draw_ruler(ui);
+        }
     }
 }

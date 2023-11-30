@@ -2,6 +2,7 @@ use eframe::{egui, NativeOptions};
 use ini::Ini;
 use mosaic::internals::default_vals;
 
+use crate::editor_state::GraspEditorState;
 use crate::editor_state_machine::EditorState;
 use ::mosaic::internals::{
     self_val, EntityId, Mosaic, MosaicCRUD, MosaicIO, Tile, TileFieldGetter, Value,
@@ -73,14 +74,15 @@ pub struct GraspEditorData {
     pub previous_text: String,
 }
 
-#[derive(Debug)]
+//#[derive(Debug)]
 pub struct GraspEditorTab {
     pub name: String,
     pub state: EditorState,
     pub quadtree: Quadtree<i32, EntityId>,
     pub document_mosaic: Arc<Mosaic>,
     pub node_area: HashMap<EntityId, u64>,
-
+    pub ruler_visible: bool,
+    pub grid_visible: bool,
     pub editor_data: GraspEditorData,
 }
 

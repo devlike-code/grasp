@@ -1,9 +1,12 @@
 use std::sync::Arc;
 
-use egui::Ui;
+use egui::{
+    ahash::{HashMap, HashMapExt},
+    Ui,
+};
 use egui_dock::{DockArea, DockState, Style};
 use mosaic::{
-    internals::{Mosaic, MosaicTypelevelCRUD, Tile},
+    internals::{Mosaic, MosaicTypelevelCRUD, Tile, TileFieldGetter, S32},
     iterators::tile_getters::TileGetters,
 };
 use quadtree_rs::Quadtree;
@@ -12,13 +15,14 @@ use crate::{
     editor_state_machine::EditorState,
     grasp_common::{GraspEditorTab, GraspEditorTabs},
 };
-#[derive(Debug)]
+
+type ComponentRenderer = Box<dyn Fn(&mut Ui, Tile)>;
+//#[derive(Debug)]
 pub struct GraspEditorState {
     document_mosaic: Arc<Mosaic>,
+    component_renderers: HashMap<S32, ComponentRenderer>,
     tabs: GraspEditorTabs,
     dock_state: DockState<GraspEditorTab>,
-    ruler_visible: bool,
-    grid_visible: bool,
 }
 
 impl GraspEditorState {
@@ -32,13 +36,18 @@ impl GraspEditorState {
         document_mosaic.new_type("Selection: unit;").unwrap();
 
         let dock_state = DockState::new(vec![]);
+
+        // add here default renderers
         let mut state = Self {
             document_mosaic,
+            component_renderers: HashMap::new(),
             dock_state,
             tabs: GraspEditorTabs::default(),
-            ruler_visible: false,
-            grid_visible: false,
         };
+
+        state
+            .component_renderers
+            .insert("Label".into(), Box::new(Self::draw_label_property));
 
         let tab = state.new_tab();
         state.dock_state.main_surface_mut().push_to_first_leaf(tab);
@@ -54,6 +63,8 @@ impl GraspEditorState {
             node_area: Default::default(),
             editor_data: Default::default(),
             state: EditorState::Idle,
+            grid_visible: false,
+            ruler_visible: false,
         }
     }
 
@@ -80,8 +91,10 @@ impl GraspEditorState {
                     let selected = &tab.editor_data.selected;
                     for t in selected {
                         for d in t.iter().get_descriptors() {
-                            if d.component.to_string() == "Label"{
-                                Self::draw_label_property(ui, &d);
+                            if d.component.to_string() == "Label" {
+                                if let Some(renderer) = self.component_renderers.get(&d.component) {
+                                    renderer(ui, d);
+                                }
                             }
                         }
                     }
@@ -121,33 +134,45 @@ impl GraspEditorState {
         ui.menu_button("View", |ui| {
             let ruler_on = {
                 let mut checked = "";
-                if self.ruler_visible {
-                    checked = "✔";
+                if let Some((_, tab)) = self.dock_state.find_active_focused() {
+                    if tab.ruler_visible {
+                        checked = "✔";
+                    }
                 }
                 checked
             };
             if ui.button(format!("Toggle ruler {}", ruler_on)).clicked() {
-                self.ruler_visible = !self.ruler_visible;
-                ui.close_menu();
+                if let Some((_, tab)) = self.dock_state.find_active_focused() {
+                    tab.ruler_visible = !tab.ruler_visible;
+                    ui.close_menu();
+                }
             }
 
             let grid_on = {
                 let mut checked = "";
-                if self.grid_visible {
-                    checked = "✔";
+                if let Some((_, tab)) = self.dock_state.find_active_focused() {
+                    if tab.grid_visible {
+                        checked = "✔";
+                    }
                 }
                 checked
             };
             if ui.button(format!("Toggle grid {}", grid_on)).clicked() {
-                self.grid_visible = !self.grid_visible;
-                ui.close_menu();
+                if let Some((_, tab)) = self.dock_state.find_active_focused() {
+                    tab.grid_visible = !tab.grid_visible;
+                    ui.close_menu();
+                }
             }
         });
     }
-    
-    fn draw_label_property(ui: &mut Ui, d: &Tile){
+
+    fn draw_label_property(ui: &mut Ui, d: Tile) {
         ui.horizontal(|ui| {
-            ui.label(format!("{} --> {:?}", d.component.to_string(), d.data));
+            ui.label(format!(
+                "{} --> {:?}",
+                d.component.to_string(),
+                d.get_data()
+            ));
         });
     }
 }
