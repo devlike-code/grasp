@@ -2,11 +2,11 @@ use std::{fmt::format, sync::Arc};
 
 use egui::{
     ahash::{HashMap, HashMapExt},
-    CollapsingHeader, Color32, RichText, Ui,
+    CollapsingHeader, Color32, RichText, TextEdit, Ui,
 };
 use egui_dock::{DockArea, DockState, Style};
 use mosaic::{
-    internals::{Mosaic, MosaicTypelevelCRUD, Tile, S32},
+    internals::{Mosaic, MosaicTypelevelCRUD, Tile, TileFieldQuery, Value, S32},
     iterators::tile_getters::TileGetters,
 };
 use quadtree_rs::Quadtree;
@@ -16,7 +16,7 @@ use crate::{
     grasp_common::{GraspEditorTab, GraspEditorTabs},
 };
 
-type ComponentRenderer = Box<dyn Fn(&mut Ui, Tile)>;
+type ComponentRenderer = Box<dyn Fn(&mut Ui, &Tile)>;
 //#[derive(Debug)]
 pub struct GraspEditorState {
     document_mosaic: Arc<Mosaic>,
@@ -48,6 +48,10 @@ impl GraspEditorState {
         state
             .component_renderers
             .insert("Label".into(), Box::new(Self::draw_label_property));
+
+        state
+            .component_renderers
+            .insert("Position".into(), Box::new(Self::draw_position_property));
 
         let tab = state.new_tab();
         state.dock_state.main_surface_mut().push_to_first_leaf(tab);
@@ -101,8 +105,14 @@ impl GraspEditorState {
                                     if let Some(renderer) =
                                         self.component_renderers.get(&d.component)
                                     {
-                                        renderer(ui, d);
+                                        renderer(ui, &d);
                                     }
+                                }
+                            }
+
+                            if t.component.to_string() == "Position" {
+                                if let Some(renderer) = self.component_renderers.get(&t.component) {
+                                    renderer(ui, t);
                                 }
                             }
                         });
@@ -175,7 +185,7 @@ impl GraspEditorState {
         });
     }
 
-    fn draw_label_property(ui: &mut Ui, d: Tile) {
+    fn draw_label_property(ui: &mut Ui, d: &Tile) {
         ui.heading(
             RichText::from(format!(
                 "{} --> {:?}",
@@ -188,6 +198,41 @@ impl GraspEditorState {
         );
 
         // Add more widgets as needed.
+    }
+
+    fn draw_position_property(ui: &mut Ui, d: &Tile) {
+        if let (Value::F32(x), Value::F32(y)) = d.query(("x", "y")) {
+            let text = RichText::from(format!(
+                "{} : ({:.2}, {:.2})",
+                d.component.to_string(),
+                x,
+                y
+            ))
+            .size(15.0)
+            .color(Color32::LIGHT_YELLOW);
+            ui.heading(text);
+        }
+        // if ui.heading(text).double_clicked() {
+        //     let text_edit = TextEdit::singleline(&mut self.editor_data.text)
+        //         .char_limit(30)
+        //         .cursor_at_end(true);
+        //     let text_edit_response = ui.put(
+        //         Rect::from_two_pos(
+        //             floating_pos.add(Vec2::new(0.0, -5.0)),
+        //             floating_pos.add(Vec2::new(60.0, 20.0)),
+        //         ),
+        //         text_edit,
+        //     );
+        // if let Some((_, tab)) = self.dock_state.find_active_focused() {
+        //     tab.editor_data.renaming = Some(d.id);
+        //     tab.editor_data.selected = vec![d];
+        //     tab.editor_data.text = label.to_string();
+        //     tab.editor_data.previous_text = label.to_string();
+        // }
+
+        // self.trigger(DblClickToRename);
+        //}
+        //}
     }
 }
 
