@@ -1,11 +1,9 @@
 use eframe::{egui, NativeOptions};
 use ini::Ini;
-use mosaic::internals::default_vals;
 
-use crate::editor_state::GraspEditorState;
 use crate::editor_state_machine::EditorState;
 use ::mosaic::internals::{
-    self_val, EntityId, Mosaic, MosaicCRUD, MosaicIO, Tile, TileFieldGetter, Value,
+    default_vals, self_val, EntityId, Mosaic, MosaicCRUD, MosaicIO, Tile, TileFieldQuery, Value,
 };
 use egui::{ahash::HashMap, Ui, Vec2, WidgetText};
 use egui::{Pos2, Rect};
@@ -80,7 +78,7 @@ pub struct GraspEditorTab {
     pub state: EditorState,
     pub quadtree: Quadtree<i32, EntityId>,
     pub document_mosaic: Arc<Mosaic>,
-    pub node_area: HashMap<EntityId, u64>,
+    pub node_to_area: HashMap<EntityId, u64>,
     pub ruler_visible: bool,
     pub grid_visible: bool,
     pub editor_data: GraspEditorData,
@@ -105,6 +103,7 @@ impl QuadTreeFetch for Vec<&Entry<i32, EntityId>> {
 
 pub trait UiKeyDownExtract {
     fn alt_down(&self) -> bool;
+    fn delete_down(&self) -> bool;
 }
 
 impl UiKeyDownExtract for Ui {
@@ -114,6 +113,13 @@ impl UiKeyDownExtract for Ui {
             alt_down = input_state.modifiers.alt;
         });
         alt_down
+    }
+    fn delete_down(&self) -> bool {
+        let mut delete_down = false;
+        self.input(|input_state| {
+            delete_down = input_state.keys_down.get(&egui::Key::Delete).is_some();
+        });
+        delete_down
     }
 }
 
@@ -173,7 +179,7 @@ impl GraspEditorTab {
         let region = self.build_circle_area(pos, 10);
 
         if let Some(area_id) = self.quadtree.insert(region, obj.id) {
-            self.node_area.insert(obj.id, area_id);
+            self.node_to_area.insert(obj.id, area_id);
         }
     }
 
@@ -197,7 +203,7 @@ impl GraspEditorTabs {
 }
 
 pub fn get_pos_from_tile(tile: &Tile) -> Option<Pos2> {
-    if let (Value::F32(x), Value::F32(y)) = tile.get(("x", "y")) {
+    if let (Value::F32(x), Value::F32(y)) = tile.query(("x", "y")) {
         Some(Pos2::new(x, y))
     } else {
         None

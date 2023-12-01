@@ -1,6 +1,6 @@
 use egui::{Pos2, Vec2};
 use mosaic::{
-    internals::{MosaicIO, TileFieldGetter, TileFieldSetter, Value, S32},
+    internals::{MosaicIO, TileFieldQuery, TileFieldSetter, Value, S32},
     iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
 };
 
@@ -112,7 +112,7 @@ impl StateMachine for GraspEditorTab {
 impl GraspEditorTab {
     pub fn update_selected_positions_by(&mut self, dp: Vec2) {
         for tile in &mut self.editor_data.selected {
-            if let (Value::F32(x), Value::F32(y)) = tile.get(("x", "y")) {
+            if let (Value::F32(x), Value::F32(y)) = tile.query(("x", "y")) {
                 tile.set("x", x + dp.x);
                 tile.set("y", y + dp.y);
             }
@@ -121,13 +121,13 @@ impl GraspEditorTab {
 
     pub fn update_quadtree_for_selected(&mut self) {
         for tile in &self.editor_data.selected {
-            if let (Value::F32(x), Value::F32(y)) = tile.get(("x", "y")) {
-                if let Some(area_id) = self.node_area.get(&tile.id) {
+            if let (Value::F32(x), Value::F32(y)) = tile.query(("x", "y")) {
+                if let Some(area_id) = self.node_to_area.get(&tile.id) {
                     self.quadtree.delete_by_handle(*area_id);
 
                     let region = self.build_circle_area(Pos2::new(x, y), 10);
                     if let Some(area_id) = self.quadtree.insert(region, tile.id) {
-                        self.node_area.insert(tile.id, area_id);
+                        self.node_to_area.insert(tile.id, area_id);
                     }
                 }
             }

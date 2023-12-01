@@ -1,12 +1,12 @@
-use std::sync::Arc;
+use std::{fmt::format, sync::Arc};
 
 use egui::{
     ahash::{HashMap, HashMapExt},
-    Ui,
+    CollapsingHeader, Color32, RichText, Ui,
 };
 use egui_dock::{DockArea, DockState, Style};
 use mosaic::{
-    internals::{Mosaic, MosaicTypelevelCRUD, Tile, TileFieldGetter, S32},
+    internals::{Mosaic, MosaicTypelevelCRUD, Tile, S32},
     iterators::tile_getters::TileGetters,
 };
 use quadtree_rs::Quadtree;
@@ -60,7 +60,7 @@ impl GraspEditorState {
             name: format!("Untitled {}", self.tabs.increment()),
             quadtree: Quadtree::new_with_anchor((-1000, -1000).into(), 16),
             document_mosaic: Arc::clone(&self.document_mosaic),
-            node_area: Default::default(),
+            node_to_area: Default::default(),
             editor_data: Default::default(),
             state: EditorState::Idle,
             grid_visible: false,
@@ -90,13 +90,22 @@ impl GraspEditorState {
                 if let Some((_, tab)) = self.dock_state.find_active_focused() {
                     let selected = &tab.editor_data.selected;
                     for t in selected {
-                        for d in t.iter().get_descriptors() {
-                            if d.component.to_string() == "Label" {
-                                if let Some(renderer) = self.component_renderers.get(&d.component) {
-                                    renderer(ui, d);
+                        CollapsingHeader::new(RichText::from(format!(
+                            "ID:{} {}",
+                            t.id, "PROPERTIES"
+                        )))
+                        .default_open(true)
+                        .show(ui, |ui| {
+                            for d in t.iter().get_descriptors() {
+                                if d.component.to_string() == "Label" {
+                                    if let Some(renderer) =
+                                        self.component_renderers.get(&d.component)
+                                    {
+                                        renderer(ui, d);
+                                    }
                                 }
                             }
-                        }
+                        });
                     }
                 }
                 ui.separator();
@@ -167,13 +176,18 @@ impl GraspEditorState {
     }
 
     fn draw_label_property(ui: &mut Ui, d: Tile) {
-        ui.horizontal(|ui| {
-            ui.label(format!(
+        ui.heading(
+            RichText::from(format!(
                 "{} --> {:?}",
                 d.component.to_string(),
-                d.get_data()
-            ));
-        });
+                d.get("self")
+            ))
+            .italics()
+            .size(15.0)
+            .color(Color32::LIGHT_YELLOW),
+        );
+
+        // Add more widgets as needed.
     }
 }
 

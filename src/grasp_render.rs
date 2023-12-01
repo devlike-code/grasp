@@ -2,7 +2,7 @@ use egui::{
     Align2, Color32, FontId, Painter, Pos2, Rangef, Rect, Rounding, Stroke, TextEdit, Ui, Vec2,
 };
 use mosaic::{
-    internals::{MosaicIO, Tile, TileFieldGetter},
+    internals::{MosaicIO, Tile},
     iterators::{
         component_selectors::ComponentSelectors, tile_filters::TileFilters,
         tile_getters::TileGetters,
@@ -297,7 +297,7 @@ impl GraspEditorTab {
         self.draw_link(painter);
         self.draw_selected(painter);
         self.draw_rect_select(painter);
-        if self.ruler_visible { 
+        if self.ruler_visible {
             self.draw_ruler(ui);
         }
     }

@@ -3,7 +3,7 @@ use std::ops::Sub;
 use egui::{Response, Sense, Ui, Vec2};
 use itertools::Itertools;
 use mosaic::{
-    internals::{TileFieldGetter, Value},
+    internals::{MosaicCRUD, Value},
     iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
 };
 
@@ -38,6 +38,18 @@ impl GraspEditorTab {
 
         let mouse = self.sense_begin_frame(ui);
         let under_cursor = self.quadtree.query(self.build_cursor_area()).collect_vec();
+        let mut areas_to_remove = vec![];
+       
+        if ui.delete_down() {
+            for selected in &self.editor_data.selected {
+                self.document_mosaic.delete_tile(selected.id);
+                if let Some(area_id) = self.node_to_area.get(&selected.id) {
+                    areas_to_remove.push(*area_id);
+                   self.node_to_area.remove(&selected.id);
+                }                 
+            }
+            self.editor_data.selected.clear();
+        }
 
         if mouse.double_clicked() && under_cursor.is_empty() {
             //
@@ -57,7 +69,7 @@ impl GraspEditorTab {
                 self.editor_data.selected = vec![tile];
                 self.editor_data.text = label.to_string();
                 self.editor_data.previous_text = label.to_string();
-            
+
                 self.trigger(DblClickToRename);
             }
             //
@@ -99,5 +111,8 @@ impl GraspEditorTab {
             self.trigger(EndDrag);
             //
         }
+
+        areas_to_remove.into_iter().for_each(|f: u64|{ self.quadtree.delete_by_handle(f); });
+       
     }
 }
