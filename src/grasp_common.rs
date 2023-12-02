@@ -203,7 +203,7 @@ impl GraspEditorTabs {
 }
 
 pub fn get_pos_from_tile(tile: &Tile) -> Option<Pos2> {
-    if let (Value::F32(x), Value::F32(y)) = tile.query(("x", "y")) {
+    if let (Value::F32(x), Value::F32(y)) = tile.get_by(("x", "y")) {
         Some(Pos2::new(x, y))
     } else {
         None

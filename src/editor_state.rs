@@ -1,8 +1,8 @@
-use std::{fmt::format, sync::Arc};
+use std::sync::Arc;
 
 use egui::{
     ahash::{HashMap, HashMapExt},
-    CollapsingHeader, Color32, RichText, TextEdit, Ui,
+    CollapsingHeader, Color32, RichText, Ui,
 };
 use egui_dock::{DockArea, DockState, Style};
 use mosaic::{
@@ -201,7 +201,7 @@ impl GraspEditorState {
     }
 
     fn draw_position_property(ui: &mut Ui, d: &Tile) {
-        if let (Value::F32(x), Value::F32(y)) = d.query(("x", "y")) {
+        if let (Value::F32(x), Value::F32(y)) = d.get_by(("x", "y")) {
             let text = RichText::from(format!(
                 "{} : ({:.2}, {:.2})",
                 d.component.to_string(),
