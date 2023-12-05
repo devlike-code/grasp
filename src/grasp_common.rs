@@ -1,15 +1,12 @@
 use crate::editor_state_machine::EditorState;
-use ::mosaic::internals::{
-    default_vals, self_val, EntityId, Mosaic, MosaicCRUD, MosaicIO, Tile, TileFieldQuery, Value,
-};
-use eframe::{egui, NativeOptions};
+use eframe::NativeOptions;
+use ::mosaic::internals::{EntityId, Mosaic, MosaicCRUD, MosaicIO, Tile, TileFieldQuery, Value};
 use egui::{ahash::HashMap, Ui, Vec2, WidgetText};
 use egui::{Pos2, Rect};
 use egui_dock::TabViewer;
 use ini::Ini;
 use itertools::Itertools;
-use mosaic::capabilities::ArchetypeSubject;
-use mosaic::internals::MosaicTypelevelCRUD;
+use mosaic::internals::{par, void};
 use quadtree_rs::entry::Entry;
 use quadtree_rs::{
     area::{Area, AreaBuilder},
@@ -177,7 +174,7 @@ impl GraspEditorTab {
                 ("y".into(), Value::F32(pos.y)),
             ],
         );
-        obj.add_component("Label", self_val(Value::S32("<Label>".into())));
+        obj.add_component("Label", par("<Label>"));
 
         let region = self.build_circle_area(pos, 10);
 
@@ -189,7 +186,7 @@ impl GraspEditorTab {
     pub fn create_new_arrow(&mut self, source: &Tile, target: &Tile) {
         let _arr = self
             .document_mosaic
-            .new_arrow(source, target, "Arrow", default_vals());
+            .new_arrow(source, target, "Arrow", void());
     }
 }
 

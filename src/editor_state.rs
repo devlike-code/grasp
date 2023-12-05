@@ -187,14 +187,10 @@ impl GraspEditorState {
 
     fn draw_label_property(ui: &mut Ui, d: &Tile) {
         ui.heading(
-            RichText::from(format!(
-                "{} --> {:?}",
-                d.component.to_string(),
-                d.get("self")
-            ))
-            .italics()
-            .size(15.0)
-            .color(Color32::LIGHT_YELLOW),
+            RichText::from(format!("{} --> {:?}", d.component, d.get("self")))
+                .italics()
+                .size(15.0)
+                .color(Color32::LIGHT_YELLOW),
         );
 
         // Add more widgets as needed.
@@ -202,14 +198,9 @@ impl GraspEditorState {
 
     fn draw_position_property(ui: &mut Ui, d: &Tile) {
         if let (Value::F32(x), Value::F32(y)) = d.get_by(("x", "y")) {
-            let text = RichText::from(format!(
-                "{} : ({:.2}, {:.2})",
-                d.component.to_string(),
-                x,
-                y
-            ))
-            .size(15.0)
-            .color(Color32::LIGHT_YELLOW);
+            let text = RichText::from(format!("{} : ({:.2}, {:.2})", d.component, x, y))
+                .size(15.0)
+                .color(Color32::LIGHT_YELLOW);
             ui.heading(text);
         }
         // if ui.heading(text).double_clicked() {

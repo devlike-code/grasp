@@ -201,7 +201,7 @@ impl GraspEditorTab {
             let step = 50;
             let low_bound = (min_x - pan.x) as i32 / step;
             let upper_bound = (max_x - pan.x) as i32 / step;
-            let range_y = Rangef::new(min_y + 10.0 as f32, 20.0);
+            let range_y = Rangef::new(min_y + 10.0f32, 20.0);
             for i in low_bound..(upper_bound + 1) {
                 painter.vline(
                     (i * step) as f32 + pan.x,
