@@ -1,15 +1,12 @@
 use eframe::{egui, NativeOptions};
 use ini::Ini;
 use mosaic::querying::base_mosaic_query::Collage;
-
 use crate::editor_state_machine::EditorState;
-use eframe::NativeOptions;
 use mosaic::capabilities::ArchetypeSubject;
 use ::mosaic::internals::{EntityId, Mosaic, MosaicCRUD, MosaicIO, Tile, TileFieldQuery, Value};
 use egui::{ahash::HashMap, Ui, Vec2, WidgetText};
 use egui::{Pos2, Rect};
 use egui_dock::TabViewer;
-use ini::Ini;
 use itertools::Itertools;
 use mosaic::internals::{par, void, MosaicTypelevelCRUD};
 use quadtree_rs::entry::Entry;
