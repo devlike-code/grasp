@@ -47,13 +47,12 @@ impl GraspEditorTab {
     }
 
     fn draw_arrow(&mut self, painter: &Painter, arrow: &Tile) {
-        let source_pos = self.pos_with_pan(
-            get_pos_from_tile(&self.document_mosaic.get(arrow.source_id()).unwrap()).unwrap(),
-        );
+        let source_node = self.document_mosaic.get(arrow.source_id()).unwrap();
+        let target_node = self.document_mosaic.get(arrow.target_id()).unwrap();
 
-        let target_pos = self.pos_with_pan(
-            get_pos_from_tile(&self.document_mosaic.get(arrow.target_id()).unwrap()).unwrap(),
-        );
+        let source_pos = self.pos_with_pan(get_pos_from_tile(&source_node).unwrap());
+
+        let target_pos = self.pos_with_pan(get_pos_from_tile(&target_node).unwrap());
 
         self.internal_draw_arrow(
             painter,
@@ -67,49 +66,53 @@ impl GraspEditorTab {
 
     fn draw_node(&mut self, ui: &mut Ui, node: &Tile) {
         let painter = ui.painter();
+        if node.match_archetype(&["Position", "Label"]) {
+            let arcs = node.get_archetype(&["Position", "Label"]);
+            match (arcs.get("Position"), arcs.get("Label")) {
+                (Some(pos_component), Some(label)) => {
+                    let pos = self.pos_with_pan(Pos2::new(
+                        pos_component.get("x").as_f32(),
+                        pos_component.get("y").as_f32(),
+                    ));
 
-        match (node.get_component("Position"), node.get_component("Label")) {
-            (Some(pos_component), Some(label)) => {
-                let pos = self.pos_with_pan(Pos2::new(
-                    pos_component.get("x").as_f32(),
-                    pos_component.get("y").as_f32(),
-                ));
+                    painter.circle_filled(pos, 10.0, Color32::GRAY);
 
-                painter.circle_filled(pos, 10.0, Color32::GRAY);
+                    let floating_pos = pos.add(Vec2::new(10.0, 10.0));
 
-                let floating_pos = pos.add(Vec2::new(10.0, 10.0));
+                    if self.state == EditorState::Rename
+                        && self.editor_data.renaming == Some(node.id)
+                    {
+                        let text_edit = TextEdit::singleline(&mut self.editor_data.text)
+                            .char_limit(30)
+                            .cursor_at_end(true);
+                        let text_edit_response = ui.put(
+                            Rect::from_two_pos(
+                                floating_pos.add(Vec2::new(0.0, -5.0)),
+                                floating_pos.add(Vec2::new(60.0, 20.0)),
+                            ),
+                            text_edit,
+                        );
 
-                if self.state == EditorState::Rename && self.editor_data.renaming == Some(node.id) {
-                    let text_edit = TextEdit::singleline(&mut self.editor_data.text)
-                        .char_limit(30)
-                        .cursor_at_end(true);
-                    let text_edit_response = ui.put(
-                        Rect::from_two_pos(
-                            floating_pos.add(Vec2::new(0.0, -5.0)),
-                            floating_pos.add(Vec2::new(60.0, 20.0)),
-                        ),
-                        text_edit,
-                    );
+                        text_edit_response.request_focus();
 
-                    text_edit_response.request_focus();
-
-                    if ui.input(|i| i.key_pressed(egui::Key::Enter)) {
-                        self.trigger(EditorStateTrigger::EndDrag);
-                    } else if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
-                        self.editor_data.text = self.editor_data.previous_text.clone();
-                        self.trigger(EditorStateTrigger::EndDrag);
+                        if ui.input(|i| i.key_pressed(egui::Key::Enter)) {
+                            self.trigger(EditorStateTrigger::EndDrag);
+                        } else if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+                            self.editor_data.text = self.editor_data.previous_text.clone();
+                            self.trigger(EditorStateTrigger::EndDrag);
+                        }
+                    } else {
+                        painter.text(
+                            floating_pos,
+                            Align2::LEFT_CENTER,
+                            label.get("self").as_s32().to_string(),
+                            FontId::default(),
+                            Color32::GRAY,
+                        );
                     }
-                } else {
-                    painter.text(
-                        floating_pos,
-                        Align2::LEFT_CENTER,
-                        label.get("self").as_s32().to_string(),
-                        FontId::default(),
-                        Color32::GRAY,
-                    );
                 }
+                _ => {}
             }
-            _ => {},          
         }
     }
 
@@ -139,13 +142,14 @@ impl GraspEditorTab {
 
     fn draw_selected(&mut self, painter: &Painter) {
         for selected in &self.editor_data.selected {
+            let selected_pos_component = selected.get_component("Position").unwrap();
             let stroke = Stroke {
                 width: 0.5,
                 color: Color32::RED,
             };
             let selected_pos = self.pos_with_pan(Pos2::new(
-                selected.get("x").as_f32(),
-                selected.get("y").as_f32(),
+                selected_pos_component.get("x").as_f32(),
+                selected_pos_component.get("y").as_f32(),
             ));
 
             painter.circle(selected_pos, 11.0, Color32::RED, stroke);
@@ -284,7 +288,7 @@ impl GraspEditorTab {
             .document_mosaic
             .get_all()
             .filter_objects()
-            .include_component("Node")          
+            .include_component("Node")
         {
             self.draw_node(ui, &node);
         }

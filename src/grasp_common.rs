@@ -1,12 +1,13 @@
 use crate::editor_state_machine::EditorState;
 use eframe::NativeOptions;
+use mosaic::capabilities::ArchetypeSubject;
 use ::mosaic::internals::{EntityId, Mosaic, MosaicCRUD, MosaicIO, Tile, TileFieldQuery, Value};
 use egui::{ahash::HashMap, Ui, Vec2, WidgetText};
 use egui::{Pos2, Rect};
 use egui_dock::TabViewer;
 use ini::Ini;
 use itertools::Itertools;
-use mosaic::internals::{par, void};
+use mosaic::internals::{par, void, MosaicTypelevelCRUD};
 use quadtree_rs::entry::Entry;
 use quadtree_rs::{
     area::{Area, AreaBuilder},
@@ -68,6 +69,11 @@ pub struct GraspEditorData {
     pub renaming: Option<EntityId>,
     pub text: String,
     pub previous_text: String,
+    pub repositioning: Option<EntityId>,
+    pub x_pos: f32,
+    pub y_pos: f32,   
+    pub previous_x_pos: f32,
+    pub previous_y_pos: f32,   
 }
 
 //#[derive(Debug)]
@@ -165,7 +171,7 @@ impl GraspEditorTab {
     pub fn create_new_object(&mut self, pos: Pos2) {
         self.document_mosaic.new_type("Node: unit;").unwrap();
 
-        let obj = self.document_mosaic.new_object("Node", default_vals());
+        let obj = self.document_mosaic.new_object("Node", void());
    
         obj.add_component(
             "Position",
@@ -203,7 +209,8 @@ impl GraspEditorTabs {
 }
 
 pub fn get_pos_from_tile(tile: &Tile) -> Option<Pos2> {
-    if let (Value::F32(x), Value::F32(y)) = tile.get_by(("x", "y")) {
+    let tile_pos_component = tile.get_component("Position").unwrap();
+    if let (Value::F32(x), Value::F32(y)) = tile_pos_component.get_by(("x", "y")) {
         Some(Pos2::new(x, y))
     } else {
         None

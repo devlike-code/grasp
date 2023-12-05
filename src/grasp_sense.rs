@@ -39,14 +39,14 @@ impl GraspEditorTab {
         let mouse = self.sense_begin_frame(ui);
         let under_cursor = self.quadtree.query(self.build_cursor_area()).collect_vec();
         let mut areas_to_remove = vec![];
-       
+
         if ui.delete_down() {
             for selected in &self.editor_data.selected {
                 self.document_mosaic.delete_tile(selected.id);
                 if let Some(area_id) = self.node_to_area.get(&selected.id) {
                     areas_to_remove.push(*area_id);
-                   self.node_to_area.remove(&selected.id);
-                }                 
+                    self.node_to_area.remove(&selected.id);
+                }
             }
             self.editor_data.selected.clear();
         }
@@ -112,7 +112,9 @@ impl GraspEditorTab {
             //
         }
 
-        areas_to_remove.into_iter().for_each(|f: u64|{ self.quadtree.delete_by_handle(f); });
-       
+        areas_to_remove.into_iter().for_each(|f: u64| {
+            self.quadtree.delete_by_handle(f);
+        });
     }
 }
+

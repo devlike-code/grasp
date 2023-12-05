@@ -50,6 +50,9 @@ impl GraspEditorTab {
             }
 
             EditorState::Rename => {}
+
+            EditorState::Reposition => {}
+
         }
     }
 }

@@ -1,5 +1,6 @@
 use egui::{Pos2, Vec2};
 use mosaic::{
+    capabilities::ArchetypeSubject,
     internals::{MosaicIO, TileFieldQuery, TileFieldSetter, Value, S32},
     iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
 };
@@ -22,6 +23,7 @@ impl StateMachine for GraspEditorTab {
             }
 
             (_, EditorStateTrigger::DblClickToRename) => Some(EditorState::Rename),
+            (_, EditorStateTrigger::ClickToReposition) => Some(EditorState::Reposition),
 
             (_, EditorStateTrigger::MouseDownOverNode) => None,
             (_, EditorStateTrigger::ClickToSelect) => Some(EditorState::Idle),
@@ -74,11 +76,9 @@ impl StateMachine for GraspEditorTab {
                         .document_mosaic
                         .get(tile)
                         .unwrap()
-                        .iter()
-                        .get_descriptors()
-                        .include_component("Label")
-                        .next()
+                        .get_component("Label")                      
                     {
+                        //SET LABEL VALUE
                         TileFieldSetter::<S32>::set(
                             &mut label,
                             "self",
@@ -87,6 +87,27 @@ impl StateMachine for GraspEditorTab {
                     }
                 }
 
+                self.editor_data.renaming = None;
+                self.editor_data.previous_text.clear();
+                self.editor_data.text.clear();
+                Some(EditorState::Idle)
+            }
+            (EditorState::Reposition, _) => {         
+                if let Some(tile_id) = self.editor_data.repositioning {
+                  
+                    if let Some(mut pos) = self
+                        .document_mosaic
+                        .get(tile_id)
+                        .unwrap()
+                        .get_component("Position")
+                    {        
+                        pos.set("x", self.editor_data.x_pos);
+                        pos.set("y", self.editor_data.y_pos);
+                    }
+                }
+
+                self.update_quadtree_for_selected();
+         
                 self.editor_data.renaming = None;
                 self.editor_data.previous_text.clear();
                 self.editor_data.text.clear();
@@ -112,16 +133,19 @@ impl StateMachine for GraspEditorTab {
 impl GraspEditorTab {
     pub fn update_selected_positions_by(&mut self, dp: Vec2) {
         for tile in &mut self.editor_data.selected {
-            if let (Value::F32(x), Value::F32(y)) = tile.get_by(("x", "y")) {
-                tile.set("x", x + dp.x);
-                tile.set("y", y + dp.y);
+            let mut selected_pos_component = tile.get_component("Position").unwrap();
+            if let (Value::F32(x), Value::F32(y)) = selected_pos_component.get_by(("x", "y")) {
+                selected_pos_component.set("x", x + dp.x);
+                selected_pos_component.set("y", y + dp.y);
             }
         }
     }
 
     pub fn update_quadtree_for_selected(&mut self) {
         for tile in &self.editor_data.selected {
-            if let (Value::F32(x), Value::F32(y)) = tile.get_by(("x", "y")) {
+            let selected_pos_component = tile.get_component("Position").unwrap();
+
+            if let (Value::F32(x), Value::F32(y)) = selected_pos_component.get_by(("x", "y")) {
                 if let Some(area_id) = self.node_to_area.get(&tile.id) {
                     self.quadtree.delete_by_handle(*area_id);
 

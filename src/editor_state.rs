@@ -2,22 +2,23 @@ use std::sync::Arc;
 
 use egui::{
     ahash::{HashMap, HashMapExt},
-    CollapsingHeader, Color32, RichText, Ui,
+    Align, CollapsingHeader, Color32, Layout, RichText, Ui,
 };
 use egui_dock::{DockArea, DockState, Style};
 use mosaic::{
-    internals::{Mosaic, MosaicTypelevelCRUD, Tile, TileFieldQuery, Value, S32},
+    internals::{Mosaic, MosaicTypelevelCRUD, Tile, TileFieldQuery, TileFieldSetter, Value, S32},
     iterators::tile_getters::TileGetters,
 };
 use quadtree_rs::Quadtree;
 
 use crate::{
-    editor_state_machine::EditorState,
+    editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
     grasp_common::{GraspEditorTab, GraspEditorTabs},
 };
 use mosaic::capabilities::ArchetypeSubject;
 
-type ComponentRenderer = Box<dyn Fn(&mut Ui, &Tile)>;
+type ComponentRenderer = Box<dyn Fn(&mut Ui, &mut GraspEditorTab, Tile)>;
+
 //#[derive(Debug)]
 pub struct GraspEditorState {
     document_mosaic: Arc<Mosaic>,
@@ -93,7 +94,7 @@ impl GraspEditorState {
             .resizable(true)
             .show(ctx, |ui| {
                 if let Some((_, tab)) = self.dock_state.find_active_focused() {
-                    let selected = &tab.editor_data.selected;
+                    let selected = tab.editor_data.selected.clone();
                     for t in selected {
                         CollapsingHeader::new(RichText::from(format!(
                             "ID:{} {}",
@@ -102,17 +103,20 @@ impl GraspEditorState {
                         .default_open(true)
                         .show(ui, |ui| {
                             if t.match_archetype(&["Position", "Label"]) {
-                                let values = t.get_archetype(&["Position", "Label"]);
-                                let pos = values.get("Position").unwrap();
-                                let lab = values.get("Label").unwrap();
+                                let mut values = t.get_archetype(&["Position", "Label"]);
+                                let mut pos = values.get("Position").unwrap().clone();
+                                let mut lab = values.get("Label").unwrap().clone();
 
-                                if let Some(renderer) = self.component_renderers.get(&pos.component)
+                                if let Some(renderer) =
+                                    self.component_renderers.get(&"Position".into())
                                 {
-                                    renderer(ui, &pos);
+                                    renderer(ui, tab, pos);
                                 }
 
-                                if let Some(renderer) = self.component_renderers.get(&lab.component) {
-                                    renderer(ui, &lab);
+                                if let Some(renderer) =
+                                    self.component_renderers.get(&"Label".into())
+                                {
+                                    renderer(ui, tab, lab);
                                 }
                             }
                         });
@@ -185,23 +189,68 @@ impl GraspEditorState {
         });
     }
 
-    fn draw_label_property(ui: &mut Ui, d: &Tile) {
+    fn draw_label_property(ui: &mut Ui, tab: &mut GraspEditorTab, d: Tile) {
         ui.heading(
-            RichText::from(format!("{} --> {:?}", d.component, d.get("self")))
-                .italics()
-                .size(15.0)
-                .color(Color32::LIGHT_YELLOW),
+            RichText::from(format!(
+                "{} --> {:?}",
+                d.component,
+                d.get("self").as_s32().to_string()
+            ))
+            .italics()
+            .size(15.0)
+            .color(Color32::LIGHT_YELLOW),
         );
 
         // Add more widgets as needed.
     }
 
-    fn draw_position_property(ui: &mut Ui, d: &Tile) {
+    fn draw_position_property(ui: &mut Ui, mut tab: &mut GraspEditorTab, mut d: Tile) {
         if let (Value::F32(x), Value::F32(y)) = d.get_by(("x", "y")) {
-            let text = RichText::from(format!("{} : ({:.2}, {:.2})", d.component, x, y))
-                .size(15.0)
-                .color(Color32::LIGHT_YELLOW);
-            ui.heading(text);
+            let mut x_text = String::from(format!("{}", x));
+            let mut y_text = String::from(format!("{}", y));
+
+            ui.horizontal(|ui| {
+                fn round_float_on_2(f: f32) -> f32 {
+                    (f * 100.0).round() / 100.0
+                }
+
+                if tab.state == EditorState::Reposition
+                    && tab.editor_data.repositioning == Some(d.id)
+                {
+                    let mut x = tab.editor_data.x_pos.to_string();
+                    let mut y = tab.editor_data.y_pos.to_string();
+
+                    ui.with_layout(Layout::top_down(Align::Min), |ui| {
+                        ui.text_edit_singleline(&mut x);
+                        ui.text_edit_singleline(&mut y);
+                    });
+
+                    tab.editor_data.x_pos = x.parse().unwrap();
+                    tab.editor_data.y_pos = y.parse().unwrap();
+
+                    if ui.input(|i| i.key_pressed(egui::Key::Enter)) {
+                        tab.trigger(EditorStateTrigger::EndDrag);
+                    } else if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+                        tab.editor_data.x_pos = tab.editor_data.previous_x_pos.clone();
+                        tab.editor_data.y_pos = tab.editor_data.previous_y_pos.clone();
+                        tab.trigger(EditorStateTrigger::EndDrag);
+                    }
+                } else {
+                    ui.with_layout(Layout::top_down(Align::Min), |ui| {
+                        let x_response = ui.text_edit_singleline(&mut x_text);
+                        let y_response = ui.text_edit_singleline(&mut y_text);
+
+                        if x_response.has_focus() || y_response.has_focus() {
+                            tab.editor_data.repositioning = Some(d.id);
+
+                            tab.editor_data.x_pos = x;
+                            tab.editor_data.y_pos = y;
+
+                            tab.trigger(EditorStateTrigger::ClickToReposition);
+                        }
+                    });
+                }
+            });
         }
         // if ui.heading(text).double_clicked() {
         //     let text_edit = TextEdit::singleline(&mut self.editor_data.text)
