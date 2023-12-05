@@ -8,10 +8,7 @@ use egui::{
 use mosaic::capabilities::ArchetypeSubject;
 use mosaic::{
     internals::{MosaicIO, Tile},
-    iterators::{
-        component_selectors::ComponentSelectors, tile_filters::TileFilters,
-        tile_getters::TileGetters,
-    },
+    iterators::{component_selectors::ComponentSelectors, tile_filters::TileFilters},
 };
 use std::ops::Add;
 
@@ -64,6 +61,7 @@ impl GraspEditorTab {
         );
     }
 
+    #[allow(clippy::single_match)]
     fn draw_node(&mut self, ui: &mut Ui, node: &Tile) {
         let painter = ui.painter();
         if node.match_archetype(&["Position", "Label"]) {

@@ -2,7 +2,6 @@ use egui::{Pos2, Vec2};
 use mosaic::{
     capabilities::ArchetypeSubject,
     internals::{MosaicIO, TileFieldQuery, TileFieldSetter, Value, S32},
-    iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
 };
 
 use crate::{
@@ -76,7 +75,7 @@ impl StateMachine for GraspEditorTab {
                         .document_mosaic
                         .get(tile)
                         .unwrap()
-                        .get_component("Label")                      
+                        .get_component("Label")
                     {
                         //SET LABEL VALUE
                         TileFieldSetter::<S32>::set(
@@ -92,22 +91,21 @@ impl StateMachine for GraspEditorTab {
                 self.editor_data.text.clear();
                 Some(EditorState::Idle)
             }
-            (EditorState::Reposition, _) => {         
+            (EditorState::Reposition, _) => {
                 if let Some(tile_id) = self.editor_data.repositioning {
-                  
                     if let Some(mut pos) = self
                         .document_mosaic
                         .get(tile_id)
                         .unwrap()
                         .get_component("Position")
-                    {        
+                    {
                         pos.set("x", self.editor_data.x_pos);
                         pos.set("y", self.editor_data.y_pos);
                     }
                 }
 
                 self.update_quadtree_for_selected();
-         
+
                 self.editor_data.renaming = None;
                 self.editor_data.previous_text.clear();
                 self.editor_data.text.clear();

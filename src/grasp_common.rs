@@ -1,13 +1,13 @@
-use eframe::{egui, NativeOptions};
-use ini::Ini;
-use mosaic::querying::base_mosaic_query::Collage;
 use crate::editor_state_machine::EditorState;
-use mosaic::capabilities::ArchetypeSubject;
 use ::mosaic::internals::{EntityId, Mosaic, MosaicCRUD, MosaicIO, Tile, TileFieldQuery, Value};
+use eframe::{egui, NativeOptions};
 use egui::{ahash::HashMap, Ui, Vec2, WidgetText};
 use egui::{Pos2, Rect};
 use egui_dock::TabViewer;
+use ini::Ini;
 use itertools::Itertools;
+use mosaic::capabilities::ArchetypeSubject;
+use mosaic::internals::collage::Collage;
 use mosaic::internals::{par, void, MosaicTypelevelCRUD};
 use quadtree_rs::entry::Entry;
 use quadtree_rs::{
@@ -72,9 +72,9 @@ pub struct GraspEditorData {
     pub previous_text: String,
     pub repositioning: Option<EntityId>,
     pub x_pos: f32,
-    pub y_pos: f32,   
+    pub y_pos: f32,
     pub previous_x_pos: f32,
-    pub previous_y_pos: f32,   
+    pub previous_y_pos: f32,
 }
 
 //#[derive(Debug)]
@@ -174,7 +174,7 @@ impl GraspEditorTab {
         self.document_mosaic.new_type("Node: unit;").unwrap();
 
         let obj = self.document_mosaic.new_object("Node", void());
-   
+
         obj.add_component(
             "Position",
             vec![

@@ -5,11 +5,7 @@ use egui::{
     Align, CollapsingHeader, Color32, Layout, RichText, Ui,
 };
 use egui_dock::{DockArea, DockState, Style};
-use mosaic::{
-    internals::{Mosaic, MosaicTypelevelCRUD, Tile, TileFieldQuery, TileFieldSetter, Value, S32},
-    iterators::tile_getters::TileGetters,
-    querying::base_mosaic_query::tiles,
-};
+use mosaic::internals::{tiles, Mosaic, MosaicTypelevelCRUD, Tile, TileFieldQuery, Value, S32};
 use quadtree_rs::Quadtree;
 
 use crate::{
@@ -105,9 +101,9 @@ impl GraspEditorState {
                         .default_open(true)
                         .show(ui, |ui| {
                             if t.match_archetype(&["Position", "Label"]) {
-                                let mut values = t.get_archetype(&["Position", "Label"]);
-                                let mut pos = values.get("Position").unwrap().clone();
-                                let mut lab = values.get("Label").unwrap().clone();
+                                let values = t.get_archetype(&["Position", "Label"]);
+                                let pos = values.get("Position").unwrap().clone();
+                                let lab = values.get("Label").unwrap().clone();
 
                                 if let Some(renderer) =
                                     self.component_renderers.get(&"Position".into())
@@ -191,7 +187,7 @@ impl GraspEditorState {
         });
     }
 
-    fn draw_label_property(ui: &mut Ui, tab: &mut GraspEditorTab, d: Tile) {
+    fn draw_label_property(ui: &mut Ui, _tab: &mut GraspEditorTab, d: Tile) {
         ui.heading(
             RichText::from(format!(
                 "{} --> {:?}",
@@ -206,16 +202,12 @@ impl GraspEditorState {
         // Add more widgets as needed.
     }
 
-    fn draw_position_property(ui: &mut Ui, mut tab: &mut GraspEditorTab, mut d: Tile) {
+    fn draw_position_property(ui: &mut Ui, tab: &mut GraspEditorTab, d: Tile) {
         if let (Value::F32(x), Value::F32(y)) = d.get_by(("x", "y")) {
-            let mut x_text = String::from(format!("{}", x));
-            let mut y_text = String::from(format!("{}", y));
+            let mut x_text = format!("{}", x);
+            let mut y_text = format!("{}", y);
 
             ui.horizontal(|ui| {
-                fn round_float_on_2(f: f32) -> f32 {
-                    (f * 100.0).round() / 100.0
-                }
-
                 if tab.state == EditorState::Reposition
                     && tab.editor_data.repositioning == Some(d.id)
                 {
@@ -233,8 +225,8 @@ impl GraspEditorState {
                     if ui.input(|i| i.key_pressed(egui::Key::Enter)) {
                         tab.trigger(EditorStateTrigger::EndDrag);
                     } else if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
-                        tab.editor_data.x_pos = tab.editor_data.previous_x_pos.clone();
-                        tab.editor_data.y_pos = tab.editor_data.previous_y_pos.clone();
+                        tab.editor_data.x_pos = tab.editor_data.previous_x_pos;
+                        tab.editor_data.y_pos = tab.editor_data.previous_y_pos;
                         tab.trigger(EditorStateTrigger::EndDrag);
                     }
                 } else {
