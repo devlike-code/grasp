@@ -1,5 +1,6 @@
 use eframe::{egui, NativeOptions};
 use ini::Ini;
+use mosaic::querying::base_mosaic_query::Collage;
 
 use crate::editor_state_machine::EditorState;
 use ::mosaic::internals::{EntityId, Mosaic, MosaicCRUD, MosaicIO, Tile, TileFieldQuery, Value};
@@ -78,6 +79,7 @@ pub struct GraspEditorTab {
     pub quadtree: Quadtree<i32, EntityId>,
     pub document_mosaic: Arc<Mosaic>,
     pub node_to_area: HashMap<EntityId, u64>,
+    pub collage: Box<Collage>,
     pub ruler_visible: bool,
     pub grid_visible: bool,
     pub editor_data: GraspEditorData,

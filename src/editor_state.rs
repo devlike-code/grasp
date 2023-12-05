@@ -8,6 +8,7 @@ use egui_dock::{DockArea, DockState, Style};
 use mosaic::{
     internals::{Mosaic, MosaicTypelevelCRUD, Tile, TileFieldQuery, Value, S32},
     iterators::tile_getters::TileGetters,
+    querying::base_mosaic_query::tiles,
 };
 use quadtree_rs::Quadtree;
 
@@ -64,6 +65,7 @@ impl GraspEditorState {
             name: format!("Untitled {}", self.tabs.increment()),
             quadtree: Quadtree::new_with_anchor((-1000, -1000).into(), 16),
             document_mosaic: Arc::clone(&self.document_mosaic),
+            collage: tiles(),
             node_to_area: Default::default(),
             editor_data: Default::default(),
             state: EditorState::Idle,
