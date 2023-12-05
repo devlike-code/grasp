@@ -1,14 +1,15 @@
-use eframe::{egui, NativeOptions};
-use ini::Ini;
-
 use crate::editor_state_machine::EditorState;
 use ::mosaic::internals::{
     default_vals, self_val, EntityId, Mosaic, MosaicCRUD, MosaicIO, Tile, TileFieldQuery, Value,
 };
+use eframe::{egui, NativeOptions};
 use egui::{ahash::HashMap, Ui, Vec2, WidgetText};
 use egui::{Pos2, Rect};
 use egui_dock::TabViewer;
+use ini::Ini;
 use itertools::Itertools;
+use mosaic::capabilities::ArchetypeSubject;
+use mosaic::internals::MosaicTypelevelCRUD;
 use quadtree_rs::entry::Entry;
 use quadtree_rs::{
     area::{Area, AreaBuilder},
@@ -165,16 +166,18 @@ impl GraspEditorTab {
 
 impl GraspEditorTab {
     pub fn create_new_object(&mut self, pos: Pos2) {
-        let obj = self.document_mosaic.new_object(
+        self.document_mosaic.new_type("Node: unit;").unwrap();
+
+        let obj = self.document_mosaic.new_object("Node", default_vals());
+   
+        obj.add_component(
             "Position",
             vec![
                 ("x".into(), Value::F32(pos.x)),
                 ("y".into(), Value::F32(pos.y)),
             ],
         );
-
-        self.document_mosaic
-            .new_descriptor(&obj, "Label", self_val(Value::S32("Label!".into())));
+        obj.add_component("Label", self_val(Value::S32("<Label>".into())));
 
         let region = self.build_circle_area(pos, 10);
 

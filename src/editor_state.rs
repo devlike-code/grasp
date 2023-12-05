@@ -15,6 +15,7 @@ use crate::{
     editor_state_machine::EditorState,
     grasp_common::{GraspEditorTab, GraspEditorTabs},
 };
+use mosaic::capabilities::ArchetypeSubject;
 
 type ComponentRenderer = Box<dyn Fn(&mut Ui, &Tile)>;
 //#[derive(Debug)]
@@ -100,19 +101,18 @@ impl GraspEditorState {
                         )))
                         .default_open(true)
                         .show(ui, |ui| {
-                            for d in t.iter().get_descriptors() {
-                                if d.component.to_string() == "Label" {
-                                    if let Some(renderer) =
-                                        self.component_renderers.get(&d.component)
-                                    {
-                                        renderer(ui, &d);
-                                    }
-                                }
-                            }
+                            if t.match_archetype(&["Position", "Label"]) {
+                                let values = t.get_archetype(&["Position", "Label"]);
+                                let pos = values.get("Position").unwrap();
+                                let lab = values.get("Label").unwrap();
 
-                            if t.component.to_string() == "Position" {
-                                if let Some(renderer) = self.component_renderers.get(&t.component) {
-                                    renderer(ui, t);
+                                if let Some(renderer) = self.component_renderers.get(&pos.component)
+                                {
+                                    renderer(ui, &pos);
+                                }
+
+                                if let Some(renderer) = self.component_renderers.get(&lab.component) {
+                                    renderer(ui, &lab);
                                 }
                             }
                         });
