@@ -8,7 +8,7 @@ use mosaic::{
 };
 
 use crate::{
-    editor_state_machine::{EditorStateTrigger, StateMachine},
+    editor_state_machine::{EditorStateTrigger, StateMachine, EditorState},
     grasp_common::{GraspEditorTab, QuadTreeFetch, UiKeyDownExtract},
 };
 
@@ -40,7 +40,7 @@ impl GraspEditorTab {
         let under_cursor = self.quadtree.query(self.build_cursor_area()).collect_vec();
         let mut areas_to_remove = vec![];
 
-        if ui.delete_down() {
+        if ui.delete_down() && self.state == EditorState::Idle {
             for selected in &self.editor_data.selected {
                 self.document_mosaic.delete_tile(selected.id);
                 if let Some(area_id) = self.node_to_area.get(&selected.id) {

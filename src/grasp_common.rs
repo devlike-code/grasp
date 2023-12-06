@@ -71,10 +71,10 @@ pub struct GraspEditorData {
     pub text: String,
     pub previous_text: String,
     pub repositioning: Option<EntityId>,
-    pub x_pos: f32,
-    pub y_pos: f32,
-    pub previous_x_pos: f32,
-    pub previous_y_pos: f32,
+    pub x_pos: String,
+    pub y_pos: String,
+    pub previous_x_pos: String,
+    pub previous_y_pos: String,
 }
 
 pub struct GraspEditorTab {
@@ -115,18 +115,10 @@ pub trait UiKeyDownExtract {
 
 impl UiKeyDownExtract for Ui {
     fn alt_down(&self) -> bool {
-        let mut alt_down = false;
-        self.input(|input_state| {
-            alt_down = input_state.modifiers.alt;
-        });
-        alt_down
+        self.input(|input_state| input_state.modifiers.alt)
     }
     fn delete_down(&self) -> bool {
-        let mut delete_down = false;
-        self.input(|input_state| {
-            delete_down = input_state.keys_down.get(&egui::Key::Delete).is_some();
-        });
-        delete_down
+        self.input(|input_state| input_state.keys_down.get(&egui::Key::Delete).is_some())
     }
 }
 

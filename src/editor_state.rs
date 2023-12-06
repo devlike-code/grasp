@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use egui::{
     ahash::{HashMap, HashMapExt},
-    Align, CollapsingHeader, Color32, Layout, RichText, Ui,
+    Align, CollapsingHeader, Color32, Layout, Response, RichText, TextEdit, Ui,
 };
 use egui_dock::{DockArea, DockState, Style};
 use mosaic::{
@@ -230,86 +230,145 @@ impl GraspEditorState {
         });
     }
 
-    fn draw_label_property(ui: &mut Ui, _tab: &mut GraspEditorTab, d: Tile) {
-        ui.heading(
-            RichText::from(format!(
-                "{} --> {:?}",
-                d.component,
-                d.get("self").as_s32().to_string()
-            ))
-            .italics()
-            .size(15.0)
-            .color(Color32::LIGHT_YELLOW),
-        );
+    fn draw_label_property(ui: &mut Ui, tab: &mut GraspEditorTab, d: Tile) {
+        println!("DRAW LABEL STATE: {:?}", tab.state);
+        if let Some(label) = d.get_component("Label") {
+            let mut label_text = label.get("self").as_s32().to_string();
 
-        // Add more widgets as needed.
+            CollapsingHeader::new(RichText::from(format!("ID:{} {}", d.id, "LABEL")))
+                .default_open(true)
+                .show(ui, |ui| {
+                    ui.horizontal(|ui| {
+                        if tab.state == EditorState::Rename
+                            && tab.editor_data.renaming == Some(d.id)
+                        {
+                            let mut label = tab.editor_data.text.clone();
+
+                            ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
+                                ui.text_edit_singleline(&mut label);
+                            });
+
+                            tab.editor_data.text = label;
+
+                            if ui.input(|i| i.key_pressed(egui::Key::Enter)) {
+                                tab.trigger(EditorStateTrigger::EndDrag);
+                            } else if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+                                tab.editor_data.text = tab.editor_data.previous_text.clone();
+                                tab.trigger(EditorStateTrigger::EndDrag);
+                            }
+                        } else {
+                            ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
+                                let l_response = ui.text_edit_singleline(&mut label_text);
+
+                                if l_response.has_focus() {
+                                    tab.editor_data.renaming = Some(d.id);
+
+                                    tab.editor_data.text = label_text;
+                                    tab.editor_data.previous_text = tab.editor_data.text.clone();
+
+                                    tab.trigger(EditorStateTrigger::DblClickToRename);
+                                }
+                            });
+                        }
+                    });
+                });
+        }
     }
 
     fn draw_position_property(ui: &mut Ui, tab: &mut GraspEditorTab, d: Tile) {
+        println!("DRAW POSITION STATE: {:?}", tab.state);
         if let (Value::F32(x), Value::F32(y)) = d.get_by(("x", "y")) {
             let mut x_text = format!("{}", x);
             let mut y_text = format!("{}", y);
+            CollapsingHeader::new(RichText::from(format!("ID:{} {}", d.id, "POSITION")))
+                .default_open(true)
+                .show(ui, |ui| {
+                    //    ui.with_layout(Layout::left_to_right(Align::Center).with_cross_justify(true), |ui|{
+                    ui.horizontal(|ui| {
+                        if tab.state == EditorState::Reposition
+                            && tab.editor_data.repositioning == Some(d.id)
+                        {
+                            let mut x = tab.editor_data.x_pos.clone();
+                            let mut y = tab.editor_data.y_pos.clone();
 
-            ui.horizontal(|ui| {
-                if tab.state == EditorState::Reposition
-                    && tab.editor_data.repositioning == Some(d.id)
-                {
-                    let mut x = tab.editor_data.x_pos.to_string();
-                    let mut y = tab.editor_data.y_pos.to_string();
+                            ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
+                                egui::Grid::new("pos_size").show(ui, |ui| {
+                                    ui.horizontal(|ui| {
+                                        ui.label("x:");
+                                        ui.add(TextEdit::singleline(&mut x));
+                                    });
+                                    ui.horizontal(|ui| {
+                                        ui.label("y:");
+                                        ui.add(TextEdit::singleline(&mut y));
+                                    });
+                                    ui.end_row();
+                                });
+                            });
 
-                    ui.with_layout(Layout::top_down(Align::Min), |ui| {
-                        ui.text_edit_singleline(&mut x);
-                        ui.text_edit_singleline(&mut y);
-                    });
+                            if let Ok(x_parsed) = x.parse::<f32>() {
+                                if !x.ends_with('.') {
+                                    tab.editor_data.x_pos = x_parsed.to_string();
+                                } else {
+                                    tab.editor_data.x_pos = x.clone();
+                                }
+                            }
 
-                    tab.editor_data.x_pos = x.parse().unwrap();
-                    tab.editor_data.y_pos = y.parse().unwrap();
+                            if let Ok(y_parsed) = y.parse::<f32>() {
+                                if !y.ends_with('.') {
+                                    tab.editor_data.y_pos = y_parsed.to_string();
+                                } else {
+                                    tab.editor_data.y_pos = y.clone();
+                                }
+                            }
 
-                    if ui.input(|i| i.key_pressed(egui::Key::Enter)) {
-                        tab.trigger(EditorStateTrigger::EndDrag);
-                    } else if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
-                        tab.editor_data.x_pos = tab.editor_data.previous_x_pos;
-                        tab.editor_data.y_pos = tab.editor_data.previous_y_pos;
-                        tab.trigger(EditorStateTrigger::EndDrag);
-                    }
-                } else {
-                    ui.with_layout(Layout::top_down(Align::Min), |ui| {
-                        let x_response = ui.text_edit_singleline(&mut x_text);
-                        let y_response = ui.text_edit_singleline(&mut y_text);
+                            if ui.input(|i| i.key_pressed(egui::Key::Enter)) {
+                                tab.trigger(EditorStateTrigger::EndDrag);
+                            } else if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+                                tab.editor_data.repositioning = None;
+                                tab.trigger(EditorStateTrigger::EndDrag);
+                            }
+                        } else {
+                            ui.with_layout(
+                                Layout::left_to_right(Align::Center)
+                                    .with_cross_align(Align::Center),
+                                |ui| {
+                                    egui::Grid::new("pos_size").show(ui, |ui| {
+                                        let mut x_response: Option<Response> = None;
+                                        let mut y_response: Option<Response> = None;
 
-                        if x_response.has_focus() || y_response.has_focus() {
-                            tab.editor_data.repositioning = Some(d.id);
+                                        ui.horizontal(|ui| {
+                                            ui.label("x:");
+                                            x_response =
+                                                Some(ui.add(TextEdit::singleline(&mut x_text)));
+                                        });
+                                        ui.horizontal(|ui| {
+                                            ui.label("y:");
+                                            y_response =
+                                                Some(ui.add(TextEdit::singleline(&mut y_text)));
+                                        });
+                                        ui.end_row();
 
-                            tab.editor_data.x_pos = x;
-                            tab.editor_data.y_pos = y;
+                                        if x_response.unwrap().has_focus()
+                                            || y_response.unwrap().has_focus()
+                                        {
+                                            tab.editor_data.repositioning = Some(d.id);
 
-                            tab.trigger(EditorStateTrigger::ClickToReposition);
+                                            tab.editor_data.x_pos = x.to_string();
+                                            tab.editor_data.y_pos = y.to_string();
+                                            tab.editor_data.previous_x_pos =
+                                                tab.editor_data.x_pos.clone();
+                                            tab.editor_data.previous_x_pos =
+                                                tab.editor_data.y_pos.clone();
+
+                                            tab.trigger(EditorStateTrigger::ClickToReposition);
+                                        }
+                                    });
+                                },
+                            );
                         }
                     });
-                }
-            });
+                });
         }
-        // if ui.heading(text).double_clicked() {
-        //     let text_edit = TextEdit::singleline(&mut self.editor_data.text)
-        //         .char_limit(30)
-        //         .cursor_at_end(true);
-        //     let text_edit_response = ui.put(
-        //         Rect::from_two_pos(
-        //             floating_pos.add(Vec2::new(0.0, -5.0)),
-        //             floating_pos.add(Vec2::new(60.0, 20.0)),
-        //         ),
-        //         text_edit,
-        //     );
-        // if let Some((_, tab)) = self.dock_state.find_active_focused() {
-        //     tab.editor_data.renaming = Some(d.id);
-        //     tab.editor_data.selected = vec![d];
-        //     tab.editor_data.text = label.to_string();
-        //     tab.editor_data.previous_text = label.to_string();
-        // }
-
-        // self.trigger(DblClickToRename);
-        //}
-        //}
     }
 }
 

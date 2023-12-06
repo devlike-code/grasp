@@ -1,7 +1,7 @@
 use egui::{Pos2, Vec2};
 use mosaic::{
     capabilities::{ArchetypeSubject, QueueCapability},
-    internals::{void, MosaicIO, TileFieldQuery, TileFieldSetter, Value, S32},
+    internals::{void, MosaicCRUD, MosaicIO, TileFieldQuery, TileFieldSetter, Value, S32},
     iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
 };
 
@@ -29,6 +29,7 @@ impl StateMachine for GraspEditorTab {
     type State = EditorState;
 
     fn on_transition(&mut self, from: Self::State, trigger: Self::Trigger) -> Option<EditorState> {
+        println!("TRANSITIION FROM = {:?}, TRIGGER -> {:?}", from, trigger);
         match (from, trigger) {
             (_, EditorStateTrigger::DblClickToCreate) => {
                 self.create_new_object(self.editor_data.cursor);
@@ -109,14 +110,22 @@ impl StateMachine for GraspEditorTab {
             }
             (EditorState::Reposition, _) => {
                 if let Some(tile_id) = self.editor_data.repositioning {
-                    if let Some(mut pos) = self
-                        .document_mosaic
-                        .get(tile_id)
-                        .unwrap()
-                        .get_component("Position")
-                    {
-                        pos.set("x", self.editor_data.x_pos);
-                        pos.set("y", self.editor_data.y_pos);
+                    if self.document_mosaic.is_tile_valid(&tile_id) {
+                        if let Some(mut pos) = self
+                            .document_mosaic
+                            .get(tile_id)
+                            .unwrap()
+                            .get_component("Position")
+                        {
+                            pos.set(
+                                "x",
+                                self.editor_data.x_pos.parse::<f32>().unwrap_or_default(),
+                            );
+                            pos.set(
+                                "y",
+                                self.editor_data.y_pos.parse::<f32>().unwrap_or_default(),
+                            );
+                        }
                     }
                 }
 
