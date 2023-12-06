@@ -340,7 +340,6 @@ impl eframe::App for GraspEditorState {
                     .enqueue(&tab, &self.document_mosaic.new_object("void", void()));
 
                 request.iter().delete();
-                println!("SENDING REQUEST TO UPDATE TAB TO {:?}", tab);
             }
         }
 
