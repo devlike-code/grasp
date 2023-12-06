@@ -2,7 +2,7 @@ use crate::editor_state_machine::EditorState;
 use ::mosaic::internals::{EntityId, Mosaic, MosaicCRUD, MosaicIO, Tile, TileFieldQuery, Value};
 use eframe::{egui, NativeOptions};
 use egui::{ahash::HashMap, Ui, Vec2, WidgetText};
-use egui::{Pos2, Rect};
+use egui::{Pos2, Rect, Response};
 use egui_dock::TabViewer;
 use ini::Ini;
 use itertools::Itertools;
@@ -77,9 +77,9 @@ pub struct GraspEditorData {
     pub previous_y_pos: f32,
 }
 
-//#[derive(Debug)]
 pub struct GraspEditorTab {
     pub name: String,
+    pub tab_tile: Tile,
     pub state: EditorState,
     pub quadtree: Quadtree<i32, EntityId>,
     pub document_mosaic: Arc<Mosaic>,
@@ -88,6 +88,7 @@ pub struct GraspEditorTab {
     pub ruler_visible: bool,
     pub grid_visible: bool,
     pub editor_data: GraspEditorData,
+    pub response: Option<Response>,
 }
 
 pub trait QuadTreeFetch {
@@ -211,9 +212,12 @@ impl GraspEditorTabs {
 }
 
 pub fn get_pos_from_tile(tile: &Tile) -> Option<Pos2> {
-    let tile_pos_component = tile.get_component("Position").unwrap();
-    if let (Value::F32(x), Value::F32(y)) = tile_pos_component.get_by(("x", "y")) {
-        Some(Pos2::new(x, y))
+    if let Some(tile_pos_component) = tile.get_component("Position") {
+        if let (Value::F32(x), Value::F32(y)) = tile_pos_component.get_by(("x", "y")) {
+            Some(Pos2::new(x, y))
+        } else {
+            None
+        }
     } else {
         None
     }

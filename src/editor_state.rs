@@ -5,7 +5,16 @@ use egui::{
     Align, CollapsingHeader, Color32, Layout, RichText, Ui,
 };
 use egui_dock::{DockArea, DockState, Style};
-use mosaic::internals::{tiles, Mosaic, MosaicTypelevelCRUD, Tile, TileFieldQuery, Value, S32};
+use mosaic::{
+    internals::{
+        tiles, void, Collage, Mosaic, MosaicCRUD, MosaicIO, MosaicTypelevelCRUD, Tile,
+        TileFieldQuery, Value, S32,
+    },
+    iterators::{
+        component_selectors::ComponentSelectors, tile_deletion::TileDeletion,
+        tile_getters::TileGetters,
+    },
+};
 use quadtree_rs::Quadtree;
 
 use crate::{
@@ -13,6 +22,8 @@ use crate::{
     grasp_common::{GraspEditorTab, GraspEditorTabs},
 };
 use mosaic::capabilities::ArchetypeSubject;
+use mosaic::capabilities::CollageImportCapability;
+use mosaic::capabilities::QueueCapability;
 
 type ComponentRenderer = Box<dyn Fn(&mut Ui, &mut GraspEditorTab, Tile)>;
 
@@ -22,17 +33,38 @@ pub struct GraspEditorState {
     component_renderers: HashMap<S32, ComponentRenderer>,
     tabs: GraspEditorTabs,
     dock_state: DockState<GraspEditorTab>,
+    editor_state_tile: Tile,
+    new_tab_request_queue: Tile,
+    refresh_quadtree_queue: Tile,
 }
 
 impl GraspEditorState {
     pub fn new() -> Self {
         let document_mosaic = Mosaic::new();
+
         document_mosaic.new_type("Arrow: unit;").unwrap();
         document_mosaic.new_type("Label: s32;").unwrap();
         document_mosaic
             .new_type("Position: { x: f32, y: f32 };")
             .unwrap();
         document_mosaic.new_type("Selection: unit;").unwrap();
+        document_mosaic.new_type("EditorState: unit;").unwrap();
+        document_mosaic.new_type("EditorTab: unit;").unwrap();
+        document_mosaic.new_type("ToTab: unit;").unwrap();
+        document_mosaic
+            .new_type("NewTabRequestQueue: unit;")
+            .unwrap();
+        document_mosaic
+            .new_type("RefreshQuadtreeQueue: unit;")
+            .unwrap();
+
+        let editor_state_tile = document_mosaic.new_object("EditorState", void());
+
+        let new_tab_request_queue = document_mosaic.make_queue();
+        new_tab_request_queue.add_component("NewTabRequestQueue", void());
+
+        let refresh_quadtree_queue = document_mosaic.make_queue();
+        refresh_quadtree_queue.add_component("RefreshQuadtreeQueue", void());
 
         let dock_state = DockState::new(vec![]);
 
@@ -41,6 +73,9 @@ impl GraspEditorState {
             document_mosaic,
             component_renderers: HashMap::new(),
             dock_state,
+            editor_state_tile,
+            new_tab_request_queue,
+            refresh_quadtree_queue,
             tabs: GraspEditorTabs::default(),
         };
 
@@ -52,23 +87,31 @@ impl GraspEditorState {
             .component_renderers
             .insert("Position".into(), Box::new(Self::draw_position_property));
 
-        let tab = state.new_tab();
+        let tab = state.new_tab(tiles());
         state.dock_state.main_surface_mut().push_to_first_leaf(tab);
 
         state
     }
 
-    pub fn new_tab(&mut self) -> GraspEditorTab {
+    pub fn new_tab(&mut self, collage: Box<Collage>) -> GraspEditorTab {
+        let tab_tile = self.document_mosaic.make_queue();
+        tab_tile.add_component("EditorTab", void());
+
+        self.document_mosaic
+            .new_arrow(&self.editor_state_tile, &tab_tile, "ToTab", void());
+
         GraspEditorTab {
             name: format!("Untitled {}", self.tabs.increment()),
+            tab_tile,
             quadtree: Quadtree::new_with_anchor((-1000, -1000).into(), 16),
             document_mosaic: Arc::clone(&self.document_mosaic),
-            collage: tiles(),
+            collage,
             node_to_area: Default::default(),
             editor_data: Default::default(),
             state: EditorState::Idle,
             grid_visible: false,
             ruler_visible: false,
+            response: None,
         }
     }
 
@@ -136,7 +179,7 @@ impl GraspEditorState {
     fn show_document(&mut self, ui: &mut Ui, frame: &mut eframe::Frame) {
         ui.menu_button("Document", |ui| {
             if ui.button("New Tab").clicked() {
-                let tab = self.new_tab();
+                let tab = self.new_tab(tiles());
                 self.dock_state.main_surface_mut().push_to_first_leaf(tab);
 
                 ui.close_menu();
@@ -273,9 +316,34 @@ impl GraspEditorState {
 impl eframe::App for GraspEditorState {
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         ctx.set_visuals(egui::Visuals::dark());
+
         self.menu_bar(ctx, frame);
         self.left_sidebar(ctx, frame);
         self.right_sidebar(ctx, frame);
+
+        while let Some(request) = self.document_mosaic.dequeue(&self.new_tab_request_queue) {
+            if let Some(collage) = request.to_collage() {
+                let tab = self.new_tab(collage);
+                self.dock_state.main_surface_mut().push_to_first_leaf(tab);
+            }
+        }
+
+        while let Some(request) = self.document_mosaic.dequeue(&self.refresh_quadtree_queue) {
+            for tab in self
+                .editor_state_tile
+                .iter()
+                .get_arrows_from()
+                .include_component("ToTab")
+                .get_targets()
+            {
+                self.document_mosaic
+                    .enqueue(&tab, &self.document_mosaic.new_object("void", void()));
+
+                request.iter().delete();
+                println!("SENDING REQUEST TO UPDATE TAB TO {:?}", tab);
+            }
+        }
+
         self.show_tabs(ctx, frame);
     }
 }

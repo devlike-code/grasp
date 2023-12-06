@@ -1,7 +1,8 @@
 use egui::{Pos2, Vec2};
 use mosaic::{
-    capabilities::ArchetypeSubject,
-    internals::{MosaicIO, TileFieldQuery, TileFieldSetter, Value, S32},
+    capabilities::{ArchetypeSubject, QueueCapability},
+    internals::{void, MosaicIO, TileFieldQuery, TileFieldSetter, Value, S32},
+    iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
 };
 
 use crate::{
@@ -9,15 +10,29 @@ use crate::{
     grasp_common::{get_pos_from_tile, GraspEditorTab},
 };
 
+impl GraspEditorTab {
+    pub(crate) fn request_quadtree_update(&self) {
+        let queue = self
+            .document_mosaic
+            .get_all()
+            .include_component("RefreshQuadtreeQueue")
+            .get_targets()
+            .next()
+            .unwrap();
+        let request = self.document_mosaic.new_object("void", void());
+        self.document_mosaic.enqueue(&queue, &request);
+    }
+}
+
 impl StateMachine for GraspEditorTab {
     type Trigger = EditorStateTrigger;
     type State = EditorState;
 
     fn on_transition(&mut self, from: Self::State, trigger: Self::Trigger) -> Option<EditorState> {
-        println!("ON TRANSITION {:?} --{:?}--> ", from, trigger);
         match (from, trigger) {
             (_, EditorStateTrigger::DblClickToCreate) => {
                 self.create_new_object(self.editor_data.cursor);
+                self.request_quadtree_update();
                 Some(EditorState::Idle)
             }
 
@@ -56,11 +71,12 @@ impl StateMachine for GraspEditorTab {
                 self.editor_data.selected.clear();
                 self.editor_data.link_start_pos = None;
                 self.editor_data.link_end = None;
+                self.request_quadtree_update();
                 Some(EditorState::Idle)
             }
             (EditorState::Move, EditorStateTrigger::EndDrag) => {
                 self.update_selected_positions_by(self.editor_data.cursor_delta);
-                self.update_quadtree_for_selected();
+                self.request_quadtree_update();
                 Some(EditorState::Idle)
             }
             (EditorState::Rect, EditorStateTrigger::EndDrag) => {
@@ -147,6 +163,33 @@ impl GraspEditorTab {
                 if let Some(area_id) = self.node_to_area.get(&tile.id) {
                     self.quadtree.delete_by_handle(*area_id);
 
+                    let region = self.build_circle_area(Pos2::new(x, y), 10);
+                    if let Some(area_id) = self.quadtree.insert(region, tile.id) {
+                        self.node_to_area.insert(tile.id, area_id);
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn update_quadtree(&mut self) {
+        for tile in self
+            .document_mosaic
+            .get_all()
+            .include_component("Position")
+            .get_targets()
+        {
+            let selected_pos_component = tile.get_component("Position").unwrap();
+
+            if let (Value::F32(x), Value::F32(y)) = selected_pos_component.get_by(("x", "y")) {
+                if let Some(area_id) = self.node_to_area.get(&tile.id) {
+                    self.quadtree.delete_by_handle(*area_id);
+
+                    let region = self.build_circle_area(Pos2::new(x, y), 10);
+                    if let Some(area_id) = self.quadtree.insert(region, tile.id) {
+                        self.node_to_area.insert(tile.id, area_id);
+                    }
+                } else {
                     let region = self.build_circle_area(Pos2::new(x, y), 10);
                     if let Some(area_id) = self.quadtree.insert(region, tile.id) {
                         self.node_to_area.insert(tile.id, area_id);

@@ -5,7 +5,7 @@ use crate::{
 use egui::{
     Align2, Color32, FontId, Painter, Pos2, Rangef, Rect, Rounding, Stroke, TextEdit, Ui, Vec2,
 };
-use mosaic::capabilities::ArchetypeSubject;
+use mosaic::{capabilities::ArchetypeSubject, internals::MosaicCollage};
 use mosaic::{
     internals::{MosaicIO, Tile},
     iterators::{component_selectors::ComponentSelectors, tile_filters::TileFilters},
@@ -13,6 +13,32 @@ use mosaic::{
 use std::ops::Add;
 
 impl GraspEditorTab {
+    pub fn draw_debug(&mut self, ui: &mut Ui) {
+        let painter = ui.painter();
+
+        self.quadtree.iter().for_each(|area| {
+            let anchor_pos = self.pos_with_pan(Pos2 {
+                x: area.anchor().x as f32,
+                y: area.anchor().y as f32,
+            });
+            painter.rect(
+                Rect {
+                    min: Pos2 {
+                        x: anchor_pos.x,
+                        y: anchor_pos.y,
+                    },
+                    max: Pos2 {
+                        x: (anchor_pos.x + area.width() as f32),
+                        y: (anchor_pos.y + area.height() as f32),
+                    },
+                },
+                Rounding::ZERO,
+                Color32::TRANSPARENT,
+                Stroke::new(1.0, Color32::RED),
+            );
+        });
+    }
+
     fn internal_draw_arrow(
         &self,
         painter: &egui::Painter,
@@ -48,7 +74,6 @@ impl GraspEditorTab {
         let target_node = self.document_mosaic.get(arrow.target_id()).unwrap();
 
         let source_pos = self.pos_with_pan(get_pos_from_tile(&source_node).unwrap());
-
         let target_pos = self.pos_with_pan(get_pos_from_tile(&target_node).unwrap());
 
         self.internal_draw_arrow(
@@ -282,9 +307,10 @@ impl GraspEditorTab {
     }
 
     pub fn render(&mut self, ui: &mut Ui) {
-        for node in self
-            .document_mosaic
-            .get_all()
+        let tab_mosaic = self.document_mosaic.apply_collage(&self.collage, None);
+
+        for node in tab_mosaic
+            .clone()
             .filter_objects()
             .include_component("Node")
         {
@@ -293,7 +319,7 @@ impl GraspEditorTab {
 
         let painter = ui.painter();
 
-        for arrow in self.document_mosaic.get_all().filter_arrows() {
+        for arrow in tab_mosaic.filter_arrows().include_component("Arrow") {
             self.draw_arrow(painter, &arrow);
         }
 
@@ -303,5 +329,7 @@ impl GraspEditorTab {
         if self.ruler_visible {
             self.draw_ruler(ui);
         }
+
+        self.draw_debug(ui);
     }
 }

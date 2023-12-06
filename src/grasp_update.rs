@@ -1,16 +1,54 @@
-use egui::{CursorIcon, Rect, Ui};
+use egui::{CursorIcon, Key, Rect, Ui};
 use itertools::Itertools;
-use mosaic::internals::MosaicIO;
+use mosaic::{
+    capabilities::QueueCapability,
+    internals::{take_objects, tiles, MosaicIO},
+    iterators::{
+        component_selectors::ComponentSelectors, tile_deletion::TileDeletion,
+        tile_getters::TileGetters,
+    },
+};
 
 use crate::{
     editor_state_machine::EditorState,
     grasp_common::{GraspEditorTab, QuadTreeFetch},
 };
+use mosaic::capabilities::CollageExportCapability;
 
 impl GraspEditorTab {
     pub fn update(&mut self, ui: &mut Ui) {
+        while let Some(request) = self.document_mosaic.dequeue(&self.tab_tile) {
+            self.update_quadtree();
+            request.iter().delete();
+        }
+
         match &self.state {
-            EditorState::Idle => {}
+            EditorState::Idle => {
+                if ui.input(|i| i.key_released(Key::F12)) {
+                    let content = self.document_mosaic.dot();
+                    open::that(format!(
+                        "https://dreampuf.github.io/GraphvizOnline/#{}",
+                        urlencoding::encode(content.as_str())
+                    ))
+                    .unwrap();
+                }
+
+                // EXAMPLE USAGE FOR COLLAGE:
+                if ui.input(|i| i.key_released(Key::Space)) {
+                    if let Some(queue) = self
+                        .document_mosaic
+                        .get_all()
+                        .include_component("NewTabRequestQueue")
+                        .get_targets()
+                        .next()
+                    {
+                        self.document_mosaic.enqueue(
+                            &queue,
+                            &take_objects(tiles()).to_tiles(&self.document_mosaic),
+                        );
+                    }
+                }
+            }
 
             EditorState::Move => {
                 self.update_selected_positions_by(self.editor_data.cursor_delta);
@@ -52,7 +90,6 @@ impl GraspEditorTab {
             EditorState::Rename => {}
 
             EditorState::Reposition => {}
-
         }
     }
 }
