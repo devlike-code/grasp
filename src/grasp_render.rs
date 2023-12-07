@@ -102,8 +102,8 @@ impl GraspEditorTab {
 
                     let floating_pos = pos.add(Vec2::new(10.0, 10.0));
 
-                    if self.state == EditorState::Rename
-                        && self.editor_data.renaming == Some(node.id)
+                    if self.state == EditorState::PropertyChanging
+                        && self.editor_data.tile_changing == Some(node.id)
                     {
                         let text_edit = TextEdit::singleline(&mut self.editor_data.text)
                             .char_limit(30)

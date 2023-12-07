@@ -6,7 +6,7 @@ pub enum EditorState {
     Move,
     Link,
     Rect,
-    Rename,
+    PropertyChanging,
     Reposition,
     ContextMenu,
 }
