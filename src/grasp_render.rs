@@ -330,6 +330,7 @@ impl GraspEditorTab {
             self.draw_ruler(ui);
         }
 
+        self.update_context_menu(ui);
         self.draw_debug(ui);
     }
 }

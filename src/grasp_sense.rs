@@ -8,7 +8,7 @@ use mosaic::{
 };
 
 use crate::{
-    editor_state_machine::{EditorStateTrigger, StateMachine, EditorState},
+    editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
     grasp_common::{GraspEditorTab, QuadTreeFetch, UiKeyDownExtract},
 };
 
@@ -102,14 +102,22 @@ impl GraspEditorTab {
             self.editor_data.rect_start_pos = Some(self.editor_data.cursor);
             self.trigger(DragToSelect);
             //
-        } else if mouse.drag_started_by(egui::PointerButton::Secondary) {
+        } else if mouse.drag_started_by(egui::PointerButton::Middle) {
             //
             self.trigger(DragToPan);
             //
-        } else if mouse.drag_released() {
+        } else if mouse.drag_released_by(egui::PointerButton::Primary)
+            || mouse.drag_released_by(egui::PointerButton::Middle)
+        {
             //
             self.trigger(EndDrag);
             //
+        } else if ui.mouse_secondary_down() {
+            if !under_cursor.is_empty() && self.editor_data.selected.is_empty() {
+                self.editor_data.selected = under_cursor.fetch_tiles(&self.document_mosaic);
+            }
+            self.response = Some(mouse.clone());
+            self.trigger(ClickToContextMenu);
         }
 
         areas_to_remove.into_iter().for_each(|f: u64| {
@@ -117,4 +125,3 @@ impl GraspEditorTab {
         });
     }
 }
-

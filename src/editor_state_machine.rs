@@ -8,6 +8,7 @@ pub enum EditorState {
     Rect,
     Rename,
     Reposition,
+    ContextMenu,
 }
 
 #[allow(dead_code)]
@@ -28,6 +29,8 @@ pub enum EditorStateTrigger {
     DragToLink,
 
     EndDrag,
+
+    ClickToContextMenu,
 }
 
 pub trait StateMachine {

@@ -111,6 +111,7 @@ impl QuadTreeFetch for Vec<&Entry<i32, EntityId>> {
 pub trait UiKeyDownExtract {
     fn alt_down(&self) -> bool;
     fn delete_down(&self) -> bool;
+    fn mouse_secondary_down(&self) -> bool;
 }
 
 impl UiKeyDownExtract for Ui {
@@ -119,6 +120,10 @@ impl UiKeyDownExtract for Ui {
     }
     fn delete_down(&self) -> bool {
         self.input(|input_state| input_state.keys_down.get(&egui::Key::Delete).is_some())
+    }
+
+    fn mouse_secondary_down(&self) -> bool {
+        self.input(|input| input.pointer.secondary_down())
     }
 }
 

@@ -56,7 +56,11 @@ impl StateMachine for GraspEditorTab {
                 Some(EditorState::Link)
             }
             (_, EditorStateTrigger::DragToMove) => Some(EditorState::Move),
-
+            (_, EditorStateTrigger::ClickToContextMenu) => Some(EditorState::ContextMenu),
+            (EditorState::ContextMenu, _) => {
+                self.response = None;
+                Some(EditorState::Idle)
+            }
             (EditorState::Idle, EditorStateTrigger::DragToSelect) => {
                 self.editor_data.rect_delta = Some(Vec2::ZERO);
                 self.editor_data.rect_start_pos = Some(self.editor_data.cursor);
