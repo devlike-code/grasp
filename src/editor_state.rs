@@ -1,17 +1,23 @@
-use std::{env, fs, sync::Arc};
+use std::{env, fmt::Display, fs, str::FromStr, sync::Arc};
 
 use egui::{
     ahash::{HashMap, HashMapExt},
-    Align, Align2, CollapsingHeader, Context, Layout, Pos2, Response, RichText, TextEdit, Ui,
+    text::LayoutJob,
+    Align, Align2, CollapsingHeader, Context, Label, Layout, Pos2, Response, RichText, TextEdit,
+    Ui,
 };
 
 use egui_dock::{DockArea, DockState, Style};
+use egui_extras::Size;
+use egui_grid::GridBuilder;
 use egui_toast::{Toast, ToastKind, ToastOptions, Toasts};
+use epi::egui::plot::Text;
+use itertools::Itertools;
 use mosaic::{
-    capabilities::QueueTile,
+    capabilities::{Archetype, QueueTile},
     internals::{
-        par, tiles, void, Collage, Mosaic, MosaicCRUD, MosaicIO, MosaicTypelevelCRUD, Tile,
-        TileFieldQuery, Value, S32,
+        par, tiles, void, Collage, ComponentField, Datatype, Mosaic, MosaicCRUD, MosaicIO,
+        MosaicTypelevelCRUD, Tile, TileFieldQuery, TileFieldSetter, ToByteArray, Value, S32,
     },
     iterators::{
         component_selectors::ComponentSelectors, tile_deletion::TileDeletion,
@@ -116,13 +122,13 @@ impl GraspEditorState {
             tabs: GraspEditorTabs::default(),
         };
 
-        state
-            .component_renderers
-            .insert("Label".into(), Box::new(Self::draw_label_property));
+        // state
+        //     .component_renderers
+        //     .insert("Label".into(), Box::new(Self::draw_label_property));
 
-        state
-            .component_renderers
-            .insert("Position".into(), Box::new(Self::draw_position_property));
+        // state
+        //     .component_renderers
+        //     .insert("Position".into(), Box::new(Self::draw_position_property));
 
         let tab = state.new_tab(tiles());
         state.dock_state.main_surface_mut().push_to_first_leaf(tab);
@@ -176,26 +182,44 @@ impl GraspEditorState {
                     let selected = tab.editor_data.selected.clone();
                     for t in selected {
                         CollapsingHeader::new(RichText::from(format!(
-                            "ID:{} {}",
+                            "[ID:{}] {}",
                             t.id, "PROPERTIES"
                         )))
                         .default_open(true)
                         .show(ui, |ui| {
-                            if t.match_archetype(&["Position", "Label"]) {
-                                let values = t.get_archetype(&["Position", "Label"]);
-                                let pos = values.get("Position").unwrap().clone();
-                                let lab = values.get("Label").unwrap().clone();
+                            for (part, tiles) in
+                                &t.get_full_archetype().into_iter().sorted().collect_vec()
+                            {
+                                let mut draw_separator = tiles.len() - 1;
+                                for tile in tiles.iter().sorted() {
+                                    if let Some(renderer) =
+                                        self.component_renderers.get(&part.as_str().into())
+                                    {
+                                        CollapsingHeader::new(RichText::from(format!(
+                                            "[ID: {}] {}",
+                                            tile.id,
+                                            part.to_uppercase()
+                                        )))
+                                        .default_open(true)
+                                        .show(ui, |ui| {
+                                            renderer(ui, tab, tile.clone());
+                                        });
+                                    } else {
+                                        CollapsingHeader::new(RichText::from(format!(
+                                            "[ID: {}] {}",
+                                            tile.id,
+                                            part.to_uppercase()
+                                        )))
+                                        .default_open(true)
+                                        .show(ui, |ui| {
+                                            draw_default_renderer(ui, tab, tile.clone());
+                                        });
+                                    }
 
-                                if let Some(renderer) =
-                                    self.component_renderers.get(&"Position".into())
-                                {
-                                    renderer(ui, tab, pos);
-                                }
-
-                                if let Some(renderer) =
-                                    self.component_renderers.get(&"Label".into())
-                                {
-                                    renderer(ui, tab, lab);
+                                    if draw_separator > 0 {
+                                        ui.separator();
+                                        draw_separator -= 1;
+                                    }
                                 }
                             }
                         });
@@ -304,43 +328,37 @@ impl GraspEditorState {
         if let Some(label) = d.get_component("Label") {
             let mut label_text = label.get("self").as_s32().to_string();
 
-            CollapsingHeader::new(RichText::from(format!("ID:{} {}", d.id, "LABEL")))
-                .default_open(true)
-                .show(ui, |ui| {
-                    ui.horizontal(|ui| {
-                        if tab.state == EditorState::Rename
-                            && tab.editor_data.renaming == Some(d.id)
-                        {
-                            let mut label = tab.editor_data.text.clone();
+            ui.horizontal(|ui| {
+                if tab.state == EditorState::Rename && tab.editor_data.renaming == Some(d.id) {
+                    let mut label = tab.editor_data.text.clone();
 
-                            ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
-                                ui.text_edit_singleline(&mut label);
-                            });
+                    ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
+                        ui.text_edit_singleline(&mut label);
+                    });
 
-                            tab.editor_data.text = label;
+                    tab.editor_data.text = label;
 
-                            if ui.input(|i| i.key_pressed(egui::Key::Enter)) {
-                                tab.trigger(EditorStateTrigger::EndDrag);
-                            } else if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
-                                tab.editor_data.text = tab.editor_data.previous_text.clone();
-                                tab.trigger(EditorStateTrigger::EndDrag);
-                            }
-                        } else {
-                            ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
-                                let l_response = ui.text_edit_singleline(&mut label_text);
+                    if ui.input(|i| i.key_pressed(egui::Key::Enter)) {
+                        tab.trigger(EditorStateTrigger::EndDrag);
+                    } else if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+                        tab.editor_data.text = tab.editor_data.previous_text.clone();
+                        tab.trigger(EditorStateTrigger::EndDrag);
+                    }
+                } else {
+                    ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
+                        let l_response = ui.text_edit_singleline(&mut label_text);
 
-                                if l_response.has_focus() {
-                                    tab.editor_data.renaming = Some(d.id);
+                        if l_response.has_focus() {
+                            tab.editor_data.renaming = Some(d.id);
 
-                                    tab.editor_data.text = label_text;
-                                    tab.editor_data.previous_text = tab.editor_data.text.clone();
+                            tab.editor_data.text = label_text;
+                            tab.editor_data.previous_text = tab.editor_data.text.clone();
 
-                                    tab.trigger(EditorStateTrigger::DblClickToRename);
-                                }
-                            });
+                            tab.trigger(EditorStateTrigger::DblClickToRename);
                         }
                     });
-                });
+                }
+            });
         }
     }
 
@@ -436,6 +454,92 @@ impl GraspEditorState {
                         }
                     });
                 });
+        }
+    }
+}
+
+fn draw_default_renderer(ui: &mut Ui, tab: &mut GraspEditorTab, d: Tile) {
+    let mosaic = &tab.document_mosaic;
+    let comp = mosaic
+        .component_registry
+        .get_component_type(d.component)
+        .unwrap();
+    let fields = comp.get_fields();
+
+    ui.vertical(|ui| {
+        let mut grid_builder = GridBuilder::new();
+        for _i in 0..fields.len() {
+            grid_builder = grid_builder
+                .new_row(Size::initial(18.0))
+                .cell(Size::exact(60.0))
+                .cell(Size::remainder().at_least(120.0));
+        }
+
+        grid_builder.show(ui, |mut grid| {
+            for field in &fields {
+                let name = if comp.is_alias() {
+                    "self".to_string()
+                } else {
+                    let name = field.name;
+                    name.to_string()
+                };
+
+                let datatype = field.datatype.clone();
+
+                if datatype == Datatype::UNIT {
+                    continue;
+                }
+
+                let value = d.get(name.as_str());
+
+                {
+                    grid.cell(|ui| {
+                        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                            ui.label(name.clone());
+                        });
+                    });
+                }
+
+                grid.cell(|ui| {
+                    ui.with_layout(Layout::left_to_right(Align::Center), |ui| match value {
+                        Value::UNIT => {}
+                        Value::I8(v) => draw_value(ui, &d, name.as_str(), v),
+                        Value::I16(v) => draw_value(ui, &d, name.as_str(), v),
+                        Value::I32(v) => draw_value(ui, &d, name.as_str(), v),
+                        Value::I64(v) => draw_value(ui, &d, name.as_str(), v),
+                        Value::U8(v) => draw_value(ui, &d, name.as_str(), v),
+                        Value::U16(v) => draw_value(ui, &d, name.as_str(), v),
+                        Value::U32(v) => draw_value(ui, &d, name.as_str(), v),
+                        Value::U64(v) => draw_value(ui, &d, name.as_str(), v),
+                        Value::F32(v) => draw_value(ui, &d, name.as_str(), v),
+                        Value::F64(v) => draw_value(ui, &d, name.as_str(), v),
+                        Value::S32(_) => {}
+                        Value::S128(_) => {}
+                        Value::BOOL(v) => {
+                            let mut b = v;
+                            ui.checkbox(&mut b, "");
+                        }
+                    });
+                });
+            }
+        })
+    });
+}
+
+fn draw_value<T: Display + FromStr + ToByteArray>(ui: &mut Ui, tile: &Tile, name: &str, t: T)
+where
+    Tile: TileFieldSetter<T>,
+{
+    let mut tile = tile.clone();
+    let mut text = format!("{}", t);
+    let e = TextEdit::singleline(&mut text)
+        .char_limit(32)
+        .cursor_at_end(true)
+        .show(ui);
+
+    if e.response.changed() {
+        if let Ok(t) = text.parse::<T>() {
+            tile.set(name, t);
         }
     }
 }

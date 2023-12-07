@@ -20,7 +20,7 @@ log = "0.4.20"
 rand = "0.8.5"
 egui_dock = "0.9"
 egui_ui_refresh = "0.1.0"
-egui_extras = { version = "*", features = ["all_loaders"] }
+egui_extras = { version = "0.24.0", features = ["all_loaders"] }
 image = { version = "0.24", features = ["jpeg", "png"] }
 quadtree_rs = "0.1.3"
 itertools = "0.12.0"
@@ -28,3 +28,4 @@ open = "5.0.1"
 urlencoding = "2.1.3"
 rfd = "0.12.1"
 egui-toast = "0.10.0"
+egui_grid = { path = "./egui-grid" }
