@@ -32,13 +32,15 @@ pub fn create_native_options() -> NativeOptions {
 
     let mut options = eframe::NativeOptions::default();
 
-    options.maximized = config
+    let maximized = config
         .get_from(Some("Window"), "maximized")
         .unwrap_or("true")
         .parse()
         .unwrap_or(true);
 
-    if !options.maximized {
+    options.viewport = options.viewport.with_maximized(maximized);
+
+    if !maximized {
         let w = config
             .get_from(Some("Window"), "width")
             .unwrap_or("1920")
@@ -49,7 +51,7 @@ pub fn create_native_options() -> NativeOptions {
             .unwrap_or("1080")
             .parse()
             .unwrap_or(1080.0f32);
-        options.initial_window_size = Some(egui::Vec2 { x: w, y: h });
+        options.viewport = options.viewport.with_inner_size(egui::Vec2 { x: w, y: h });
     }
 
     options

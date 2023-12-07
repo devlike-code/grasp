@@ -5,7 +5,7 @@ use egui::Ui;
 use crate::grasp_common::GraspEditorTab;
 
 impl GraspEditorTab {
-    pub(crate) fn update_context_menu(&mut self, ui: &mut Ui) {
+    pub(crate) fn update_context_menu(&mut self, _ui: &mut Ui) {
         if let Some(response) = self.response.clone() {
             response.context_menu(|ui| {
                 if !self.editor_data.selected.is_empty() {

@@ -1,7 +1,9 @@
+use std::sync::Arc;
+
 use egui::{Pos2, Vec2};
 use mosaic::{
     capabilities::{ArchetypeSubject, QueueCapability},
-    internals::{void, MosaicCRUD, MosaicIO, TileFieldQuery, TileFieldSetter, Value, S32},
+    internals::{void, Mosaic, MosaicCRUD, MosaicIO, TileFieldQuery, TileFieldSetter, Value, S32},
     iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
 };
 
@@ -10,17 +12,20 @@ use crate::{
     grasp_common::{get_pos_from_tile, GraspEditorTab},
 };
 
-impl GraspEditorTab {
-    pub(crate) fn request_quadtree_update(&self) {
+pub trait QuadtreeUpdateCapability {
+    fn request_quadtree_update(&self);
+}
+
+impl QuadtreeUpdateCapability for Arc<Mosaic> {
+    fn request_quadtree_update(&self) {
         let queue = self
-            .document_mosaic
             .get_all()
             .include_component("RefreshQuadtreeQueue")
             .get_targets()
             .next()
             .unwrap();
-        let request = self.document_mosaic.new_object("void", void());
-        self.document_mosaic.enqueue(&queue, &request);
+        let request = self.new_object("void", void());
+        self.enqueue(&queue, &request);
     }
 }
 
@@ -33,7 +38,7 @@ impl StateMachine for GraspEditorTab {
         match (from, trigger) {
             (_, EditorStateTrigger::DblClickToCreate) => {
                 self.create_new_object(self.editor_data.cursor);
-                self.request_quadtree_update();
+                self.document_mosaic.request_quadtree_update();
                 Some(EditorState::Idle)
             }
 
@@ -76,12 +81,12 @@ impl StateMachine for GraspEditorTab {
                 self.editor_data.selected.clear();
                 self.editor_data.link_start_pos = None;
                 self.editor_data.link_end = None;
-                self.request_quadtree_update();
+                self.document_mosaic.request_quadtree_update();
                 Some(EditorState::Idle)
             }
             (EditorState::Move, EditorStateTrigger::EndDrag) => {
                 self.update_selected_positions_by(self.editor_data.cursor_delta);
-                self.request_quadtree_update();
+                self.document_mosaic.request_quadtree_update();
                 Some(EditorState::Idle)
             }
             (EditorState::Rect, EditorStateTrigger::EndDrag) => {

@@ -1,13 +1,16 @@
-use std::sync::Arc;
+use std::{env, fs, sync::Arc};
 
 use egui::{
     ahash::{HashMap, HashMapExt},
-    Align, CollapsingHeader, Color32, Layout, Response, RichText, TextEdit, Ui,
+    Align, Align2, CollapsingHeader, Context, Layout, Pos2, Response, RichText, TextEdit, Ui,
 };
+
 use egui_dock::{DockArea, DockState, Style};
+use egui_toast::{Toast, ToastKind, ToastOptions, Toasts};
 use mosaic::{
+    capabilities::QueueTile,
     internals::{
-        tiles, void, Collage, Mosaic, MosaicCRUD, MosaicIO, MosaicTypelevelCRUD, Tile,
+        par, tiles, void, Collage, Mosaic, MosaicCRUD, MosaicIO, MosaicTypelevelCRUD, Tile,
         TileFieldQuery, Value, S32,
     },
     iterators::{
@@ -20,6 +23,7 @@ use quadtree_rs::Quadtree;
 use crate::{
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
     grasp_common::{GraspEditorTab, GraspEditorTabs},
+    grasp_transitions::QuadtreeUpdateCapability,
 };
 use mosaic::capabilities::ArchetypeSubject;
 use mosaic::capabilities::CollageImportCapability;
@@ -27,36 +31,63 @@ use mosaic::capabilities::QueueCapability;
 
 type ComponentRenderer = Box<dyn Fn(&mut Ui, &mut GraspEditorTab, Tile)>;
 
-//#[derive(Debug)]
+pub trait ToastCapability {
+    fn send_toast(&self, text: &str);
+}
+
+impl ToastCapability for Arc<Mosaic> {
+    fn send_toast(&self, text: &str) {
+        if text.len() >= 32 {
+            println!(
+                "ERROR: Toast message must be shorter than 32 bytes, in:\n{}",
+                text
+            );
+        } else {
+            let queue = self
+                .get_all()
+                .include_component("ToastRequestQueue")
+                .get_targets()
+                .next()
+                .unwrap();
+            let request = self.new_object("ToastRequest", par(text));
+            self.enqueue(&queue, &request);
+            println!("ToastRequest enqueued");
+        }
+    }
+}
+
 pub struct GraspEditorState {
     document_mosaic: Arc<Mosaic>,
     component_renderers: HashMap<S32, ComponentRenderer>,
     tabs: GraspEditorTabs,
     dock_state: DockState<GraspEditorTab>,
+    toasts: Toasts,
     editor_state_tile: Tile,
-    new_tab_request_queue: Tile,
-    refresh_quadtree_queue: Tile,
+    new_tab_request_queue: QueueTile,
+    refresh_quadtree_queue: QueueTile,
+    toast_request_queue: QueueTile,
 }
 
 impl GraspEditorState {
+    pub fn prepare_mosaic(mosaic: Arc<Mosaic>) -> Arc<Mosaic> {
+        mosaic.new_type("Arrow: unit;").unwrap();
+        mosaic.new_type("Label: s32;").unwrap();
+        mosaic.new_type("Position: { x: f32, y: f32 };").unwrap();
+        mosaic.new_type("Selection: unit;").unwrap();
+        mosaic.new_type("EditorState: unit;").unwrap();
+        mosaic.new_type("EditorTab: unit;").unwrap();
+        mosaic.new_type("ToTab: unit;").unwrap();
+        mosaic.new_type("NewTabRequestQueue: unit;").unwrap();
+        mosaic.new_type("RefreshQuadtreeQueue: unit;").unwrap();
+        mosaic.new_type("ToastRequestQueue: unit;").unwrap();
+        mosaic.new_type("ToastRequest: s32;").unwrap();
+        println!("Mosaic ready for use in Grasp!");
+        mosaic
+    }
+
     pub fn new() -> Self {
         let document_mosaic = Mosaic::new();
-
-        document_mosaic.new_type("Arrow: unit;").unwrap();
-        document_mosaic.new_type("Label: s32;").unwrap();
-        document_mosaic
-            .new_type("Position: { x: f32, y: f32 };")
-            .unwrap();
-        document_mosaic.new_type("Selection: unit;").unwrap();
-        document_mosaic.new_type("EditorState: unit;").unwrap();
-        document_mosaic.new_type("EditorTab: unit;").unwrap();
-        document_mosaic.new_type("ToTab: unit;").unwrap();
-        document_mosaic
-            .new_type("NewTabRequestQueue: unit;")
-            .unwrap();
-        document_mosaic
-            .new_type("RefreshQuadtreeQueue: unit;")
-            .unwrap();
+        Self::prepare_mosaic(Arc::clone(&document_mosaic));
 
         let editor_state_tile = document_mosaic.new_object("EditorState", void());
 
@@ -66,6 +97,10 @@ impl GraspEditorState {
         let refresh_quadtree_queue = document_mosaic.make_queue();
         refresh_quadtree_queue.add_component("RefreshQuadtreeQueue", void());
 
+        let toast_request_queue = document_mosaic.make_queue();
+        toast_request_queue.add_component("ToastRequestQueue", void());
+
+        let toasts = Toasts::new().anchor(Align2::RIGHT_TOP, Pos2::new(-10.0, 10.0));
         let dock_state = DockState::new(vec![]);
 
         // add here default renderers
@@ -73,9 +108,11 @@ impl GraspEditorState {
             document_mosaic,
             component_renderers: HashMap::new(),
             dock_state,
+            toasts,
             editor_state_tile,
             new_tab_request_queue,
             refresh_quadtree_queue,
+            toast_request_queue,
             tabs: GraspEditorTabs::default(),
         };
 
@@ -129,6 +166,7 @@ impl GraspEditorState {
                 ui.separator();
             });
     }
+
     fn right_sidebar(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::SidePanel::right("properties")
             .default_width(250.0)
@@ -176,7 +214,7 @@ impl GraspEditorState {
         });
     }
 
-    fn show_document(&mut self, ui: &mut Ui, frame: &mut eframe::Frame) {
+    fn show_document(&mut self, ui: &mut Ui, _frame: &mut eframe::Frame) {
         ui.menu_button("Document", |ui| {
             if ui.button("New Tab").clicked() {
                 let tab = self.new_tab(tiles());
@@ -187,9 +225,41 @@ impl GraspEditorState {
 
             ui.separator();
 
+            if ui.button("Open").clicked() {
+                if let Some(file) = rfd::FileDialog::new()
+                    .add_filter("Mosaic", &["mos"])
+                    .set_directory(env::current_dir().unwrap())
+                    .pick_file()
+                {
+                    self.document_mosaic.clear();
+                    Self::prepare_mosaic(Arc::clone(&self.document_mosaic));
+
+                    self.document_mosaic.load(&fs::read(file).unwrap()).unwrap();
+                    self.document_mosaic.send_toast("Document loaded");
+
+                    self.document_mosaic.request_quadtree_update();
+                }
+                ui.close_menu();
+            }
+
+            if ui.button("Save").clicked() {
+                let document = self.document_mosaic.save();
+                if let Some(file) = rfd::FileDialog::new()
+                    .add_filter("Mosaic", &["mos"])
+                    .set_directory(env::current_dir().unwrap())
+                    .save_file()
+                {
+                    fs::write(file, document).unwrap();
+                    self.document_mosaic.send_toast("Document saved");
+                }
+                ui.close_menu();
+            }
+
+            ui.separator();
+
             if ui.button("Exit").clicked() {
                 ui.close_menu();
-                frame.close();
+                ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
             }
         });
     }
@@ -205,7 +275,7 @@ impl GraspEditorState {
                 }
                 checked
             };
-            if ui.button(format!("Toggle ruler {}", ruler_on)).clicked() {
+            if ui.button(format!("Toggle Ruler {}", ruler_on)).clicked() {
                 if let Some((_, tab)) = self.dock_state.find_active_focused() {
                     tab.ruler_visible = !tab.ruler_visible;
                     ui.close_menu();
@@ -221,7 +291,7 @@ impl GraspEditorState {
                 }
                 checked
             };
-            if ui.button(format!("Toggle grid {}", grid_on)).clicked() {
+            if ui.button(format!("Toggle Grid {}", grid_on)).clicked() {
                 if let Some((_, tab)) = self.dock_state.find_active_focused() {
                     tab.grid_visible = !tab.grid_visible;
                     ui.close_menu();
@@ -231,7 +301,6 @@ impl GraspEditorState {
     }
 
     fn draw_label_property(ui: &mut Ui, tab: &mut GraspEditorTab, d: Tile) {
-        println!("DRAW LABEL STATE: {:?}", tab.state);
         if let Some(label) = d.get_component("Label") {
             let mut label_text = label.get("self").as_s32().to_string();
 
@@ -276,7 +345,6 @@ impl GraspEditorState {
     }
 
     fn draw_position_property(ui: &mut Ui, tab: &mut GraspEditorTab, d: Tile) {
-        println!("DRAW POSITION STATE: {:?}", tab.state);
         if let (Value::F32(x), Value::F32(y)) = d.get_by(("x", "y")) {
             let mut x_text = format!("{}", x);
             let mut y_text = format!("{}", y);
@@ -373,17 +441,32 @@ impl GraspEditorState {
 }
 
 impl eframe::App for GraspEditorState {
-    fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+    fn update(&mut self, ctx: &Context, frame: &mut eframe::Frame) {
         ctx.set_visuals(egui::Visuals::dark());
-
         self.menu_bar(ctx, frame);
         self.left_sidebar(ctx, frame);
         self.right_sidebar(ctx, frame);
+
+        while let Some(request) = self.document_mosaic.dequeue(&self.toast_request_queue) {
+            let toast_message = request.get("self").as_s32();
+            self.toasts.add(Toast {
+                text: toast_message.to_string().into(),
+                kind: ToastKind::Info,
+                options: ToastOptions::default()
+                    .duration_in_seconds(5.0)
+                    .show_icon(false)
+                    .show_progress(true),
+            });
+
+            request.iter().delete();
+        }
 
         while let Some(request) = self.document_mosaic.dequeue(&self.new_tab_request_queue) {
             if let Some(collage) = request.to_collage() {
                 let tab = self.new_tab(collage);
                 self.dock_state.main_surface_mut().push_to_first_leaf(tab);
+
+                request.iter().delete();
             }
         }
 
@@ -403,5 +486,6 @@ impl eframe::App for GraspEditorState {
         }
 
         self.show_tabs(ctx, frame);
+        self.toasts.show(ctx);
     }
 }
