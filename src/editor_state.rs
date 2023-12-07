@@ -367,20 +367,26 @@ fn draw_default_renderer(ui: &mut Ui, tab: &mut GraspEditorTab, d: Tile) {
                 grid.cell(|ui| {
                     ui.with_layout(Layout::left_to_right(Align::Center), |ui| match value {
                         Value::UNIT => {}
-                        Value::I8(v) => draw_value(ui, tab, &d, name.as_str(), v),
-                        Value::I16(v) => draw_value(ui, tab, &d, name.as_str(), v),
-                        Value::I32(v) => draw_value(ui, tab, &d, name.as_str(), v),
-                        Value::I64(v) => draw_value(ui, tab, &d, name.as_str(), v),
-                        Value::U8(v) => draw_value(ui, tab, &d, name.as_str(), v),
-                        Value::U16(v) => draw_value(ui, tab, &d, name.as_str(), v),
-                        Value::U32(v) => draw_value(ui, tab, &d, name.as_str(), v),
-                        Value::U64(v) => draw_value(ui, tab, &d, name.as_str(), v),
-                        Value::F32(v) => draw_value(ui, tab, &d, name.as_str(), v),
-                        Value::F64(v) => draw_value(ui, tab, &d, name.as_str(), v),
-                        Value::S32(v) => draw_value(ui, tab, &d, name.as_str(), v.to_string()),
-                        Value::S128(v) => {
-                            draw_value(ui, tab, &d, name.as_str(), String::from_byte_array(&v))
+                        Value::I8(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
+                        Value::I16(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
+                        Value::I32(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
+                        Value::I64(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
+                        Value::U8(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
+                        Value::U16(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
+                        Value::U32(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
+                        Value::U64(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
+                        Value::F32(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
+                        Value::F64(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
+                        Value::S32(v) => {
+                            draw_property_value(ui, tab, &d, name.as_str(), v.to_string())
                         }
+                        Value::S128(v) => draw_property_value(
+                            ui,
+                            tab,
+                            &d,
+                            name.as_str(),
+                            String::from_byte_array(&v),
+                        ),
 
                         Value::BOOL(v) => {
                             let mut b = v;
@@ -393,7 +399,7 @@ fn draw_default_renderer(ui: &mut Ui, tab: &mut GraspEditorTab, d: Tile) {
     });
 }
 
-fn draw_value<T: Display + FromStr + ToByteArray>(
+fn draw_property_value<T: Display + FromStr + ToByteArray>(
     ui: &mut Ui,
     tab: &mut GraspEditorTab,
     tile: &Tile,
@@ -414,12 +420,12 @@ fn draw_value<T: Display + FromStr + ToByteArray>(
 
     if !changing {
         let text = format!("{}", t);
-        println!("{:?}", text);
         let label = Label::new(text.clone()).wrap(true).sense(Sense::click());
 
         if ui.add(label).double_clicked() {
             tab.editor_data.tile_changing = Some(tile.id);
             tab.editor_data.field_changing = Some(name.to_string());
+            tab.editor_data.previous_text = text.clone();
             tab.editor_data.text = text;
             tab.trigger(EditorStateTrigger::DblClickToRename);
         }
@@ -445,7 +451,7 @@ fn draw_value<T: Display + FromStr + ToByteArray>(
             _ => ui.text_edit_singleline(&mut text),
         };
 
-        if widget.changed() && text.parse::<T>().is_ok() {
+        if widget.changed() {
             tab.editor_data.text = text.clone();
         }
 
