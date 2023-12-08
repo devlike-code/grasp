@@ -11,7 +11,7 @@ use rand::distributions::uniform::UniformSampler;
 
 use crate::{
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
-    grasp_common::{get_pos_from_tile, GraspEditorTab},
+    grasp_common::{get_pos_from_tile, GraspEditorTab}, utilities::Pos,
 };
 
 pub trait QuadtreeUpdateCapability {

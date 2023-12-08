@@ -9,6 +9,7 @@ mod grasp_render;
 mod grasp_sense;
 mod grasp_transitions;
 mod grasp_update;
+mod utilities;
 
 fn main() -> Result<(), eframe::Error> {
     env_logger::init();
