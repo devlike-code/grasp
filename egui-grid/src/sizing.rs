@@ -9,7 +9,7 @@ pub struct Sizing {
 }
 
 impl Sizing {
-    pub fn add(&mut self, size: Size) {
+    pub fn _add(&mut self, size: Size) {
         self.sizes.push(size);
     }
 

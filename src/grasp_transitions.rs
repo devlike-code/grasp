@@ -3,7 +3,7 @@ use std::sync::Arc;
 use egui::{epaint::QuadraticBezierShape, Color32, Pos2, Stroke, Vec2};
 use mosaic::{
     capabilities::{ArchetypeSubject, QueueCapability},
-    internals::{void, Mosaic, MosaicCRUD, MosaicIO, TileFieldQuery, TileFieldSetter, Value, S32},
+    internals::{void, Mosaic, MosaicCRUD, MosaicIO, TileFieldQuery, TileFieldSetter, Value},
     iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
 };
 use rand::distributions::uniform::UniformSampler;
@@ -43,7 +43,7 @@ impl StateMachine for GraspEditorTab {
                 Some(EditorState::Idle)
             }
 
-            (_, EditorStateTrigger::DblClickToRename) => Some(EditorState::Rename),
+            (_, EditorStateTrigger::DblClickToRename) => Some(EditorState::PropertyChanging),
             (_, EditorStateTrigger::ClickToReposition) => Some(EditorState::Reposition),
 
             (_, EditorStateTrigger::MouseDownOverNode) => None,
@@ -129,28 +129,14 @@ impl StateMachine for GraspEditorTab {
                 Some(EditorState::Idle)
             }
 
-            (EditorState::Rename, _) => {
-                if let Some(tile) = self.editor_data.renaming {
-                    if let Some(mut label) = self
-                        .document_mosaic
-                        .get(tile)
-                        .unwrap()
-                        .get_component("Label")
-                    {
-                        //SET LABEL VALUE
-                        TileFieldSetter::<S32>::set(
-                            &mut label,
-                            "self",
-                            self.editor_data.text.as_str().into(),
-                        )
-                    }
-                }
-
-                self.editor_data.renaming = None;
+            (EditorState::PropertyChanging, _) => {
+                self.editor_data.tile_changing = None;
+                self.editor_data.field_changing = None;
                 self.editor_data.previous_text.clear();
                 self.editor_data.text.clear();
                 Some(EditorState::Idle)
             }
+
             (EditorState::Reposition, _) => {
                 if let Some(tile_id) = self.editor_data.repositioning {
                     if self.document_mosaic.is_tile_valid(&tile_id) {
@@ -174,7 +160,7 @@ impl StateMachine for GraspEditorTab {
 
                 self.update_quadtree_for_selected();
 
-                self.editor_data.renaming = None;
+                self.editor_data.tile_changing = None;
                 self.editor_data.previous_text.clear();
                 self.editor_data.text.clear();
                 Some(EditorState::Idle)

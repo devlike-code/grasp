@@ -2,22 +2,19 @@ use std::{env, fmt::Display, fs, str::FromStr, sync::Arc};
 
 use egui::{
     ahash::{HashMap, HashMapExt},
-    text::LayoutJob,
-    Align, Align2, CollapsingHeader, Context, Label, Layout, Pos2, Response, RichText, TextEdit,
-    Ui,
+    Align, Align2, CollapsingHeader, Context, Label, Layout, Pos2, RichText, Sense, TextEdit, Ui,
 };
 
 use egui_dock::{DockArea, DockState, Style};
 use egui_extras::Size;
 use egui_grid::GridBuilder;
 use egui_toast::{Toast, ToastKind, ToastOptions, Toasts};
-use epi::egui::plot::Text;
 use itertools::Itertools;
 use mosaic::{
-    capabilities::{Archetype, QueueTile},
+    capabilities::QueueTile,
     internals::{
-        par, tiles, void, Collage, ComponentField, Datatype, Mosaic, MosaicCRUD, MosaicIO,
-        MosaicTypelevelCRUD, Tile, TileFieldQuery, TileFieldSetter, ToByteArray, Value, S32,
+        par, tiles, void, Collage, Datatype, FromByteArray, Mosaic, MosaicCRUD, MosaicIO,
+        MosaicTypelevelCRUD, Tile, TileFieldSetter, ToByteArray, Value, S32,
     },
     iterators::{
         component_selectors::ComponentSelectors, tile_deletion::TileDeletion,
@@ -323,139 +320,6 @@ impl GraspEditorState {
             }
         });
     }
-
-    fn draw_label_property(ui: &mut Ui, tab: &mut GraspEditorTab, d: Tile) {
-        if let Some(label) = d.get_component("Label") {
-            let mut label_text = label.get("self").as_s32().to_string();
-
-            ui.horizontal(|ui| {
-                if tab.state == EditorState::Rename && tab.editor_data.renaming == Some(d.id) {
-                    let mut label = tab.editor_data.text.clone();
-
-                    ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
-                        ui.text_edit_singleline(&mut label);
-                    });
-
-                    tab.editor_data.text = label;
-
-                    if ui.input(|i| i.key_pressed(egui::Key::Enter)) {
-                        tab.trigger(EditorStateTrigger::EndDrag);
-                    } else if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
-                        tab.editor_data.text = tab.editor_data.previous_text.clone();
-                        tab.trigger(EditorStateTrigger::EndDrag);
-                    }
-                } else {
-                    ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
-                        let l_response = ui.text_edit_singleline(&mut label_text);
-
-                        if l_response.has_focus() {
-                            tab.editor_data.renaming = Some(d.id);
-
-                            tab.editor_data.text = label_text;
-                            tab.editor_data.previous_text = tab.editor_data.text.clone();
-
-                            tab.trigger(EditorStateTrigger::DblClickToRename);
-                        }
-                    });
-                }
-            });
-        }
-    }
-
-    fn draw_position_property(ui: &mut Ui, tab: &mut GraspEditorTab, d: Tile) {
-        if let (Value::F32(x), Value::F32(y)) = d.get_by(("x", "y")) {
-            let mut x_text = format!("{}", x);
-            let mut y_text = format!("{}", y);
-            CollapsingHeader::new(RichText::from(format!("ID:{} {}", d.id, "POSITION")))
-                .default_open(true)
-                .show(ui, |ui| {
-                    //    ui.with_layout(Layout::left_to_right(Align::Center).with_cross_justify(true), |ui|{
-                    ui.horizontal(|ui| {
-                        if tab.state == EditorState::Reposition
-                            && tab.editor_data.repositioning == Some(d.id)
-                        {
-                            let mut x = tab.editor_data.x_pos.clone();
-                            let mut y = tab.editor_data.y_pos.clone();
-
-                            ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
-                                egui::Grid::new("pos_size").show(ui, |ui| {
-                                    ui.horizontal(|ui| {
-                                        ui.label("x:");
-                                        ui.add(TextEdit::singleline(&mut x));
-                                    });
-                                    ui.horizontal(|ui| {
-                                        ui.label("y:");
-                                        ui.add(TextEdit::singleline(&mut y));
-                                    });
-                                    ui.end_row();
-                                });
-                            });
-
-                            if let Ok(x_parsed) = x.parse::<f32>() {
-                                if !x.ends_with('.') {
-                                    tab.editor_data.x_pos = x_parsed.to_string();
-                                } else {
-                                    tab.editor_data.x_pos = x.clone();
-                                }
-                            }
-
-                            if let Ok(y_parsed) = y.parse::<f32>() {
-                                if !y.ends_with('.') {
-                                    tab.editor_data.y_pos = y_parsed.to_string();
-                                } else {
-                                    tab.editor_data.y_pos = y.clone();
-                                }
-                            }
-
-                            if ui.input(|i| i.key_pressed(egui::Key::Enter)) {
-                                tab.trigger(EditorStateTrigger::EndDrag);
-                            } else if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
-                                tab.editor_data.repositioning = None;
-                                tab.trigger(EditorStateTrigger::EndDrag);
-                            }
-                        } else {
-                            ui.with_layout(
-                                Layout::left_to_right(Align::Center)
-                                    .with_cross_align(Align::Center),
-                                |ui| {
-                                    egui::Grid::new("pos_size").show(ui, |ui| {
-                                        let mut x_response: Option<Response> = None;
-                                        let mut y_response: Option<Response> = None;
-
-                                        ui.horizontal(|ui| {
-                                            ui.label("x:");
-                                            x_response =
-                                                Some(ui.add(TextEdit::singleline(&mut x_text)));
-                                        });
-                                        ui.horizontal(|ui| {
-                                            ui.label("y:");
-                                            y_response =
-                                                Some(ui.add(TextEdit::singleline(&mut y_text)));
-                                        });
-                                        ui.end_row();
-
-                                        if x_response.unwrap().has_focus()
-                                            || y_response.unwrap().has_focus()
-                                        {
-                                            tab.editor_data.repositioning = Some(d.id);
-
-                                            tab.editor_data.x_pos = x.to_string();
-                                            tab.editor_data.y_pos = y.to_string();
-                                            tab.editor_data.previous_x_pos =
-                                                tab.editor_data.x_pos.clone();
-                                            tab.editor_data.previous_x_pos =
-                                                tab.editor_data.y_pos.clone();
-
-                                            tab.trigger(EditorStateTrigger::ClickToReposition);
-                                        }
-                                    });
-                                },
-                            );
-                        }
-                    });
-                });
-        }
-    }
 }
 
 fn draw_default_renderer(ui: &mut Ui, tab: &mut GraspEditorTab, d: Tile) {
@@ -503,18 +367,27 @@ fn draw_default_renderer(ui: &mut Ui, tab: &mut GraspEditorTab, d: Tile) {
                 grid.cell(|ui| {
                     ui.with_layout(Layout::left_to_right(Align::Center), |ui| match value {
                         Value::UNIT => {}
-                        Value::I8(v) => draw_value(ui, &d, name.as_str(), v),
-                        Value::I16(v) => draw_value(ui, &d, name.as_str(), v),
-                        Value::I32(v) => draw_value(ui, &d, name.as_str(), v),
-                        Value::I64(v) => draw_value(ui, &d, name.as_str(), v),
-                        Value::U8(v) => draw_value(ui, &d, name.as_str(), v),
-                        Value::U16(v) => draw_value(ui, &d, name.as_str(), v),
-                        Value::U32(v) => draw_value(ui, &d, name.as_str(), v),
-                        Value::U64(v) => draw_value(ui, &d, name.as_str(), v),
-                        Value::F32(v) => draw_value(ui, &d, name.as_str(), v),
-                        Value::F64(v) => draw_value(ui, &d, name.as_str(), v),
-                        Value::S32(_) => {}
-                        Value::S128(_) => {}
+                        Value::I8(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
+                        Value::I16(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
+                        Value::I32(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
+                        Value::I64(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
+                        Value::U8(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
+                        Value::U16(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
+                        Value::U32(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
+                        Value::U64(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
+                        Value::F32(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
+                        Value::F64(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
+                        Value::S32(v) => {
+                            draw_property_value(ui, tab, &d, name.as_str(), v.to_string())
+                        }
+                        Value::S128(v) => draw_property_value(
+                            ui,
+                            tab,
+                            &d,
+                            name.as_str(),
+                            String::from_byte_array(&v),
+                        ),
+
                         Value::BOOL(v) => {
                             let mut b = v;
                             ui.checkbox(&mut b, "");
@@ -526,20 +399,70 @@ fn draw_default_renderer(ui: &mut Ui, tab: &mut GraspEditorTab, d: Tile) {
     });
 }
 
-fn draw_value<T: Display + FromStr + ToByteArray>(ui: &mut Ui, tile: &Tile, name: &str, t: T)
-where
+fn draw_property_value<T: Display + FromStr + ToByteArray>(
+    ui: &mut Ui,
+    tab: &mut GraspEditorTab,
+    tile: &Tile,
+    name: &str,
+    t: T,
+) where
     Tile: TileFieldSetter<T>,
 {
-    let mut tile = tile.clone();
-    let mut text = format!("{}", t);
-    let e = TextEdit::singleline(&mut text)
-        .char_limit(32)
-        .cursor_at_end(true)
-        .show(ui);
+    let changing: bool = tab.state == EditorState::PropertyChanging && {
+        match (
+            tab.editor_data.tile_changing,
+            &tab.editor_data.field_changing,
+        ) {
+            (Some(tile_id), Some(field_name)) => tile_id == tile.id && field_name.as_str() == name,
+            _ => false,
+        }
+    };
 
-    if e.response.changed() {
-        if let Ok(t) = text.parse::<T>() {
-            tile.set(name, t);
+    if !changing {
+        let text = format!("{}", t);
+        let label = Label::new(text.clone()).wrap(true).sense(Sense::click());
+
+        if ui.add(label).double_clicked() {
+            tab.editor_data.tile_changing = Some(tile.id);
+            tab.editor_data.field_changing = Some(name.to_string());
+            tab.editor_data.previous_text = text.clone();
+            tab.editor_data.text = text;
+            tab.trigger(EditorStateTrigger::DblClickToRename);
+        }
+    } else {
+        let mut text = tab.editor_data.text.clone();
+        let datatype = tile.get(name).get_datatype();
+
+        let widget = match datatype {
+            Datatype::S32 => {
+                TextEdit::singleline(&mut text)
+                    .char_limit(32)
+                    .show(ui)
+                    .response
+            }
+
+            Datatype::S128 => {
+                TextEdit::multiline(&mut text)
+                    .char_limit(128)
+                    .show(ui)
+                    .response
+            }
+
+            _ => ui.text_edit_singleline(&mut text),
+        };
+
+        if widget.changed() {
+            tab.editor_data.text = text.clone();
+        }
+
+        if widget.lost_focus() {
+            let mut tile = tile.clone();
+            if let Ok(parsed) = text.parse::<T>() {
+                tile.set(name, parsed);
+                tile.mosaic.request_quadtree_update();
+            }
+
+            tab.trigger(EditorStateTrigger::EndDrag);
         }
     }
 }

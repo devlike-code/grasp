@@ -87,7 +87,7 @@ impl GraspEditorTab {
                 }
             }
 
-            EditorState::Rename => {}
+            EditorState::PropertyChanging => {}
 
             EditorState::Reposition => {}
             EditorState::ContextMenu => {}
