@@ -149,7 +149,7 @@ impl GraspEditorState {
             quadtree: Quadtree::new_with_anchor((-1000, -1000).into(), 16),
             document_mosaic: Arc::clone(&self.document_mosaic),
             collage,
-            node_to_area: Default::default(),
+            object_to_area: Default::default(),
             editor_data: Default::default(),
             state: EditorState::Idle,
             grid_visible: false,

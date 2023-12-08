@@ -43,9 +43,9 @@ impl GraspEditorTab {
         if ui.delete_down() && self.state == EditorState::Idle {
             for selected in &self.editor_data.selected {
                 self.document_mosaic.delete_tile(selected.id);
-                if let Some(area_id) = self.node_to_area.get(&selected.id) {
+                if let Some(area_id) = self.object_to_area.get(&selected.id) {
                     areas_to_remove.push(*area_id);
-                    self.node_to_area.remove(&selected.id);
+                    self.object_to_area.remove(&selected.id);
                 }
             }
             self.editor_data.selected.clear();

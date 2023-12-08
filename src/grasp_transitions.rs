@@ -1,11 +1,12 @@
 use std::sync::Arc;
 
-use egui::{Pos2, Vec2};
+use egui::{epaint::QuadraticBezierShape, Color32, Pos2, Stroke, Vec2};
 use mosaic::{
     capabilities::{ArchetypeSubject, QueueCapability},
     internals::{void, Mosaic, MosaicCRUD, MosaicIO, TileFieldQuery, TileFieldSetter, Value, S32},
     iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
 };
+use rand::distributions::uniform::UniformSampler;
 
 use crate::{
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
@@ -76,8 +77,41 @@ impl StateMachine for GraspEditorTab {
             (EditorState::Link, EditorStateTrigger::EndDrag) => {
                 if let Some(tile) = self.editor_data.link_end.take() {
                     let start = self.editor_data.selected.first().unwrap().clone();
-                    self.create_new_arrow(&start, &tile);
+                    let mut src_pos = Pos2::default();
+                    let mut tgt_pos = Pos2::default();
+                    if let (
+                        (Value::F32(s_x), Value::F32(s_y)),
+                        (Value::F32(t_x), Value::F32(t_y)),
+                    ) = (
+                        start.get_component("Position").unwrap().get_by(("x", "y")),
+                        tile.get_component("Position").unwrap().get_by(("x", "y")),
+                    ) {
+                        src_pos = Pos2::new(s_x, s_y);
+                        tgt_pos = Pos2::new(t_x, t_y);
+                    }
+
+                    let mid_pos = src_pos.lerp(tgt_pos, 0.5);
+
+                    let qb = QuadraticBezierShape::from_points_stroke(
+                        [src_pos, mid_pos, tgt_pos],
+                        false,
+                        Color32::TRANSPARENT,
+                        Stroke::new(1.0, Color32::LIGHT_BLUE),
+                    );
+                    let sample = qb.flatten(Some(0.1));
+                    let mut rects = vec![];
+
+                    for i in (0..sample.len() - 2).step_by(2) {
+                        let rect = egui::Rect::from_two_pos(sample[i], sample[i + 2]);
+                        rects.push(rect);
+
+                        let rect = egui::Rect::from_two_pos(sample[i + 1], sample[i + 3]);
+                        rects.push(rect);
+                    }
+
+                    self.create_new_arrow(&start, &tile, mid_pos, rects);
                 }
+
                 self.editor_data.selected.clear();
                 self.editor_data.link_start_pos = None;
                 self.editor_data.link_end = None;
@@ -178,12 +212,12 @@ impl GraspEditorTab {
             let selected_pos_component = tile.get_component("Position").unwrap();
 
             if let (Value::F32(x), Value::F32(y)) = selected_pos_component.get_by(("x", "y")) {
-                if let Some(area_id) = self.node_to_area.get(&tile.id) {
+                if let Some(area_id) = self.object_to_area.get(&tile.id) {
                     self.quadtree.delete_by_handle(*area_id);
 
                     let region = self.build_circle_area(Pos2::new(x, y), 10);
                     if let Some(area_id) = self.quadtree.insert(region, tile.id) {
-                        self.node_to_area.insert(tile.id, area_id);
+                        self.object_to_area.insert(tile.id, area_id);
                     }
                 }
             }
@@ -200,17 +234,17 @@ impl GraspEditorTab {
             let selected_pos_component = tile.get_component("Position").unwrap();
 
             if let (Value::F32(x), Value::F32(y)) = selected_pos_component.get_by(("x", "y")) {
-                if let Some(area_id) = self.node_to_area.get(&tile.id) {
+                if let Some(area_id) = self.object_to_area.get(&tile.id) {
                     self.quadtree.delete_by_handle(*area_id);
 
                     let region = self.build_circle_area(Pos2::new(x, y), 10);
                     if let Some(area_id) = self.quadtree.insert(region, tile.id) {
-                        self.node_to_area.insert(tile.id, area_id);
+                        self.object_to_area.insert(tile.id, area_id);
                     }
                 } else {
                     let region = self.build_circle_area(Pos2::new(x, y), 10);
                     if let Some(area_id) = self.quadtree.insert(region, tile.id) {
-                        self.node_to_area.insert(tile.id, area_id);
+                        self.object_to_area.insert(tile.id, area_id);
                     }
                 }
             }
