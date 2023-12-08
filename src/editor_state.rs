@@ -176,7 +176,7 @@ impl GraspEditorState {
             .resizable(true)
             .show(ctx, |ui| {
                 if let Some((_, tab)) = self.dock_state.find_active_focused() {
-                    let selected = tab.editor_data.selected.clone();
+                    let selected = tab.editor_data.selected.clone().into_iter().unique().collect_vec();
                     for t in selected {
                         CollapsingHeader::new(RichText::from(format!(
                             "[ID:{}] {}",

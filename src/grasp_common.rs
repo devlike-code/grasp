@@ -86,7 +86,7 @@ pub struct GraspEditorTab {
     pub state: EditorState,
     pub quadtree: Quadtree<i32, EntityId>,
     pub document_mosaic: Arc<Mosaic>,
-    pub object_to_area: HashMap<EntityId, u64>,
+    pub object_to_area: HashMap<EntityId, Vec<u64>>,
     pub collage: Box<Collage>,
     pub ruler_visible: bool,
     pub grid_visible: bool,
@@ -188,7 +188,7 @@ impl GraspEditorTab {
         let region = self.build_circle_area(pos, 10);
 
         if let Some(area_id) = self.quadtree.insert(region, obj.id) {
-            self.object_to_area.insert(obj.id, area_id);
+            self.object_to_area.insert(obj.id, vec![area_id]);
         }
     }
 
@@ -197,8 +197,10 @@ impl GraspEditorTab {
         source: &Tile,
         target: &Tile,
         middle_pos: Pos2,
-        bezier_sample: Vec<Rect>,
+        bezier_rects: Vec<Rect>,
     ) {
+        println!("Bezier rects: {:?}", bezier_rects);
+
         let arr = self
             .document_mosaic
             .new_arrow(source, target, "Arrow", void());
@@ -215,12 +217,21 @@ impl GraspEditorTab {
         let region = self.build_circle_area(middle_pos, 10);
 
         if let Some(area_id) = self.quadtree.insert(region, arr.id) {
-            self.object_to_area.insert(arr.id, area_id);
+            if let Some(areas_vec) = self.object_to_area.get_mut(&arr.id) {
+                areas_vec.push(area_id);
+            } else {
+                self.object_to_area.insert(arr.id, vec![area_id]);
+            }
         }
-        
-        for s in bezier_sample {
-            let region = self.build_rect_area(s);
-            self.quadtree.insert(region, arr.id);
+
+        for r in bezier_rects {
+            let region = self.build_rect_area(r);
+            if let Some(area_id) = self.quadtree.insert(region, arr.id) {
+                if let Some(areas_vec) = self.object_to_area.get_mut(&arr.id) {
+                    areas_vec.push(area_id);
+                    //self.object_to_area.insert(arr.id, areas_vec.to_owned());
+                }
+            }
         }
     }
 }

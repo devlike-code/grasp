@@ -44,7 +44,7 @@ impl GraspEditorTab {
             for selected in &self.editor_data.selected {
                 self.document_mosaic.delete_tile(selected.id);
                 if let Some(area_id) = self.object_to_area.get(&selected.id) {
-                    areas_to_remove.push(*area_id);
+                    areas_to_remove.push(area_id.clone());
                     self.object_to_area.remove(&selected.id);
                 }
             }
@@ -120,8 +120,10 @@ impl GraspEditorTab {
             self.trigger(ClickToContextMenu);
         }
 
-        areas_to_remove.into_iter().for_each(|f: u64| {
-            self.quadtree.delete_by_handle(f);
+        areas_to_remove.into_iter().for_each(|areas_vec: Vec<u64>| {
+            for a in areas_vec {
+                self.quadtree.delete_by_handle(a);
+            }
         });
     }
 }

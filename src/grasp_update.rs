@@ -18,7 +18,7 @@ use mosaic::capabilities::CollageExportCapability;
 impl GraspEditorTab {
     pub fn update(&mut self, ui: &mut Ui) {
         while let Some(request) = self.document_mosaic.dequeue(&self.tab_tile) {
-            self.update_quadtree();
+            self.update_quadtree(None);
             request.iter().delete();
         }
 

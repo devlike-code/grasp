@@ -20,7 +20,7 @@ impl GraspEditorTab {
             let anchor_pos = self.pos_with_pan(Pos2 {
                 x: area.anchor().x as f32,
                 y: area.anchor().y as f32,
-            });
+            }) - self.editor_data.tab_offset;
             painter.rect(
                 Rect {
                     min: Pos2 {
@@ -43,6 +43,7 @@ impl GraspEditorTab {
         &self,
         painter: &egui::Painter,
         origin: Pos2,
+        middle: Pos2,
         vec: Vec2,
         stroke: Stroke,
         start_offset: f32,
@@ -53,7 +54,7 @@ impl GraspEditorTab {
         let dir = vec.normalized();
         let a_start: Pos2 = origin + dir * start_offset;
         let tip = a_start + vec - dir * (start_offset + end_offset);
-        let middle = a_start.lerp(tip, 0.5);
+        //let middle = a_start.lerp(tip, 0.5);
 
         let shape = egui::epaint::QuadraticBezierShape {
             points: [a_start, middle, tip],
@@ -67,18 +68,24 @@ impl GraspEditorTab {
         painter.add(shape);
         painter.line_segment([tip, tip - tip_length * (rot * dir)], stroke);
         painter.line_segment([tip, tip - tip_length * (rot.inverse() * dir)], stroke);
+
+        painter.circle_filled(shape.sample(0.5), 10.0, Color32::GRAY);
+
     }
 
     fn draw_arrow(&mut self, painter: &Painter, arrow: &Tile) {
         let source_node = self.document_mosaic.get(arrow.source_id()).unwrap();
         let target_node = self.document_mosaic.get(arrow.target_id()).unwrap();
+        let arrow_node = self.document_mosaic.get(arrow.id).unwrap();
 
         let source_pos = self.pos_with_pan(get_pos_from_tile(&source_node).unwrap());
         let target_pos = self.pos_with_pan(get_pos_from_tile(&target_node).unwrap());
+        let mid_pos = self.pos_with_pan(get_pos_from_tile(&arrow_node).unwrap());
 
         self.internal_draw_arrow(
             painter,
             source_pos,
+            mid_pos,
             target_pos - source_pos,
             Stroke::new(1.0, Color32::LIGHT_BLUE),
             10.0,
@@ -151,10 +158,11 @@ impl GraspEditorTab {
                 end_pos = get_pos_from_tile(end).unwrap();
                 end_offset = 10.0;
             }
-
+            let mid_pos = start_pos.lerp(end_pos, 0.5);
             self.internal_draw_arrow(
                 painter,
                 start_pos,
+                mid_pos,
                 end_pos - start_pos,
                 Stroke::new(2.0, Color32::WHITE),
                 10.0,
