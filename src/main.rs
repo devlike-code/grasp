@@ -82,16 +82,14 @@ impl SeqWriter {
             }
         }
 
-        self.sender
-            .send(SeqWriterData {
-                source: record.file().unwrap_or_default().to_string(),
-                level: record.level().to_string(),
-                line: record.line().unwrap_or_default().to_string(),
-                module: record.module_path().unwrap_or_default().to_string(),
-                message,
-                timestamp: Timestamp::now_utc().to_string(),
-            })
-            .unwrap();
+        let _ = self.sender.send(SeqWriterData {
+            source: record.file().unwrap_or_default().to_string(),
+            level: record.level().to_string(),
+            line: record.line().unwrap_or_default().to_string(),
+            module: record.module_path().unwrap_or_default().to_string(),
+            message,
+            timestamp: Timestamp::now_utc().to_string(),
+        });
     }
 }
 
