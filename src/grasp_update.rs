@@ -1,8 +1,8 @@
 use egui::{CursorIcon, Key, Rect, Ui};
 use itertools::Itertools;
 use mosaic::{
-    capabilities::QueueCapability,
-    internals::{take_objects, tiles, MosaicIO},
+    capabilities::{CollageExportCapability, QueueCapability},
+    internals::{all_tiles, take_objects, MosaicIO},
     iterators::{
         component_selectors::ComponentSelectors, tile_deletion::TileDeletion,
         tile_getters::TileGetters,
@@ -12,13 +12,14 @@ use mosaic::{
 use crate::{
     editor_state_machine::EditorState,
     grasp_common::{GraspEditorTab, QuadTreeFetch},
+    grasp_transitions::QuadtreeUpdateCapability,
 };
-use mosaic::capabilities::CollageExportCapability;
 
 impl GraspEditorTab {
     pub fn update(&mut self, ui: &mut Ui) {
         while let Some(request) = self.document_mosaic.dequeue(&self.tab_tile) {
             self.update_quadtree();
+            //println!("after update: {:?}", self.quadtree);
             request.iter().delete();
         }
 
@@ -44,8 +45,10 @@ impl GraspEditorTab {
                     {
                         self.document_mosaic.enqueue(
                             &queue,
-                            &take_objects(tiles()).to_tiles(&self.document_mosaic),
+                            &take_objects(all_tiles()).to_tiles(&self.document_mosaic),
                         );
+
+                        self.document_mosaic.request_quadtree_update();
                     }
                 }
             }

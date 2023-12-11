@@ -1,10 +1,16 @@
 use std::sync::Arc;
 
 use egui::{Pos2, Vec2};
+use itertools::Itertools;
 use mosaic::{
     capabilities::{ArchetypeSubject, QueueCapability},
-    internals::{void, Mosaic, MosaicCRUD, MosaicIO, TileFieldQuery, TileFieldSetter, Value},
-    iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
+    internals::{
+        void, Mosaic, MosaicCRUD, MosaicCollage, MosaicIO, TileFieldQuery, TileFieldSetter, Value,
+    },
+    iterators::{
+        component_selectors::ComponentSelectors, tile_filters::TileFilters,
+        tile_getters::TileGetters,
+    },
 };
 
 use crate::{
@@ -38,7 +44,9 @@ impl StateMachine for GraspEditorTab {
         match (from, trigger) {
             (_, EditorStateTrigger::DblClickToCreate) => {
                 self.create_new_object(self.editor_data.cursor);
+                println!("create: {:?}", self.quadtree);
                 self.document_mosaic.request_quadtree_update();
+
                 Some(EditorState::Idle)
             }
 
@@ -56,15 +64,18 @@ impl StateMachine for GraspEditorTab {
                 Some(EditorState::Pan)
             }
             (_, EditorStateTrigger::DragToLink) => {
-                self.editor_data.link_start_pos =
-                    get_pos_from_tile(self.editor_data.selected.first().unwrap());
+                if let Some(position_from_tile) =
+                    get_pos_from_tile(self.editor_data.selected.first().unwrap())
+                {
+                    self.editor_data.link_start_pos = Some(self.pos_with_pan(position_from_tile));
+                }
                 Some(EditorState::Link)
             }
             (_, EditorStateTrigger::DragToMove) => Some(EditorState::Move),
             (_, EditorStateTrigger::ClickToContextMenu) => Some(EditorState::ContextMenu),
             (EditorState::ContextMenu, _) => {
                 self.response = None;
-                Some(EditorState::Idle)
+                self.on_transition(EditorState::Idle, trigger)
             }
             (EditorState::Idle, EditorStateTrigger::DragToSelect) => {
                 self.editor_data.rect_delta = Some(Vec2::ZERO);
@@ -177,26 +188,23 @@ impl GraspEditorTab {
     }
 
     pub fn update_quadtree(&mut self) {
-        for tile in self
-            .document_mosaic
-            .get_all()
-            .include_component("Position")
-            .get_targets()
-        {
-            let selected_pos_component = tile.get_component("Position").unwrap();
+        let filtered_tiles = self.document_mosaic.apply_collage(&self.collage, None);
 
-            if let (Value::F32(x), Value::F32(y)) = selected_pos_component.get_by(("x", "y")) {
-                if let Some(area_id) = self.node_to_area.get(&tile.id) {
-                    self.quadtree.delete_by_handle(*area_id);
+        for tile in filtered_tiles.filter_objects().unique().collect_vec() {
+            if let Some(selected_pos_component) = tile.get_component("Position") {
+                if let (Value::F32(x), Value::F32(y)) = selected_pos_component.get_by(("x", "y")) {
+                    if let Some(area_id) = self.node_to_area.get(&tile.id) {
+                        self.quadtree.delete_by_handle(*area_id);
 
-                    let region = self.build_circle_area(Pos2::new(x, y), 10);
-                    if let Some(area_id) = self.quadtree.insert(region, tile.id) {
-                        self.node_to_area.insert(tile.id, area_id);
-                    }
-                } else {
-                    let region = self.build_circle_area(Pos2::new(x, y), 10);
-                    if let Some(area_id) = self.quadtree.insert(region, tile.id) {
-                        self.node_to_area.insert(tile.id, area_id);
+                        let region = self.build_circle_area(Pos2::new(x, y), 10);
+                        if let Some(area_id) = self.quadtree.insert(region, tile.id) {
+                            self.node_to_area.insert(tile.id, area_id);
+                        }
+                    } else {
+                        let region = self.build_circle_area(Pos2::new(x, y), 10);
+                        if let Some(area_id) = self.quadtree.insert(region, tile.id) {
+                            self.node_to_area.insert(tile.id, area_id);
+                        }
                     }
                 }
             }

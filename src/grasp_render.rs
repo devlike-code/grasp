@@ -10,17 +10,19 @@ use mosaic::{
     internals::{MosaicIO, Tile},
     iterators::{component_selectors::ComponentSelectors, tile_filters::TileFilters},
 };
-use std::ops::Add;
+use std::ops::{Add, Sub};
 
 impl GraspEditorTab {
     pub fn draw_debug(&mut self, ui: &mut Ui) {
         let painter = ui.painter();
 
         self.quadtree.iter().for_each(|area| {
-            let anchor_pos = self.pos_with_pan(Pos2 {
-                x: area.anchor().x as f32,
-                y: area.anchor().y as f32,
-            });
+            let anchor_pos = self
+                .pos_with_pan(Pos2 {
+                    x: area.anchor().x as f32,
+                    y: area.anchor().y as f32,
+                })
+                .sub(self.editor_data.tab_offset);
             painter.rect(
                 Rect {
                     min: Pos2 {
@@ -145,10 +147,10 @@ impl GraspEditorTab {
         }
 
         if let Some(start_pos) = self.editor_data.link_start_pos {
-            let mut end_pos = self.editor_data.cursor;
+            let mut end_pos = self.pos_with_pan(self.editor_data.cursor);
             let mut end_offset = 0.0;
             if let Some(end) = &self.editor_data.link_end {
-                end_pos = get_pos_from_tile(end).unwrap();
+                end_pos = self.pos_with_pan(get_pos_from_tile(end).unwrap());
                 end_offset = 10.0;
             }
 
@@ -308,7 +310,6 @@ impl GraspEditorTab {
 
     pub fn render(&mut self, ui: &mut Ui) {
         let tab_mosaic = self.document_mosaic.apply_collage(&self.collage, None);
-
         for node in tab_mosaic
             .clone()
             .filter_objects()

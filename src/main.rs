@@ -1,6 +1,7 @@
 use editor_state::GraspEditorState;
 use grasp_common::create_native_options;
 
+mod editor_queue_process;
 mod editor_state;
 mod editor_state_machine;
 mod grasp_common;
