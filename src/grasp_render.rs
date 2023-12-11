@@ -12,7 +12,7 @@ use mosaic::{
     internals::{MosaicIO, Tile},
     iterators::{component_selectors::ComponentSelectors, tile_filters::TileFilters},
 };
-use std::ops::{Add, Sub};
+use std::ops::Add;
 
 impl GraspEditorTab {
     pub fn draw_debug(&mut self, ui: &mut Ui) {

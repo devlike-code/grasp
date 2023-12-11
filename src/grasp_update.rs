@@ -7,7 +7,6 @@ use mosaic::{
 use crate::{
     editor_state_machine::EditorState,
     grasp_common::{GraspEditorTab, QuadTreeFetch},
-    grasp_transitions::QuadtreeUpdateCapability,
 };
 
 impl GraspEditorTab {

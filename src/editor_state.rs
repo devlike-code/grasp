@@ -17,10 +17,7 @@ use mosaic::{
         all_tiles, par, void, Collage, Datatype, FromByteArray, Mosaic, MosaicCRUD, MosaicIO,
         MosaicTypelevelCRUD, Tile, TileFieldSetter, ToByteArray, Value, S32,
     },
-    iterators::{
-        component_selectors::ComponentSelectors, tile_deletion::TileDeletion,
-        tile_getters::TileGetters,
-    },
+    iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
 };
 use quadtree_rs::Quadtree;
 
@@ -37,8 +34,6 @@ type ComponentRenderer = Box<dyn Fn(&mut Ui, &mut GraspEditorTab, Tile)>;
 pub trait ToastCapability {
     fn send_toast(&self, text: &str);
 }
-
-// http://localhost:5341/
 
 impl ToastCapability for Arc<Mosaic> {
     fn send_toast(&self, text: &str) {
@@ -192,9 +187,9 @@ impl GraspEditorState {
                 {
                     for (_, tab) in self.dock_state.iter_all_tabs() {
                         let tab_button = Button::new(tab.name.clone()).sense(Sense::click());
-                        if ui.add(tab_button).clicked() {
-                            require_focus.push(tab);
-                        } else if !add_index.is_empty() && add_index.contains(&tab.tab_tile.id) {
+                        if ui.add(tab_button).clicked()
+                            || !add_index.is_empty() && add_index.contains(&tab.tab_tile.id)
+                        {
                             require_focus.push(tab);
                         }
                     }
