@@ -1,13 +1,11 @@
 use std::{
     collections::HashMap,
-    io::Write,
     path::Path,
     sync::mpsc::{self, Sender},
     thread,
 };
 
 use editor_state::GraspEditorState;
-use env_logger::Target;
 use grasp_common::create_native_options;
 use iso8601_timestamp::Timestamp;
 use log::Record;
@@ -26,7 +24,6 @@ struct SeqWriterData {
     level: String,
     line: String,
     message: String,
-    module: String,
     timestamp: String,
     source: String,
 }
@@ -86,7 +83,6 @@ impl SeqWriter {
             source: record.file().unwrap_or_default().to_string(),
             level: record.level().to_string(),
             line: record.line().unwrap_or_default().to_string(),
-            module: record.module_path().unwrap_or_default().to_string(),
             message,
             timestamp: Timestamp::now_utc().to_string(),
         });

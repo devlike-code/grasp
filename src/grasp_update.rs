@@ -1,19 +1,13 @@
 use egui::{CursorIcon, Key, Rect, Ui};
 use itertools::Itertools;
 use mosaic::{
-    capabilities::QueueCapability,
-    internals::{all_tiles, take_objects, tiles, MosaicIO},
-    iterators::{
-        component_selectors::ComponentSelectors, tile_deletion::TileDeletion,
-        tile_getters::TileGetters,
-    },
+    capabilities::QueueCapability, internals::MosaicIO, iterators::tile_deletion::TileDeletion,
 };
 
 use crate::{
     editor_state_machine::EditorState,
     grasp_common::{GraspEditorTab, QuadTreeFetch},
 };
-use mosaic::capabilities::CollageExportCapability;
 
 impl GraspEditorTab {
     pub fn update(&mut self, ui: &mut Ui) {

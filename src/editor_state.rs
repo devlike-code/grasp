@@ -13,8 +13,8 @@ use itertools::Itertools;
 use mosaic::{
     capabilities::QueueTile,
     internals::{
-        all_tiles, par, tiles, void, Collage, Datatype, FromByteArray, Mosaic, MosaicCRUD,
-        MosaicIO, MosaicTypelevelCRUD, Tile, TileFieldSetter, ToByteArray, Value, S32,
+        all_tiles, par, void, Collage, Datatype, FromByteArray, Mosaic, MosaicCRUD, MosaicIO,
+        MosaicTypelevelCRUD, Tile, TileFieldSetter, ToByteArray, Value, S32,
     },
     iterators::{
         component_selectors::ComponentSelectors, tile_deletion::TileDeletion,
@@ -37,6 +37,8 @@ type ComponentRenderer = Box<dyn Fn(&mut Ui, &mut GraspEditorTab, Tile)>;
 pub trait ToastCapability {
     fn send_toast(&self, text: &str);
 }
+
+// http://localhost:5341/
 
 impl ToastCapability for Arc<Mosaic> {
     fn send_toast(&self, text: &str) {

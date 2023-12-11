@@ -8,12 +8,10 @@ use mosaic::{
     internals::{void, Mosaic, MosaicCRUD, MosaicIO, Tile, TileFieldQuery, TileFieldSetter, Value},
     iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
 };
-use rand::distributions::uniform::UniformSampler;
 
 use crate::{
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
     grasp_common::{get_pos_from_tile, GraspEditorTab},
-    utilities::Pos,
 };
 
 pub trait QuadtreeUpdateCapability {
@@ -215,7 +213,7 @@ impl GraspEditorTab {
         }
     }
 
-    pub fn update_quadtree(&mut self, selection: Option<Vec<Tile>>) {
+    pub fn update_quadtree(&mut self, _selection: Option<Vec<Tile>>) {
         let selected = self
             .document_mosaic
             .get_all()
@@ -285,7 +283,7 @@ impl GraspEditorTab {
                 }
             }
 
-            for arr in connected {}
+            for _arr in connected {}
         }
     }
 }

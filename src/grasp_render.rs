@@ -98,7 +98,7 @@ impl GraspEditorTab {
     fn draw_node(&mut self, ui: &mut Ui, node: &Tile) {
         let painter = ui.painter();
         if node.match_archetype(&["Position", "Label"]) {
-            let arcs = node.get_archetype(&["Position", "Label"]);
+            let _arcs = node.get_archetype(&["Position", "Label"]);
             let pos = Pos(node.clone()).query();
             let label = Label(node.clone()).query();
 
