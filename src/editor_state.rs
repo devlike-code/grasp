@@ -342,7 +342,7 @@ impl GraspEditorState {
                 }
             };
 
-            if ui.button(format!("Show Tab view {}", tabview_on)).clicked() {
+            if ui.button(format!("Show Tab View {}", tabview_on)).clicked() {
                 self.show_tabview = !self.show_tabview;
                 ui.close_menu();
             }
@@ -360,6 +360,16 @@ impl GraspEditorState {
             if ui.button(format!("Toggle Ruler {}", ruler_on)).clicked() {
                 if let Some((_, tab)) = self.dock_state.find_active_focused() {
                     tab.ruler_visible = !tab.ruler_visible;
+                    ui.close_menu();
+                }
+            }
+
+            if ui
+                .button(format!("Toggle Debug Draw {}", ruler_on))
+                .clicked()
+            {
+                if let Some((_, tab)) = self.dock_state.find_active_focused() {
+                    tab.editor_data.debug = !tab.editor_data.debug;
                     ui.close_menu();
                 }
             }

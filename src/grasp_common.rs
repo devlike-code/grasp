@@ -62,6 +62,7 @@ pub struct GraspEditorData {
     pub pan: Vec2,
     pub previous_pan: Vec2,
     pub selected: Vec<Tile>,
+    pub debug: bool,
     pub cursor: Pos2,
     pub cursor_delta: Vec2,
     pub rect_delta: Option<Vec2>,

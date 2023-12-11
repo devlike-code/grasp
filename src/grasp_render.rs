@@ -16,6 +16,10 @@ use std::ops::Add;
 
 impl GraspEditorTab {
     pub fn draw_debug(&mut self, ui: &mut Ui) {
+        if !self.editor_data.debug {
+            return;
+        }
+
         let painter = ui.painter();
 
         self.quadtree.iter().for_each(|area| {
