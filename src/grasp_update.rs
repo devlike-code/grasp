@@ -2,7 +2,7 @@ use egui::{CursorIcon, Key, Rect, Ui};
 use itertools::Itertools;
 use mosaic::{
     capabilities::QueueCapability,
-    internals::{take_objects, tiles, MosaicIO},
+    internals::{take_objects, MosaicIO, all_tiles},
     iterators::{
         component_selectors::ComponentSelectors, tile_deletion::TileDeletion,
         tile_getters::TileGetters,
@@ -44,7 +44,7 @@ impl GraspEditorTab {
                     {
                         self.document_mosaic.enqueue(
                             &queue,
-                            &take_objects(tiles()).to_tiles(&self.document_mosaic),
+                            &take_objects(all_tiles()).to_tiles(&self.document_mosaic),
                         );
                     }
                 }

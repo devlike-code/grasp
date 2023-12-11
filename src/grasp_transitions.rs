@@ -11,7 +11,8 @@ use rand::distributions::uniform::UniformSampler;
 
 use crate::{
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
-    grasp_common::{get_pos_from_tile, GraspEditorTab}, utilities::Pos,
+    grasp_common::{get_pos_from_tile, GraspEditorTab},
+    utilities::Pos,
 };
 
 pub trait QuadtreeUpdateCapability {
@@ -181,9 +182,17 @@ impl StateMachine for GraspEditorTab {
 }
 
 impl GraspEditorTab {
+    
     pub fn generate_rects_for_bezier(qb: QuadraticBezierShape) -> Vec<Rect> {
+        //  let samples = qb.flatten(Some(0.1));
 
-        let samples = qb.flatten(Some(0.1));
+        let mut samples = vec![];
+
+        samples.push(qb.sample(0.0));
+        for i in 1..21 {
+            samples.push(qb.sample(i as f32 / 20.0));
+        }
+
         let mut rects = vec![];
 
         if samples.len() > 2 {
@@ -226,7 +235,10 @@ impl GraspEditorTab {
             println!("###### update_quadtree $$$$$$ SELECTED TILE: {:?}", tile);
 
             if let Some(area_ids) = self.object_to_area.get_mut(&tile.id) {
-                println!("###### update_quadtree $$$$$$ SELECTED TILE area_ids: {:?}", area_ids);
+                println!(
+                    "###### update_quadtree $$$$$$ SELECTED TILE area_ids: {:?}",
+                    area_ids
+                );
 
                 for area_id in area_ids {
                     self.quadtree.delete_by_handle(*area_id);
@@ -286,9 +298,7 @@ impl GraspEditorTab {
                 }
             }
 
-            for arr in connected {
-               
-            }
+            for arr in connected {}
         }
     }
 }

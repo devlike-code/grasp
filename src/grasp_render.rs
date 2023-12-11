@@ -1,11 +1,15 @@
 use crate::{
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
     grasp_common::{get_pos_from_tile, GraspEditorTab},
+    utilities::Pos,
 };
 use egui::{
     Align2, Color32, FontId, Painter, Pos2, Rangef, Rect, Rounding, Stroke, TextEdit, Ui, Vec2,
 };
-use mosaic::{capabilities::ArchetypeSubject, internals::MosaicCollage};
+use mosaic::{
+    capabilities::ArchetypeSubject,
+    internals::{MosaicCollage, TileFieldQuery},
+};
 use mosaic::{
     internals::{MosaicIO, Tile},
     iterators::{component_selectors::ComponentSelectors, tile_filters::TileFilters},
@@ -60,17 +64,14 @@ impl GraspEditorTab {
             points: [a_start, middle, tip],
             closed: false,
             fill: Color32::TRANSPARENT,
-            stroke: Stroke {
-                width: 2.0,
-                color: Color32::LIGHT_BLUE,
-            },
+            stroke,
         };
+
         painter.add(shape);
         painter.line_segment([tip, tip - tip_length * (rot * dir)], stroke);
         painter.line_segment([tip, tip - tip_length * (rot.inverse() * dir)], stroke);
 
         painter.circle_filled(shape.sample(0.5), 10.0, Color32::GRAY);
-
     }
 
     fn draw_arrow(&mut self, painter: &Painter, arrow: &Tile) {
@@ -87,7 +88,7 @@ impl GraspEditorTab {
             source_pos,
             mid_pos,
             target_pos - source_pos,
-            Stroke::new(1.0, Color32::LIGHT_BLUE),
+            Stroke::new(1.0, Color32::LIGHT_GRAY),
             10.0,
             10.0,
         );
@@ -164,7 +165,7 @@ impl GraspEditorTab {
                 start_pos,
                 mid_pos,
                 end_pos - start_pos,
-                Stroke::new(2.0, Color32::WHITE),
+                Stroke::new(2.0, Color32::DARK_BLUE),
                 10.0,
                 end_offset,
             )
@@ -173,17 +174,31 @@ impl GraspEditorTab {
 
     fn draw_selected(&mut self, painter: &Painter) {
         for selected in &self.editor_data.selected {
-            let selected_pos_component = selected.get_component("Position").unwrap();
+            let mut selected_pos = self.pos_with_pan(Pos(selected.clone()).get_by(()));
+
+            if selected.is_arrow() {
+                let start_pos = self.pos_with_pan(Pos(selected.source().clone()).get_by(()));
+                let end_pos = self.pos_with_pan(Pos(selected.target().clone()).get_by(()));
+
+                let shape = egui::epaint::QuadraticBezierShape {
+                    points: [start_pos, selected_pos, end_pos],
+                    closed: false,
+                    fill: Color32::DARK_BLUE,
+                    stroke: Stroke {
+                        width: 2.0,
+                        color: Color32::DARK_BLUE,
+                    },
+                };
+
+                selected_pos = shape.sample(0.5);
+            }
+
             let stroke = Stroke {
                 width: 0.5,
-                color: Color32::RED,
+                color: Color32::LIGHT_GREEN,
             };
-            let selected_pos = self.pos_with_pan(Pos2::new(
-                selected_pos_component.get("x").as_f32(),
-                selected_pos_component.get("y").as_f32(),
-            ));
 
-            painter.circle(selected_pos, 11.0, Color32::RED, stroke);
+            painter.circle(selected_pos, 11.0, Color32::DARK_BLUE, stroke);
         }
     }
 

@@ -14,7 +14,7 @@ use mosaic::{
     capabilities::QueueTile,
     internals::{
         par, tiles, void, Collage, Datatype, FromByteArray, Mosaic, MosaicCRUD, MosaicIO,
-        MosaicTypelevelCRUD, Tile, TileFieldSetter, ToByteArray, Value, S32,
+        MosaicTypelevelCRUD, Tile, TileFieldSetter, ToByteArray, Value, S32, all_tiles,
     },
     iterators::{
         component_selectors::ComponentSelectors, tile_deletion::TileDeletion,
@@ -127,7 +127,7 @@ impl GraspEditorState {
         //     .component_renderers
         //     .insert("Position".into(), Box::new(Self::draw_position_property));
 
-        let tab = state.new_tab(tiles());
+        let tab = state.new_tab(all_tiles());
         state.dock_state.main_surface_mut().push_to_first_leaf(tab);
 
         state
@@ -238,7 +238,7 @@ impl GraspEditorState {
     fn show_document(&mut self, ui: &mut Ui, _frame: &mut eframe::Frame) {
         ui.menu_button("Document", |ui| {
             if ui.button("New Tab").clicked() {
-                let tab = self.new_tab(tiles());
+                let tab = self.new_tab(all_tiles());
                 self.dock_state.main_surface_mut().push_to_first_leaf(tab);
 
                 ui.close_menu();

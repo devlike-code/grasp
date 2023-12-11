@@ -9,7 +9,7 @@ use mosaic::{
 
 use crate::{
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
-    grasp_common::{GraspEditorTab, QuadTreeFetch, UiKeyDownExtract},
+    grasp_common::{GraspEditorTab, QuadTreeFetch, UiKeyDownExtract}, grasp_transitions::QuadtreeUpdateCapability,
 };
 
 impl GraspEditorTab {
@@ -49,6 +49,9 @@ impl GraspEditorTab {
                 }
             }
             self.editor_data.selected.clear();
+
+            //self.update_quadtree(None);
+            self.document_mosaic.request_quadtree_update();
         }
 
         if mouse.double_clicked() && under_cursor.is_empty() {
