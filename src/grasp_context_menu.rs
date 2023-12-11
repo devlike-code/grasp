@@ -1,9 +1,10 @@
 use std::ops::Sub;
 
 use egui::Ui;
+use itertools::Itertools;
 use mosaic::{
     capabilities::{
-        ArchetypeSubject, CollageExportCapability, GroupingCapability, QueueCapability,
+        Archetype, ArchetypeSubject, CollageExportCapability, GroupingCapability, QueueCapability,
         SelectionCapability,
     },
     internals::{
@@ -33,42 +34,57 @@ impl GraspEditorTab {
 
     // menu to show when having selection
     fn show_selection_menu(&mut self, ui: &mut Ui) {
+        let queue = self
+            .document_mosaic
+            .get_all()
+            .include_component("NewTabRequestQueue")
+            .get_targets()
+            .next()
+            .unwrap();
+
         ui.menu_button("Filter", |ui| {
             if ui.button("Select").clicked() {
-                if let Some(queue) = self
-                    .document_mosaic
-                    .get_all()
-                    .include_component("NewTabRequestQueue")
-                    .get_targets()
-                    .next()
-                {
-                    let selection_tile = self.document_mosaic.make_selection();
-                    self.document_mosaic
-                        .fill_selection(&selection_tile, &self.editor_data.selected.clone());
+                let selection_tile = self.document_mosaic.make_selection();
+                self.document_mosaic
+                    .fill_selection(&selection_tile, &self.editor_data.selected.clone());
 
-                    let c1 = targets_from(take_components(
-                        &["Group"],
-                        arrows_from(descriptors_from(tiles(vec![selection_tile.clone()]))),
-                    ));
+                let c1 = targets_from(take_components(
+                    &["Group"],
+                    arrows_from(descriptors_from(tiles(vec![selection_tile.clone()]))),
+                ));
 
-                    let c2 = arrows_from(targets_from(take_components(
-                        &["Group"],
-                        arrows_from(descriptors_from(tiles(vec![selection_tile.clone()]))),
-                    )));
+                let c2 = arrows_from(targets_from(take_components(
+                    &["Group"],
+                    arrows_from(descriptors_from(tiles(vec![selection_tile.clone()]))),
+                )));
 
-                    let c = gather(vec![c1, c2]);
-                    let tile = c.to_tiles(&self.document_mosaic);
-                    tile.add_component("Label", par("Selection"));
+                let c = gather(vec![c1, c2]);
+                let tile = c.to_tiles(&self.document_mosaic);
+                tile.add_component("Label", par("Selection"));
 
-                    self.document_mosaic.enqueue(&queue, &tile);
-                    self.document_mosaic.request_quadtree_update();
-                }
+                self.document_mosaic.enqueue(&queue, &tile);
+                self.document_mosaic.request_quadtree_update();
 
                 self.exit_menu(ui);
             }
 
             if ui.button("Group - todo").clicked() {
-                //self.document_mosaic.get_group_members(group, tile)
+                let selection_tile = self.document_mosaic.make_selection();
+                if let Some(group) = self
+                    .document_mosaic
+                    .get_component(&selection_tile, "GroupOwner")
+                {
+                    let name = group.get("self").as_s32().to_string();
+                    let members = self
+                        .document_mosaic
+                        .get_group_members(&name, &selection_tile);
+                    let c = tiles(members.collect_vec());
+                    let tile = c.to_tiles(&self.document_mosaic);
+                    tile.add_component("Label", par(format!("Group: {}", name).as_str()));
+
+                    self.document_mosaic.enqueue(&queue, &tile);
+                    self.document_mosaic.request_quadtree_update();
+                }
                 self.exit_menu(ui);
             }
 
