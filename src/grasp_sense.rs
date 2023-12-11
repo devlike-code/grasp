@@ -3,7 +3,7 @@ use std::ops::Sub;
 use egui::{Response, Sense, Ui, Vec2};
 use itertools::Itertools;
 use mosaic::{
-    internals::{MosaicCRUD, Value},
+    internals::{MosaicCRUD, Value, Tile},
     iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
 };
 
@@ -33,12 +33,17 @@ impl GraspEditorTab {
     }
 
     pub fn sense(&mut self, ui: &mut Ui) {
+        // fn fn_areas_to_remove(areas: Vec<Vec<u64>>, arr: Tile) -> Vec<Vec<u64>>{
+        //     for dep_arr in arr.iter().get_arrows(){
+        //         fn_areas_to_remove(areas, dep_arr);
+        //     }
+        // }
         use egui::PointerButton::*;
         use EditorStateTrigger::*;
 
         let mouse = self.sense_begin_frame(ui);
         let under_cursor = self.quadtree.query(self.build_cursor_area()).collect_vec();
-        let mut areas_to_remove = vec![];
+        let mut areas_to_remove: Vec<Vec<u64>> = vec![];
 
         if ui.delete_down() && self.state == EditorState::Idle {
             for selected in &self.editor_data.selected {

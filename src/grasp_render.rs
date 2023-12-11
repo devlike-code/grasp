@@ -165,11 +165,11 @@ impl GraspEditorTab {
 
     fn draw_selected(&mut self, painter: &Painter) {
         for selected in &self.editor_data.selected {
-            let mut selected_pos = self.pos_with_pan(Pos(selected.clone()).get_by(()));
+            let mut selected_pos = self.pos_with_pan(Pos(selected.clone()).query());
 
             if selected.is_arrow() {
-                let start_pos = self.pos_with_pan(Pos(selected.source().clone()).get_by(()));
-                let end_pos = self.pos_with_pan(Pos(selected.target().clone()).get_by(()));
+                let start_pos = self.pos_with_pan(Pos(selected.source().clone()).query());
+                let end_pos = self.pos_with_pan(Pos(selected.target().clone()).query());
 
                 let shape = egui::epaint::QuadraticBezierShape {
                     points: [start_pos, selected_pos, end_pos],

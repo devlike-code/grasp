@@ -231,19 +231,21 @@ impl GraspEditorTab {
             .get_targets()
             .collect_vec();
 
+        self.quadtree.reset();
+
         for tile in &selected {
             let mut connected = vec![];
 
-            if let Some(area_ids) = self.object_to_area.get_mut(&tile.id) {
-                println!(
-                    "###### update_quadtree $$$$$$ SELECTED TILE area_ids: {:?}",
-                    area_ids
-                );
+            // if let Some(area_ids) = self.object_to_area.get_mut(&tile.id) {
+            //     println!(
+            //         "###### update_quadtree $$$$$$ SELECTED TILE area_ids: {:?}",
+            //         area_ids
+            //     );
 
-                for area_id in area_ids {
-                    self.quadtree.delete_by_handle(*area_id);
-                }
-            }
+            //     for area_id in area_ids {
+            //         self.quadtree.delete_by_handle(*area_id);
+            //     }
+            // }
 
             let selected_pos_component = tile.get_component("Position").unwrap();
             if tile.is_object() {
