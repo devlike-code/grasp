@@ -93,7 +93,7 @@ fn main() -> Result<(), eframe::Error> {
     let writer = SeqWriter::new();
 
     env_logger::builder()
-        .format(move |buf, record| {
+        .format(move |_buf, record| {
             writer.send(record);
             Ok(())
         })

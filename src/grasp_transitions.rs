@@ -12,7 +12,6 @@ use mosaic::{
 use crate::{
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
     grasp_common::{get_pos_from_tile, GraspEditorTab},
-    utilities::Pos,
 };
 
 pub trait QuadtreeUpdateCapability {
@@ -182,7 +181,6 @@ impl StateMachine for GraspEditorTab {
 }
 
 impl GraspEditorTab {
-    
     pub fn generate_rects_for_bezier(qb: QuadraticBezierShape) -> Vec<Rect> {
         //  let samples = qb.flatten(Some(0.1));
 
@@ -195,6 +193,7 @@ impl GraspEditorTab {
 
         let mut rects = vec![];
 
+        #[allow(clippy::comparison_chain)]
         if samples.len() > 2 {
             for i in (0..samples.len()).step_by(2) {
                 if i + 2 < samples.len() {

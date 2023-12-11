@@ -3,13 +3,14 @@ use std::ops::Sub;
 use egui::{Response, Sense, Ui, Vec2};
 use itertools::Itertools;
 use mosaic::{
-    internals::{MosaicCRUD, Value, Tile},
+    internals::{MosaicCRUD, Value},
     iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
 };
 
 use crate::{
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
-    grasp_common::{GraspEditorTab, QuadTreeFetch, UiKeyDownExtract}, grasp_transitions::QuadtreeUpdateCapability,
+    grasp_common::{GraspEditorTab, QuadTreeFetch, UiKeyDownExtract},
+    grasp_transitions::QuadtreeUpdateCapability,
 };
 
 impl GraspEditorTab {

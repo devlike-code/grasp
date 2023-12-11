@@ -41,6 +41,7 @@ impl GraspEditorTab {
         });
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn internal_draw_arrow(
         &self,
         painter: &egui::Painter,
