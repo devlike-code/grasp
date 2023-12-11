@@ -14,8 +14,8 @@ use itertools::Itertools;
 use mosaic::{
     capabilities::QueueTile,
     internals::{
-        all_tiles, par, tiles, void, Collage, Datatype, FromByteArray, Mosaic, MosaicCRUD,
-        MosaicIO, MosaicTypelevelCRUD, Tile, TileFieldSetter, ToByteArray, Value, S32,
+        all_tiles, par, void, Collage, Datatype, FromByteArray, Mosaic, MosaicCRUD, MosaicIO,
+        MosaicTypelevelCRUD, Tile, TileFieldSetter, ToByteArray, Value, S32,
     },
     iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
 };
@@ -146,7 +146,7 @@ impl GraspEditorState {
             quadtree: Quadtree::new_with_anchor((-1000, -1000).into(), 16),
             document_mosaic: Arc::clone(&self.document_mosaic),
             collage,
-            node_to_area: Default::default(),
+            object_to_area: Default::default(),
             editor_data: Default::default(),
             state: EditorState::Idle,
             grid_visible: false,
@@ -187,9 +187,9 @@ impl GraspEditorState {
                 {
                     for (_, tab) in self.dock_state.iter_all_tabs() {
                         let tab_button = Button::new(tab.name.clone()).sense(Sense::click());
-                        if ui.add(tab_button).clicked() {
-                            require_focus.push(tab);
-                        } else if !add_index.is_empty() && add_index.contains(&tab.tab_tile.id) {
+                        if ui.add(tab_button).clicked()
+                            || !add_index.is_empty() && add_index.contains(&tab.tab_tile.id)
+                        {
                             require_focus.push(tab);
                         }
                     }
@@ -217,7 +217,13 @@ impl GraspEditorState {
             .resizable(true)
             .show(ctx, |ui| {
                 if let Some((_, tab)) = self.dock_state.find_active_focused() {
-                    let selected = tab.editor_data.selected.clone();
+                    let selected = tab
+                        .editor_data
+                        .selected
+                        .clone()
+                        .into_iter()
+                        .unique()
+                        .collect_vec();
                     for t in selected {
                         CollapsingHeader::new(RichText::from(format!(
                             "[ID:{}] {}",
@@ -279,7 +285,7 @@ impl GraspEditorState {
     fn show_document(&mut self, ui: &mut Ui, _frame: &mut eframe::Frame) {
         ui.menu_button("Document", |ui| {
             if ui.button("New Tab").clicked() {
-                let tab = self.new_tab(tiles(vec![]));
+                let tab = self.new_tab(all_tiles());
                 self.dock_state.main_surface_mut().push_to_first_leaf(tab);
 
                 ui.close_menu();

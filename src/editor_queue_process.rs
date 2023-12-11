@@ -13,7 +13,7 @@ use mosaic::{
 use crate::editor_state::GraspEditorState;
 
 impl GraspEditorState {
-    pub(crate) fn process_requests(&mut self) {
+    pub fn process_requests(&mut self) {
         self.process_toast_queue();
         self.process_new_tab_queue();
         self.process_quadtree_queue();

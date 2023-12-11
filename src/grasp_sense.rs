@@ -10,6 +10,7 @@ use mosaic::{
 use crate::{
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
     grasp_common::{GraspEditorTab, QuadTreeFetch, UiKeyDownExtract},
+    grasp_transitions::QuadtreeUpdateCapability,
 };
 
 impl GraspEditorTab {
@@ -33,22 +34,30 @@ impl GraspEditorTab {
     }
 
     pub fn sense(&mut self, ui: &mut Ui) {
+        // fn fn_areas_to_remove(areas: Vec<Vec<u64>>, arr: Tile) -> Vec<Vec<u64>>{
+        //     for dep_arr in arr.iter().get_arrows(){
+        //         fn_areas_to_remove(areas, dep_arr);
+        //     }
+        // }
         use egui::PointerButton::*;
         use EditorStateTrigger::*;
 
         let mouse = self.sense_begin_frame(ui);
         let under_cursor = self.quadtree.query(self.build_cursor_area()).collect_vec();
-        let mut areas_to_remove = vec![];
+        let mut areas_to_remove: Vec<Vec<u64>> = vec![];
 
         if ui.delete_down() && self.state == EditorState::Idle {
             for selected in &self.editor_data.selected {
                 self.document_mosaic.delete_tile(selected.id);
-                if let Some(area_id) = self.node_to_area.get(&selected.id) {
-                    areas_to_remove.push(*area_id);
-                    self.node_to_area.remove(&selected.id);
+                if let Some(area_id) = self.object_to_area.get(&selected.id) {
+                    areas_to_remove.push(area_id.clone());
+                    self.object_to_area.remove(&selected.id);
                 }
             }
             self.editor_data.selected.clear();
+
+            //self.update_quadtree(None);
+            self.document_mosaic.request_quadtree_update();
         }
 
         if mouse.double_clicked() && under_cursor.is_empty() {
@@ -120,8 +129,10 @@ impl GraspEditorTab {
             self.trigger(ClickToContextMenu);
         }
 
-        areas_to_remove.into_iter().for_each(|f: u64| {
-            self.quadtree.delete_by_handle(f);
+        areas_to_remove.into_iter().for_each(|areas_vec: Vec<u64>| {
+            for a in areas_vec {
+                self.quadtree.delete_by_handle(a);
+            }
         });
     }
 }

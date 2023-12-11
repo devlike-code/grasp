@@ -1,28 +1,28 @@
 use crate::{
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
     grasp_common::{get_pos_from_tile, GraspEditorTab},
+    utilities::{Label, Pos},
 };
 use egui::{
     Align2, Color32, FontId, Painter, Pos2, Rangef, Rect, Rounding, Stroke, TextEdit, Ui, Vec2,
 };
+use mosaic::internals::TileFieldEmptyQuery;
 use mosaic::{capabilities::ArchetypeSubject, internals::MosaicCollage};
 use mosaic::{
     internals::{MosaicIO, Tile},
     iterators::{component_selectors::ComponentSelectors, tile_filters::TileFilters},
 };
-use std::ops::{Add, Sub};
+use std::ops::Add;
 
 impl GraspEditorTab {
     pub fn draw_debug(&mut self, ui: &mut Ui) {
         let painter = ui.painter();
 
         self.quadtree.iter().for_each(|area| {
-            let anchor_pos = self
-                .pos_with_pan(Pos2 {
-                    x: area.anchor().x as f32,
-                    y: area.anchor().y as f32,
-                })
-                .sub(self.editor_data.tab_offset);
+            let anchor_pos = self.pos_with_pan(Pos2 {
+                x: area.anchor().x as f32,
+                y: area.anchor().y as f32,
+            }) - self.editor_data.tab_offset;
             painter.rect(
                 Rect {
                     min: Pos2 {
@@ -41,10 +41,12 @@ impl GraspEditorTab {
         });
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn internal_draw_arrow(
         &self,
         painter: &egui::Painter,
         origin: Pos2,
+        middle: Pos2,
         vec: Vec2,
         stroke: Stroke,
         start_offset: f32,
@@ -55,34 +57,37 @@ impl GraspEditorTab {
         let dir = vec.normalized();
         let a_start: Pos2 = origin + dir * start_offset;
         let tip = a_start + vec - dir * (start_offset + end_offset);
-        let middle = a_start.lerp(tip, 0.5);
+        //let middle = a_start.lerp(tip, 0.5);
 
         let shape = egui::epaint::QuadraticBezierShape {
             points: [a_start, middle, tip],
             closed: false,
             fill: Color32::TRANSPARENT,
-            stroke: Stroke {
-                width: 2.0,
-                color: Color32::LIGHT_BLUE,
-            },
+            stroke,
         };
+
         painter.add(shape);
         painter.line_segment([tip, tip - tip_length * (rot * dir)], stroke);
         painter.line_segment([tip, tip - tip_length * (rot.inverse() * dir)], stroke);
+
+        painter.circle_filled(shape.sample(0.5), 10.0, Color32::GRAY);
     }
 
     fn draw_arrow(&mut self, painter: &Painter, arrow: &Tile) {
         let source_node = self.document_mosaic.get(arrow.source_id()).unwrap();
         let target_node = self.document_mosaic.get(arrow.target_id()).unwrap();
+        let arrow_node = self.document_mosaic.get(arrow.id).unwrap();
 
         let source_pos = self.pos_with_pan(get_pos_from_tile(&source_node).unwrap());
         let target_pos = self.pos_with_pan(get_pos_from_tile(&target_node).unwrap());
+        let mid_pos = self.pos_with_pan(get_pos_from_tile(&arrow_node).unwrap());
 
         self.internal_draw_arrow(
             painter,
             source_pos,
+            mid_pos,
             target_pos - source_pos,
-            Stroke::new(1.0, Color32::LIGHT_BLUE),
+            Stroke::new(1.0, Color32::LIGHT_GRAY),
             10.0,
             10.0,
         );
@@ -92,51 +97,44 @@ impl GraspEditorTab {
     fn draw_node(&mut self, ui: &mut Ui, node: &Tile) {
         let painter = ui.painter();
         if node.match_archetype(&["Position", "Label"]) {
-            let arcs = node.get_archetype(&["Position", "Label"]);
-            match (arcs.get("Position"), arcs.get("Label")) {
-                (Some(pos_component), Some(label)) => {
-                    let pos = self.pos_with_pan(Pos2::new(
-                        pos_component.get("x").as_f32(),
-                        pos_component.get("y").as_f32(),
-                    ));
+            let _arcs = node.get_archetype(&["Position", "Label"]);
+            let pos = Pos(node.clone()).query();
+            let label = Label(node.clone()).query();
 
-                    painter.circle_filled(pos, 10.0, Color32::GRAY);
+            painter.circle_filled(pos, 10.0, Color32::GRAY);
 
-                    let floating_pos = pos.add(Vec2::new(10.0, 10.0));
+            let floating_pos = pos.add(Vec2::new(10.0, 10.0));
 
-                    if self.state == EditorState::PropertyChanging
-                        && self.editor_data.tile_changing == Some(node.id)
-                    {
-                        let text_edit = TextEdit::singleline(&mut self.editor_data.text)
-                            .char_limit(30)
-                            .cursor_at_end(true);
-                        let text_edit_response = ui.put(
-                            Rect::from_two_pos(
-                                floating_pos.add(Vec2::new(0.0, -5.0)),
-                                floating_pos.add(Vec2::new(60.0, 20.0)),
-                            ),
-                            text_edit,
-                        );
+            if self.state == EditorState::PropertyChanging
+                && self.editor_data.tile_changing == Some(node.id)
+            {
+                let text_edit = TextEdit::singleline(&mut self.editor_data.text)
+                    .char_limit(30)
+                    .cursor_at_end(true);
+                let text_edit_response = ui.put(
+                    Rect::from_two_pos(
+                        floating_pos.add(Vec2::new(0.0, -5.0)),
+                        floating_pos.add(Vec2::new(60.0, 20.0)),
+                    ),
+                    text_edit,
+                );
 
-                        text_edit_response.request_focus();
+                text_edit_response.request_focus();
 
-                        if ui.input(|i| i.key_pressed(egui::Key::Enter)) {
-                            self.trigger(EditorStateTrigger::EndDrag);
-                        } else if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
-                            self.editor_data.text = self.editor_data.previous_text.clone();
-                            self.trigger(EditorStateTrigger::EndDrag);
-                        }
-                    } else {
-                        painter.text(
-                            floating_pos,
-                            Align2::LEFT_CENTER,
-                            label.get("self").as_s32().to_string(),
-                            FontId::default(),
-                            Color32::GRAY,
-                        );
-                    }
+                if ui.input(|i| i.key_pressed(egui::Key::Enter)) {
+                    self.trigger(EditorStateTrigger::EndDrag);
+                } else if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+                    self.editor_data.text = self.editor_data.previous_text.clone();
+                    self.trigger(EditorStateTrigger::EndDrag);
                 }
-                _ => {}
+            } else {
+                painter.text(
+                    floating_pos,
+                    Align2::LEFT_CENTER,
+                    label,
+                    FontId::default(),
+                    Color32::GRAY,
+                );
             }
         }
     }
@@ -153,12 +151,13 @@ impl GraspEditorTab {
                 end_pos = self.pos_with_pan(get_pos_from_tile(end).unwrap());
                 end_offset = 10.0;
             }
-
+            let mid_pos = start_pos.lerp(end_pos, 0.5);
             self.internal_draw_arrow(
                 painter,
                 start_pos,
+                mid_pos,
                 end_pos - start_pos,
-                Stroke::new(2.0, Color32::WHITE),
+                Stroke::new(2.0, Color32::DARK_BLUE),
                 10.0,
                 end_offset,
             )
@@ -167,17 +166,31 @@ impl GraspEditorTab {
 
     fn draw_selected(&mut self, painter: &Painter) {
         for selected in &self.editor_data.selected {
-            let selected_pos_component = selected.get_component("Position").unwrap();
+            let mut selected_pos = self.pos_with_pan(Pos(selected.clone()).query());
+
+            if selected.is_arrow() {
+                let start_pos = self.pos_with_pan(Pos(selected.source().clone()).query());
+                let end_pos = self.pos_with_pan(Pos(selected.target().clone()).query());
+
+                let shape = egui::epaint::QuadraticBezierShape {
+                    points: [start_pos, selected_pos, end_pos],
+                    closed: false,
+                    fill: Color32::DARK_BLUE,
+                    stroke: Stroke {
+                        width: 2.0,
+                        color: Color32::DARK_BLUE,
+                    },
+                };
+
+                selected_pos = shape.sample(0.5);
+            }
+
             let stroke = Stroke {
                 width: 0.5,
-                color: Color32::RED,
+                color: Color32::LIGHT_GREEN,
             };
-            let selected_pos = self.pos_with_pan(Pos2::new(
-                selected_pos_component.get("x").as_f32(),
-                selected_pos_component.get("y").as_f32(),
-            ));
 
-            painter.circle(selected_pos, 11.0, Color32::RED, stroke);
+            painter.circle(selected_pos, 11.0, Color32::DARK_BLUE, stroke);
         }
     }
 

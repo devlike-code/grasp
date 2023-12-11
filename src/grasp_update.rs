@@ -1,25 +1,18 @@
 use egui::{CursorIcon, Key, Rect, Ui};
 use itertools::Itertools;
 use mosaic::{
-    capabilities::{CollageExportCapability, QueueCapability},
-    internals::{all_tiles, take_objects, MosaicIO},
-    iterators::{
-        component_selectors::ComponentSelectors, tile_deletion::TileDeletion,
-        tile_getters::TileGetters,
-    },
+    capabilities::QueueCapability, internals::MosaicIO, iterators::tile_deletion::TileDeletion,
 };
 
 use crate::{
     editor_state_machine::EditorState,
     grasp_common::{GraspEditorTab, QuadTreeFetch},
-    grasp_transitions::QuadtreeUpdateCapability,
 };
 
 impl GraspEditorTab {
     pub fn update(&mut self, ui: &mut Ui) {
         while let Some(request) = self.document_mosaic.dequeue(&self.tab_tile) {
-            self.update_quadtree();
-            //println!("after update: {:?}", self.quadtree);
+            self.update_quadtree(None);
             request.iter().delete();
         }
 
@@ -34,23 +27,20 @@ impl GraspEditorTab {
                     .unwrap();
                 }
 
-                // EXAMPLE USAGE FOR COLLAGE:
-                if ui.input(|i| i.key_released(Key::Space)) {
-                    if let Some(queue) = self
-                        .document_mosaic
-                        .get_all()
-                        .include_component("NewTabRequestQueue")
-                        .get_targets()
-                        .next()
-                    {
-                        self.document_mosaic.enqueue(
-                            &queue,
-                            &take_objects(all_tiles()).to_tiles(&self.document_mosaic),
-                        );
-
-                        self.document_mosaic.request_quadtree_update();
-                    }
-                }
+                // if ui.input(|i| i.key_released(Key::Space)) {
+                //     if let Some(queue) = self
+                //         .document_mosaic
+                //         .get_all()
+                //         .include_component("NewTabRequestQueue")
+                //         .get_targets()
+                //         .next()
+                //     {
+                //         self.document_mosaic.enqueue(
+                //             &queue,
+                //             &take_objects(all_tiles()).to_tiles(&self.document_mosaic),
+                //         );
+                //     }
+                // }
             }
 
             EditorState::Move => {
