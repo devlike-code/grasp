@@ -1,6 +1,11 @@
 use std::ops::Sub;
 
 use egui::Ui;
+use mosaic::{
+    capabilities::{CollageExportCapability, QueueCapability},
+    internals::{arrows_from, targets_from, tiles, MosaicIO},
+    iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
+};
 
 use crate::grasp_common::GraspEditorTab;
 
@@ -19,7 +24,20 @@ impl GraspEditorTab {
 
     // menu to show when havng selection
     fn show_selection_menu(&mut self, ui: &mut Ui) {
-        if ui.button("Operations-> todo").clicked() {
+        if ui.button("Filter: My Neighbors").clicked() {
+            if let Some(queue) = self
+                .document_mosaic
+                .get_all()
+                .include_component("NewTabRequestQueue")
+                .get_targets()
+                .next()
+            {
+                self.document_mosaic.enqueue(
+                    &queue,
+                    &targets_from(arrows_from(tiles(self.editor_data.selected.clone())))
+                        .to_tiles(&self.document_mosaic),
+                );
+            }
             ui.close_menu();
         }
     }

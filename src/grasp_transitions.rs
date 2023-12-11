@@ -2,12 +2,12 @@ use std::sync::Arc;
 
 use egui::{epaint::QuadraticBezierShape, Color32, Pos2, Rect, Stroke, Vec2};
 use itertools::Itertools;
+use log::{info, warn};
 use mosaic::{
     capabilities::{ArchetypeSubject, QueueCapability},
     internals::{void, Mosaic, MosaicCRUD, MosaicIO, Tile, TileFieldQuery, TileFieldSetter, Value},
     iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
 };
-use rand::distributions::uniform::UniformSampler;
 
 use crate::{
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
@@ -37,7 +37,7 @@ impl StateMachine for GraspEditorTab {
     type State = EditorState;
 
     fn on_transition(&mut self, from: Self::State, trigger: Self::Trigger) -> Option<EditorState> {
-        println!("TRANSITIION FROM = {:?}, TRIGGER -> {:?}", from, trigger);
+        info!("TRANSITIION FROM = {:?}, TRIGGER -> {:?}", from, trigger);
         match (from, trigger) {
             (_, EditorStateTrigger::DblClickToCreate) => {
                 self.create_new_object(self.editor_data.cursor);
@@ -166,7 +166,7 @@ impl StateMachine for GraspEditorTab {
             }
 
             (s, t) => {
-                println!("TRANSITION NOT DEALT WITH: {:?} {:?}!", s, t);
+                warn!("TRANSITION NOT DEALT WITH: {:?} {:?}!", s, t);
                 None
             }
         }
@@ -212,6 +212,7 @@ impl GraspEditorTab {
         }
         rects
     }
+
     pub fn update_selected_positions_by(&mut self, dp: Vec2) {
         for tile in &mut self.editor_data.selected {
             let mut selected_pos_component = tile.get_component("Position").unwrap();
@@ -222,7 +223,7 @@ impl GraspEditorTab {
         }
     }
 
-    pub fn update_quadtree(&mut self, selection: Option<Vec<Tile>>) {
+    pub fn update_quadtree(&mut self, _selection: Option<Vec<Tile>>) {
         let selected = self
             .document_mosaic
             .get_all()
@@ -232,7 +233,6 @@ impl GraspEditorTab {
 
         for tile in &selected {
             let mut connected = vec![];
-            println!("###### update_quadtree $$$$$$ SELECTED TILE: {:?}", tile);
 
             if let Some(area_ids) = self.object_to_area.get_mut(&tile.id) {
                 println!(
@@ -298,7 +298,7 @@ impl GraspEditorTab {
                 }
             }
 
-            for arr in connected {}
+            for _arr in connected {}
         }
     }
 }

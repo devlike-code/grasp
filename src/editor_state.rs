@@ -13,8 +13,8 @@ use itertools::Itertools;
 use mosaic::{
     capabilities::QueueTile,
     internals::{
-        par, tiles, void, Collage, Datatype, FromByteArray, Mosaic, MosaicCRUD, MosaicIO,
-        MosaicTypelevelCRUD, Tile, TileFieldSetter, ToByteArray, Value, S32, all_tiles,
+        all_tiles, par, void, Collage, Datatype, FromByteArray, Mosaic, MosaicCRUD, MosaicIO,
+        MosaicTypelevelCRUD, Tile, TileFieldSetter, ToByteArray, Value, S32,
     },
     iterators::{
         component_selectors::ComponentSelectors, tile_deletion::TileDeletion,
@@ -37,6 +37,8 @@ type ComponentRenderer = Box<dyn Fn(&mut Ui, &mut GraspEditorTab, Tile)>;
 pub trait ToastCapability {
     fn send_toast(&self, text: &str);
 }
+
+// http://localhost:5341/
 
 impl ToastCapability for Arc<Mosaic> {
     fn send_toast(&self, text: &str) {
@@ -176,7 +178,13 @@ impl GraspEditorState {
             .resizable(true)
             .show(ctx, |ui| {
                 if let Some((_, tab)) = self.dock_state.find_active_focused() {
-                    let selected = tab.editor_data.selected.clone().into_iter().unique().collect_vec();
+                    let selected = tab
+                        .editor_data
+                        .selected
+                        .clone()
+                        .into_iter()
+                        .unique()
+                        .collect_vec();
                     for t in selected {
                         CollapsingHeader::new(RichText::from(format!(
                             "[ID:{}] {}",
