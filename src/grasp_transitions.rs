@@ -5,13 +5,13 @@ use itertools::Itertools;
 use log::{info, warn};
 use mosaic::{
     capabilities::{ArchetypeSubject, QueueCapability},
-    internals::{void, Mosaic, MosaicCRUD, MosaicIO, Tile, TileFieldQuery, TileFieldSetter, Value},
+    internals::{void, Mosaic, MosaicCRUD, MosaicIO, Tile, TileFieldQuery, TileFieldSetter, Value, TileFieldEmptyQuery},
     iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
 };
 
 use crate::{
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
-    grasp_common::{get_pos_from_tile, GraspEditorTab},
+    grasp_common::{get_pos_from_tile, GraspEditorTab}, utilities::Pos,
 };
 
 pub trait QuadtreeUpdateCapability {
@@ -226,7 +226,9 @@ impl GraspEditorTab {
             }
         }
     }
-
+    
+    //TO-DO! --- Decide if we need selection and implement it, instead of re-creating everything every time it's called
+    //       --- If and when its impelmented pay atention to those not connected but stil updated because of connecting arrows
     pub fn update_quadtree(&mut self, _selection: Option<Vec<Tile>>) {
         let selected = self
             .document_mosaic
@@ -237,74 +239,39 @@ impl GraspEditorTab {
 
         self.quadtree.reset();
 
-        for tile in &selected {
-            let mut connected = vec![];
+        for tile in &selected {     
+            let mut selected_pos = Pos(tile.clone()).query();
 
-            // if let Some(area_ids) = self.object_to_area.get_mut(&tile.id) {
-            //     println!(
-            //         "###### update_quadtree $$$$$$ SELECTED TILE area_ids: {:?}",
-            //         area_ids
-            //     );
-
-            //     for area_id in area_ids {
-            //         self.quadtree.delete_by_handle(*area_id);
-            //     }
-            // }
-
-            let selected_pos_component = tile.get_component("Position").unwrap();
             if tile.is_object() {
-                if let (Value::F32(x), Value::F32(y)) = selected_pos_component.get_by(("x", "y")) {
-                    let region = self.build_circle_area(Pos2::new(x, y), 10);
-                    if let Some(area_id) = self.quadtree.insert(region, tile.id) {
-                        self.object_to_area.insert(tile.id, vec![area_id]);
-                    }
+                let region = self.build_circle_area(selected_pos, 10);
+                if let Some(area_id) = self.quadtree.insert(region, tile.id) {
+                    self.object_to_area.insert(tile.id, vec![area_id]);
                 }
 
-                for arr in tile.iter().get_arrows() {
-                    if !selected.contains(&arr) {
-                        connected.push(arr)
-                    }
-                }
+                
             } else if tile.is_arrow() {
-                let selected_pos_component = tile.get_component("Position").unwrap();
-                let selected_src_pos_c = tile.source().get_component("Position").unwrap();
-                let selected_tgt_pos_c = tile.target().get_component("Position").unwrap();
+                let start_pos = Pos(tile.source().clone()).query();
+                let end_pos = Pos(tile.target().clone()).query();
 
-                if let (Value::F32(x), Value::F32(y)) = selected_pos_component.get_by(("x", "y")) {
-                    if let (Value::F32(s_x), Value::F32(s_y)) =
-                        selected_src_pos_c.get_by(("x", "y"))
-                    {
-                        if let (Value::F32(t_x), Value::F32(t_y)) =
-                            selected_tgt_pos_c.get_by(("x", "y"))
-                        {
-                            let src_pos = Pos2::new(s_x, s_y);
-                            let control_point = Pos2::new(x, y);
-                            let tgt_pos = Pos2::new(t_x, t_y);
+                let qb = QuadraticBezierShape::from_points_stroke(
+                    [start_pos, selected_pos, end_pos],
+                    false,
+                    Color32::TRANSPARENT,
+                    Stroke::new(1.0, Color32::LIGHT_BLUE),
+                );
 
-                            let qb = QuadraticBezierShape::from_points_stroke(
-                                [src_pos, control_point, tgt_pos],
-                                false,
-                                Color32::TRANSPARENT,
-                                Stroke::new(1.0, Color32::LIGHT_BLUE),
-                            );
-
-                            let bezier_rects = Self::generate_rects_for_bezier(qb);
-                            for r in bezier_rects {
-                                let region = self.build_rect_area(r);
-                                if let Some(area_id) = self.quadtree.insert(region, tile.id) {
-                                    if let Some(areas_vec) = self.object_to_area.get_mut(&tile.id) {
-                                        areas_vec.push(area_id);
-                                    } else {
-                                        self.object_to_area.insert(tile.id, vec![area_id]);
-                                    }
-                                }
-                            }
+                let bezier_rects = Self::generate_rects_for_bezier(qb);
+                for r in bezier_rects {
+                    let region = self.build_rect_area(r);
+                    if let Some(area_id) = self.quadtree.insert(region, tile.id) {
+                        if let Some(areas_vec) = self.object_to_area.get_mut(&tile.id) {
+                            areas_vec.push(area_id);
+                        } else {
+                            self.object_to_area.insert(tile.id, vec![area_id]);
                         }
                     }
                 }
             }
-
-            for _arr in connected {}
         }
     }
 }
