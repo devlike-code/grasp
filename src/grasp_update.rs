@@ -2,7 +2,7 @@ use egui::{CursorIcon, Key, Rect, Ui};
 use itertools::Itertools;
 use mosaic::{
     capabilities::QueueCapability,
-    internals::{take_objects, tiles, MosaicIO},
+    internals::{all_tiles, take_objects, tiles, MosaicIO},
     iterators::{
         component_selectors::ComponentSelectors, tile_deletion::TileDeletion,
         tile_getters::TileGetters,
@@ -33,21 +33,20 @@ impl GraspEditorTab {
                     .unwrap();
                 }
 
-                // EXAMPLE USAGE FOR COLLAGE:
-                if ui.input(|i| i.key_released(Key::Space)) {
-                    if let Some(queue) = self
-                        .document_mosaic
-                        .get_all()
-                        .include_component("NewTabRequestQueue")
-                        .get_targets()
-                        .next()
-                    {
-                        self.document_mosaic.enqueue(
-                            &queue,
-                            &take_objects(tiles()).to_tiles(&self.document_mosaic),
-                        );
-                    }
-                }
+                // if ui.input(|i| i.key_released(Key::Space)) {
+                //     if let Some(queue) = self
+                //         .document_mosaic
+                //         .get_all()
+                //         .include_component("NewTabRequestQueue")
+                //         .get_targets()
+                //         .next()
+                //     {
+                //         self.document_mosaic.enqueue(
+                //             &queue,
+                //             &take_objects(all_tiles()).to_tiles(&self.document_mosaic),
+                //         );
+                //     }
+                // }
             }
 
             EditorState::Move => {

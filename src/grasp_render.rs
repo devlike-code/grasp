@@ -1,10 +1,12 @@
 use crate::{
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
     grasp_common::{get_pos_from_tile, GraspEditorTab},
+    utilities::{Label, Pos},
 };
 use egui::{
     Align2, Color32, FontId, Painter, Pos2, Rangef, Rect, Rounding, Stroke, TextEdit, Ui, Vec2,
 };
+use mosaic::internals::TileFieldEmptyQuery;
 use mosaic::{capabilities::ArchetypeSubject, internals::MosaicCollage};
 use mosaic::{
     internals::{MosaicIO, Tile},
@@ -70,7 +72,6 @@ impl GraspEditorTab {
         painter.line_segment([tip, tip - tip_length * (rot.inverse() * dir)], stroke);
 
         painter.circle_filled(shape.sample(0.5), 10.0, Color32::GRAY);
-
     }
 
     fn draw_arrow(&mut self, painter: &Painter, arrow: &Tile) {
@@ -98,50 +99,43 @@ impl GraspEditorTab {
         let painter = ui.painter();
         if node.match_archetype(&["Position", "Label"]) {
             let arcs = node.get_archetype(&["Position", "Label"]);
-            match (arcs.get("Position"), arcs.get("Label")) {
-                (Some(pos_component), Some(label)) => {
-                    let pos = self.pos_with_pan(Pos2::new(
-                        pos_component.get("x").as_f32(),
-                        pos_component.get("y").as_f32(),
-                    ));
+            let pos = Pos(node.clone()).query();
+            let label = Label(node.clone()).query();
 
-                    painter.circle_filled(pos, 10.0, Color32::GRAY);
+            painter.circle_filled(pos, 10.0, Color32::GRAY);
 
-                    let floating_pos = pos.add(Vec2::new(10.0, 10.0));
+            let floating_pos = pos.add(Vec2::new(10.0, 10.0));
 
-                    if self.state == EditorState::PropertyChanging
-                        && self.editor_data.tile_changing == Some(node.id)
-                    {
-                        let text_edit = TextEdit::singleline(&mut self.editor_data.text)
-                            .char_limit(30)
-                            .cursor_at_end(true);
-                        let text_edit_response = ui.put(
-                            Rect::from_two_pos(
-                                floating_pos.add(Vec2::new(0.0, -5.0)),
-                                floating_pos.add(Vec2::new(60.0, 20.0)),
-                            ),
-                            text_edit,
-                        );
+            if self.state == EditorState::PropertyChanging
+                && self.editor_data.tile_changing == Some(node.id)
+            {
+                let text_edit = TextEdit::singleline(&mut self.editor_data.text)
+                    .char_limit(30)
+                    .cursor_at_end(true);
+                let text_edit_response = ui.put(
+                    Rect::from_two_pos(
+                        floating_pos.add(Vec2::new(0.0, -5.0)),
+                        floating_pos.add(Vec2::new(60.0, 20.0)),
+                    ),
+                    text_edit,
+                );
 
-                        text_edit_response.request_focus();
+                text_edit_response.request_focus();
 
-                        if ui.input(|i| i.key_pressed(egui::Key::Enter)) {
-                            self.trigger(EditorStateTrigger::EndDrag);
-                        } else if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
-                            self.editor_data.text = self.editor_data.previous_text.clone();
-                            self.trigger(EditorStateTrigger::EndDrag);
-                        }
-                    } else {
-                        painter.text(
-                            floating_pos,
-                            Align2::LEFT_CENTER,
-                            label.get("self").as_s32().to_string(),
-                            FontId::default(),
-                            Color32::GRAY,
-                        );
-                    }
+                if ui.input(|i| i.key_pressed(egui::Key::Enter)) {
+                    self.trigger(EditorStateTrigger::EndDrag);
+                } else if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+                    self.editor_data.text = self.editor_data.previous_text.clone();
+                    self.trigger(EditorStateTrigger::EndDrag);
                 }
-                _ => {}
+            } else {
+                painter.text(
+                    floating_pos,
+                    Align2::LEFT_CENTER,
+                    label,
+                    FontId::default(),
+                    Color32::GRAY,
+                );
             }
         }
     }
