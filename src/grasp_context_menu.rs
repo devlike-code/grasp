@@ -7,7 +7,11 @@ use mosaic::{
     iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
 };
 
-use crate::grasp_common::GraspEditorTab;
+use crate::{
+    editor_state_machine::{EditorStateTrigger, StateMachine},
+    grasp_common::GraspEditorTab,
+    grasp_transitions::QuadtreeUpdateCapability,
+};
 
 impl GraspEditorTab {
     pub(crate) fn update_context_menu(&mut self, _ui: &mut Ui) {
@@ -22,7 +26,7 @@ impl GraspEditorTab {
         }
     }
 
-    // menu to show when havng selection
+    // menu to show when having selection
     fn show_selection_menu(&mut self, ui: &mut Ui) {
         if ui.button("Filter: My Neighbors").clicked() {
             if let Some(queue) = self
@@ -44,15 +48,20 @@ impl GraspEditorTab {
 
     // default context menu
     fn show_default_menu(&mut self, ui: &mut Ui) {
-        if ui.button("Create new node").clicked() {
+        let resp = ui.button("Create new node");
+        if resp.clicked() {
             if let Some(response) = self.response.clone() {
-                let position = response
-                    .interact_pointer_pos()
-                    .unwrap()
-                    .sub(self.editor_data.pan);
-                self.create_new_object(position);
-                ui.close_menu();
+                if let Some(position) = response.interact_pointer_pos() {
+                    self.create_new_object(position.sub(self.editor_data.pan));
+                    self.document_mosaic.request_quadtree_update();
+                }
             }
+            self.exit_menu(ui);
         }
+    }
+
+    fn exit_menu(&mut self, ui: &mut Ui) {
+        ui.close_menu();
+        self.trigger(EditorStateTrigger::ExitContextMenu);
     }
 }

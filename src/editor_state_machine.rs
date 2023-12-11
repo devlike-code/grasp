@@ -31,6 +31,7 @@ pub enum EditorStateTrigger {
     EndDrag,
 
     ClickToContextMenu,
+    ExitContextMenu,
 }
 
 pub trait StateMachine {

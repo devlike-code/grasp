@@ -40,7 +40,9 @@ impl StateMachine for GraspEditorTab {
         match (from, trigger) {
             (_, EditorStateTrigger::DblClickToCreate) => {
                 self.create_new_object(self.editor_data.cursor);
+                println!("create: {:?}", self.quadtree);
                 self.document_mosaic.request_quadtree_update();
+
                 Some(EditorState::Idle)
             }
 
@@ -58,15 +60,18 @@ impl StateMachine for GraspEditorTab {
                 Some(EditorState::Pan)
             }
             (_, EditorStateTrigger::DragToLink) => {
-                self.editor_data.link_start_pos =
-                    get_pos_from_tile(self.editor_data.selected.first().unwrap());
+                if let Some(position_from_tile) =
+                    get_pos_from_tile(self.editor_data.selected.first().unwrap())
+                {
+                    self.editor_data.link_start_pos = Some(self.pos_with_pan(position_from_tile));
+                }
                 Some(EditorState::Link)
             }
             (_, EditorStateTrigger::DragToMove) => Some(EditorState::Move),
             (_, EditorStateTrigger::ClickToContextMenu) => Some(EditorState::ContextMenu),
             (EditorState::ContextMenu, _) => {
                 self.response = None;
-                Some(EditorState::Idle)
+                self.on_transition(EditorState::Idle, trigger)
             }
             (EditorState::Idle, EditorStateTrigger::DragToSelect) => {
                 self.editor_data.rect_delta = Some(Vec2::ZERO);

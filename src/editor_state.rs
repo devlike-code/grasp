@@ -2,13 +2,14 @@ use std::{env, fmt::Display, fs, str::FromStr, sync::Arc};
 
 use egui::{
     ahash::{HashMap, HashMapExt},
-    Align, Align2, CollapsingHeader, Context, Label, Layout, Pos2, RichText, Sense, TextEdit, Ui,
+    Align, Align2, Button, CollapsingHeader, Context, Label, Layout, Pos2, RichText, Sense,
+    TextEdit, Ui,
 };
 
 use egui_dock::{DockArea, DockState, Style};
 use egui_extras::Size;
 use egui_grid::GridBuilder;
-use egui_toast::{Toast, ToastKind, ToastOptions, Toasts};
+use egui_toast::Toasts;
 use itertools::Itertools;
 use mosaic::{
     capabilities::QueueTile,
@@ -29,7 +30,6 @@ use crate::{
     grasp_transitions::QuadtreeUpdateCapability,
 };
 use mosaic::capabilities::ArchetypeSubject;
-use mosaic::capabilities::CollageImportCapability;
 use mosaic::capabilities::QueueCapability;
 
 type ComponentRenderer = Box<dyn Fn(&mut Ui, &mut GraspEditorTab, Tile)>;
@@ -62,15 +62,16 @@ impl ToastCapability for Arc<Mosaic> {
 }
 
 pub struct GraspEditorState {
-    document_mosaic: Arc<Mosaic>,
-    component_renderers: HashMap<S32, ComponentRenderer>,
-    tabs: GraspEditorTabs,
-    dock_state: DockState<GraspEditorTab>,
-    toasts: Toasts,
-    editor_state_tile: Tile,
-    new_tab_request_queue: QueueTile,
-    refresh_quadtree_queue: QueueTile,
-    toast_request_queue: QueueTile,
+    pub(crate) document_mosaic: Arc<Mosaic>,
+    pub(crate) component_renderers: HashMap<S32, ComponentRenderer>,
+    pub(crate) tabs: GraspEditorTabs,
+    pub(crate) dock_state: DockState<GraspEditorTab>,
+    pub(crate) toasts: Toasts,
+    pub(crate) editor_state_tile: Tile,
+    pub(crate) new_tab_request_queue: QueueTile,
+    pub(crate) refresh_quadtree_queue: QueueTile,
+    pub(crate) toast_request_queue: QueueTile,
+    show_tabview: bool,
 }
 
 impl GraspEditorState {
@@ -119,6 +120,7 @@ impl GraspEditorState {
             refresh_quadtree_queue,
             toast_request_queue,
             tabs: GraspEditorTabs::default(),
+            show_tabview: false,
         };
 
         // state
@@ -142,8 +144,9 @@ impl GraspEditorState {
         self.document_mosaic
             .new_arrow(&self.editor_state_tile, &tab_tile, "ToTab", void());
 
+        let new_index = self.tabs.increment();
         GraspEditorTab {
-            name: format!("Untitled {}", self.tabs.increment()),
+            name: format!("Untitled {}", new_index),
             tab_tile,
             quadtree: Quadtree::new_with_anchor((-1000, -1000).into(), 16),
             document_mosaic: Arc::clone(&self.document_mosaic),
@@ -164,12 +167,53 @@ impl GraspEditorState {
     }
 
     fn left_sidebar(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        let mut to_focus = vec![];
         egui::SidePanel::left("tree")
-            .default_width(200.0)
+            .default_width(150.0)
             .resizable(true)
             .show(ctx, |ui| {
+                if !self.show_tabview {
+                    return;
+                }
+
+                let mut add_index = vec![];
+                ui.horizontal(|ui| {
+                    ui.heading(RichText::from("Tabs").size(15.0));
+                    if ui.button("+").clicked() {
+                        let tab = self.new_tab(all_tiles());
+                        add_index.push(tab.tab_tile.id);
+                        self.dock_state.main_surface_mut().push_to_first_leaf(tab);
+                    }
+                });
+
                 ui.separator();
+
+                let mut require_focus = vec![];
+                {
+                    for (_, tab) in self.dock_state.iter_all_tabs() {
+                        let tab_button = Button::new(tab.name.clone()).sense(Sense::click());
+                        if ui.add(tab_button).clicked() {
+                            require_focus.push(tab);
+                        } else if !add_index.is_empty() && add_index.contains(&tab.tab_tile.id) {
+                            require_focus.push(tab);
+                        }
+                    }
+
+                    for new_tab_focus in require_focus {
+                        if let Some(tab_info) = self.dock_state.find_tab(new_tab_focus) {
+                            to_focus.push(tab_info);
+                        }
+                    }
+                }
             });
+
+        for (tab_surface, tab_node, index) in to_focus {
+            self.dock_state
+                .set_active_tab((tab_surface, tab_node, index));
+
+            self.dock_state
+                .set_focused_node_and_surface((tab_surface, tab_node));
+        }
     }
 
     fn right_sidebar(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
@@ -295,6 +339,19 @@ impl GraspEditorState {
 
     fn show_view(&mut self, ui: &mut Ui) {
         ui.menu_button("View", |ui| {
+            let tabview_on = {
+                if self.show_tabview {
+                    "✔"
+                } else {
+                    ""
+                }
+            };
+
+            if ui.button(format!("Show Tab view {}", tabview_on)).clicked() {
+                self.show_tabview = !self.show_tabview;
+                ui.close_menu();
+            }
+
             let ruler_on = {
                 let mut checked = "";
                 if let Some((_, tab)) = self.dock_state.find_active_focused() {
@@ -304,6 +361,7 @@ impl GraspEditorState {
                 }
                 checked
             };
+
             if ui.button(format!("Toggle Ruler {}", ruler_on)).clicked() {
                 if let Some((_, tab)) = self.dock_state.find_active_focused() {
                     tab.ruler_visible = !tab.ruler_visible;
@@ -320,6 +378,7 @@ impl GraspEditorState {
                 }
                 checked
             };
+
             if ui.button(format!("Toggle Grid {}", grid_on)).clicked() {
                 if let Some((_, tab)) = self.dock_state.find_active_focused() {
                     tab.grid_visible = !tab.grid_visible;
@@ -482,43 +541,7 @@ impl eframe::App for GraspEditorState {
         self.left_sidebar(ctx, frame);
         self.right_sidebar(ctx, frame);
 
-        while let Some(request) = self.document_mosaic.dequeue(&self.toast_request_queue) {
-            let toast_message = request.get("self").as_s32();
-            self.toasts.add(Toast {
-                text: toast_message.to_string().into(),
-                kind: ToastKind::Info,
-                options: ToastOptions::default()
-                    .duration_in_seconds(5.0)
-                    .show_icon(false)
-                    .show_progress(true),
-            });
-
-            request.iter().delete();
-        }
-
-        while let Some(request) = self.document_mosaic.dequeue(&self.new_tab_request_queue) {
-            if let Some(collage) = request.to_collage() {
-                let tab = self.new_tab(collage);
-                self.dock_state.main_surface_mut().push_to_first_leaf(tab);
-
-                request.iter().delete();
-            }
-        }
-
-        while let Some(request) = self.document_mosaic.dequeue(&self.refresh_quadtree_queue) {
-            for tab in self
-                .editor_state_tile
-                .iter()
-                .get_arrows_from()
-                .include_component("ToTab")
-                .get_targets()
-            {
-                self.document_mosaic
-                    .enqueue(&tab, &self.document_mosaic.new_object("void", void()));
-
-                request.iter().delete();
-            }
-        }
+        self.process_requests();
 
         self.show_tabs(ctx, frame);
         self.toasts.show(ctx);

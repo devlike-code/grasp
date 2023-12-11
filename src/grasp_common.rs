@@ -94,6 +94,12 @@ pub struct GraspEditorTab {
     pub response: Option<Response>,
 }
 
+impl PartialEq for GraspEditorTab {
+    fn eq(&self, other: &Self) -> bool {
+        self.tab_tile.id == other.tab_tile.id
+    }
+}
+
 pub trait QuadTreeFetch {
     fn fetch_tiles(&self, mosaic: &Arc<Mosaic>) -> Vec<Tile>;
     fn fetch_tile(&self, mosaic: &Arc<Mosaic>) -> Tile;
@@ -112,8 +118,11 @@ impl QuadTreeFetch for Vec<&Entry<i32, EntityId>> {
 }
 
 pub trait UiKeyDownExtract {
+    // Keyboard
     fn alt_down(&self) -> bool;
     fn delete_down(&self) -> bool;
+
+    //Mouse
     fn mouse_secondary_down(&self) -> bool;
 }
 
