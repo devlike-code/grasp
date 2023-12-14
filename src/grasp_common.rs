@@ -263,7 +263,6 @@ impl GraspEditorWindow {
 pub struct GraspEditorWindows {
     pub current_index: u32,
     pub windows: Vec<GraspEditorWindow>,
-    pub focused: Mutex<EntityId>,
 }
 
 impl GraspEditorWindows {
@@ -283,7 +282,6 @@ impl GraspEditorWindows {
             let window = self.windows.get(pos).unwrap();
             let request = window.document_mosaic.new_object("void", void());
             window.document_mosaic.enqueue(&window.tab_tile, &request);
-            *self.focused.lock().unwrap() = window.tab_tile.id;
         }
     }
 }

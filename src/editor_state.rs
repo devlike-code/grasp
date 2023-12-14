@@ -168,6 +168,7 @@ impl GraspEditorState {
 
     pub fn show(&mut self, s: &GuiState) {
         self.show_left_sidebar(s);
+        self.show_right_sidebar(s);
         self.show_menu_bar(s);
         self.window_list.show(s);
     }
@@ -186,7 +187,7 @@ impl GraspEditorState {
             if s.ui
                 .collapsing_header("Windows", TreeNodeFlags::DEFAULT_OPEN)
             {
-                if s.ui.button("+") {
+                if s.ui.button("[+] New Window") {
                     self.new_window(all_tiles());
                 }
 
@@ -219,6 +220,18 @@ impl GraspEditorState {
                 }
             }
 
+            w.end();
+        }
+    }
+
+    fn show_right_sidebar(&mut self, s: &GuiState) {
+        let viewport = GuiViewport::get_main_viewport();
+        if let Some(w) =
+            s.ui.window(ImString::new("Properties"))
+                .position([viewport.size().x - 300.0, 18.0], Condition::FirstUseEver)
+                .size([300.0, viewport.size().y - 18.0], Condition::FirstUseEver)
+                .begin()
+        {
             w.end();
         }
     }
