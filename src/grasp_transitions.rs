@@ -1,17 +1,21 @@
 use std::sync::Arc;
 
-use egui::{epaint::QuadraticBezierShape, Color32, Pos2, Rect, Stroke, Vec2};
 use itertools::Itertools;
 use log::{info, warn};
 use mosaic::{
     capabilities::{ArchetypeSubject, QueueCapability},
-    internals::{void, Mosaic, MosaicCRUD, MosaicIO, Tile, TileFieldQuery, TileFieldSetter, Value, TileFieldEmptyQuery},
+    internals::{
+        void, Mosaic, MosaicCRUD, MosaicIO, Tile, TileFieldEmptyQuery, TileFieldQuery,
+        TileFieldSetter, Value,
+    },
     iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
 };
 
 use crate::{
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
-    grasp_common::{get_pos_from_tile, GraspEditorTab}, utilities::Pos,
+    grasp_common::{get_pos_from_tile, GraspEditorWindow},
+    math::{rect::Rect2, vec2::Vec2},
+    utilities::Pos,
 };
 
 pub trait QuadtreeUpdateCapability {
@@ -31,7 +35,7 @@ impl QuadtreeUpdateCapability for Arc<Mosaic> {
     }
 }
 
-impl StateMachine for GraspEditorTab {
+impl StateMachine for GraspEditorWindow {
     type Trigger = EditorStateTrigger;
     type State = EditorState;
 
@@ -40,7 +44,6 @@ impl StateMachine for GraspEditorTab {
         match (from, trigger) {
             (_, EditorStateTrigger::DblClickToCreate) => {
                 self.create_new_object(self.editor_data.cursor);
-                println!("create: {:?}", self.quadtree);
                 self.document_mosaic.request_quadtree_update();
 
                 Some(EditorState::Idle)
@@ -70,11 +73,11 @@ impl StateMachine for GraspEditorTab {
             (_, EditorStateTrigger::DragToMove) => Some(EditorState::Move),
             (_, EditorStateTrigger::ClickToContextMenu) => Some(EditorState::ContextMenu),
             (EditorState::ContextMenu, _) => {
-                self.response = None;
+                //self.response = None;
                 self.on_transition(EditorState::Idle, trigger)
             }
             (EditorState::Idle, EditorStateTrigger::DragToSelect) => {
-                self.editor_data.rect_delta = Some(Vec2::ZERO);
+                self.editor_data.rect_delta = Some(Default::default());
                 self.editor_data.rect_start_pos = Some(self.editor_data.cursor);
                 Some(EditorState::Rect)
             }
@@ -83,8 +86,8 @@ impl StateMachine for GraspEditorTab {
             (EditorState::Link, EditorStateTrigger::EndDrag) => {
                 if let Some(tile) = self.editor_data.link_end.take() {
                     let start = self.editor_data.selected.first().unwrap().clone();
-                    let mut src_pos = Pos2::default();
-                    let mut tgt_pos = Pos2::default();
+                    let mut src_pos = Vec2::default();
+                    let mut tgt_pos = Vec2::default();
                     if let (
                         (Value::F32(s_x), Value::F32(s_y)),
                         (Value::F32(t_x), Value::F32(t_y)),
@@ -92,8 +95,8 @@ impl StateMachine for GraspEditorTab {
                         start.get_component("Position").unwrap().get_by(("x", "y")),
                         tile.get_component("Position").unwrap().get_by(("x", "y")),
                     ) {
-                        src_pos = Pos2::new(s_x, s_y);
-                        tgt_pos = Pos2::new(t_x, t_y);
+                        src_pos = Vec2::new(s_x, s_y);
+                        tgt_pos = Vec2::new(t_x, t_y);
                     }
 
                     let mid_pos = src_pos.lerp(tgt_pos, 0.5);
@@ -102,18 +105,18 @@ impl StateMachine for GraspEditorTab {
                     let radius: f32 = 50.0; // Adjust the radius as needed
 
                     let control_point =
-                        mid_pos + egui::vec2(angle.cos() * radius, -angle.sin() * radius);
-
-                    let qb = QuadraticBezierShape::from_points_stroke(
-                        [src_pos, control_point, tgt_pos],
-                        false,
-                        Color32::TRANSPARENT,
-                        Stroke::new(1.0, Color32::LIGHT_BLUE),
-                    );
-
-                    let rects = Self::generate_rects_for_bezier(qb);
-
-                    self.create_new_arrow(&start, &tile, mid_pos, rects);
+                        mid_pos + Vec2::new(angle.cos() * radius, -angle.sin() * radius);
+                    //
+                    // let qb = QuadraticBezierShape::from_points_stroke(
+                    //     [src_pos, control_point, tgt_pos],
+                    //     false,
+                    //     Color32::TRANSPARENT,
+                    //     Stroke::new(1.0, Color32::LIGHT_BLUE),
+                    // );
+                    //
+                    // let rects = Self::generate_rects_for_bezier(qb);
+                    //
+                    // self.create_new_arrow(&start, &tile, mid_pos, rects);
                 }
                 self.editor_data.selected.clear();
                 self.editor_data.link_start_pos = None;
@@ -185,37 +188,37 @@ impl StateMachine for GraspEditorTab {
     }
 }
 
-impl GraspEditorTab {
-    pub fn generate_rects_for_bezier(qb: QuadraticBezierShape) -> Vec<Rect> {
-        //  let samples = qb.flatten(Some(0.1));
+impl GraspEditorWindow {
+    // pub fn generate_rects_for_bezier(qb: QuadraticBezierShape) -> Vec<Rect2> {
+    //     //  let samples = qb.flatten(Some(0.1));
 
-        let mut samples = vec![];
+    //     let mut samples = vec![];
 
-        samples.push(qb.sample(0.0));
-        for i in 1..21 {
-            samples.push(qb.sample(i as f32 / 20.0));
-        }
+    //     // samples.push(qb.sample(0.0));
+    //     // for i in 1..21 {
+    //     //     samples.push(qb.sample(i as f32 / 20.0));
+    //     // }
 
-        let mut rects = vec![];
+    //     let mut rects = vec![];
 
-        #[allow(clippy::comparison_chain)]
-        if samples.len() > 2 {
-            for i in (0..samples.len()).step_by(2) {
-                if i + 2 < samples.len() {
-                    let rect = egui::Rect::from_two_pos(samples[i], samples[i + 2]);
-                    rects.push(rect);
-                }
-                if i + 3 < samples.len() {
-                    let rect = egui::Rect::from_two_pos(samples[i + 1], samples[i + 3]);
-                    rects.push(rect);
-                }
-            }
-        } else if samples.len() == 2 {
-            let rect = egui::Rect::from_two_pos(samples[0], samples[1]);
-            rects.push(rect);
-        }
-        rects
-    }
+    //     #[allow(clippy::comparison_chain)]
+    //     if samples.len() > 2 {
+    //         for i in (0..samples.len()).step_by(2) {
+    //             if i + 2 < samples.len() {
+    //                 let rect = Rect2::from_two_pos(samples[i], samples[i + 2]);
+    //                 rects.push(rect);
+    //             }
+    //             if i + 3 < samples.len() {
+    //                 let rect = Rect2::from_two_pos(samples[i + 1], samples[i + 3]);
+    //                 rects.push(rect);
+    //             }
+    //         }
+    //     } else if samples.len() == 2 {
+    //         let rect = Rect2::from_two_pos(samples[0], samples[1]);
+    //         rects.push(rect);
+    //     }
+    //     rects
+    // }
 
     pub fn update_selected_positions_by(&mut self, dp: Vec2) {
         for tile in &mut self.editor_data.selected {
@@ -226,7 +229,7 @@ impl GraspEditorTab {
             }
         }
     }
-    
+
     //TO-DO! --- Decide if we need selection and implement it, instead of re-creating everything every time it's called
     //       --- If and when its impelmented pay atention to those not connected but stil updated because of connecting arrows
     pub fn update_quadtree(&mut self, _selection: Option<Vec<Tile>>) {
@@ -239,7 +242,7 @@ impl GraspEditorTab {
 
         self.quadtree.reset();
 
-        for tile in &selected {     
+        for tile in &selected {
             let mut selected_pos = Pos(tile.clone()).query();
 
             if tile.is_object() {
@@ -247,30 +250,28 @@ impl GraspEditorTab {
                 if let Some(area_id) = self.quadtree.insert(region, tile.id) {
                     self.object_to_area.insert(tile.id, vec![area_id]);
                 }
-
-                
             } else if tile.is_arrow() {
                 let start_pos = Pos(tile.source().clone()).query();
                 let end_pos = Pos(tile.target().clone()).query();
 
-                let qb = QuadraticBezierShape::from_points_stroke(
-                    [start_pos, selected_pos, end_pos],
-                    false,
-                    Color32::TRANSPARENT,
-                    Stroke::new(1.0, Color32::LIGHT_BLUE),
-                );
+                // let qb = QuadraticBezierShape::from_points_stroke(
+                //     [start_pos, selected_pos, end_pos],
+                //     false,
+                //     Color32::TRANSPARENT,
+                //     Stroke::new(1.0, Color32::LIGHT_BLUE),
+                // );
 
-                let bezier_rects = Self::generate_rects_for_bezier(qb);
-                for r in bezier_rects {
-                    let region = self.build_rect_area(r);
-                    if let Some(area_id) = self.quadtree.insert(region, tile.id) {
-                        if let Some(areas_vec) = self.object_to_area.get_mut(&tile.id) {
-                            areas_vec.push(area_id);
-                        } else {
-                            self.object_to_area.insert(tile.id, vec![area_id]);
-                        }
-                    }
-                }
+                // let bezier_rects = Self::generate_rects_for_bezier(qb);
+                // for r in bezier_rects {
+                //     let region = self.build_rect_area(r);
+                //     if let Some(area_id) = self.quadtree.insert(region, tile.id) {
+                //         if let Some(areas_vec) = self.object_to_area.get_mut(&tile.id) {
+                //             areas_vec.push(area_id);
+                //         } else {
+                //             self.object_to_area.insert(tile.id, vec![area_id]);
+                //         }
+                //     }
+                // }
             }
         }
     }

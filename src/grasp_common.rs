@@ -1,23 +1,25 @@
 use crate::editor_state_machine::EditorState;
+use crate::math::rect::Rect2;
+use crate::math::vec2::Vec2;
+use crate::windowing::set_window_focus;
+use crate::GuiState;
 use ::mosaic::internals::{EntityId, Mosaic, MosaicCRUD, MosaicIO, Tile, TileFieldQuery, Value};
-use eframe::{egui, NativeOptions};
-use egui::{ahash::HashMap, Ui, Vec2, WidgetText};
-use egui::{Pos2, Rect, Response};
-use egui_dock::TabViewer;
+use imgui::{ImString, WindowFlags};
 use ini::Ini;
-use itertools::Itertools;
-use mosaic::capabilities::ArchetypeSubject;
+use mosaic::capabilities::{ArchetypeSubject, QueueCapability};
 use mosaic::internals::collage::Collage;
-use mosaic::internals::{par, void, MosaicTypelevelCRUD};
-use quadtree_rs::entry::Entry;
+use mosaic::internals::{par, void, MosaicTypelevelCRUD, TileFieldSetter};
+use mosaic::iterators::component_selectors::ComponentSelectors;
+use mosaic::iterators::tile_deletion::TileDeletion;
 use quadtree_rs::{
     area::{Area, AreaBuilder},
     Quadtree,
 };
-use std::{ops::Add, sync::Arc};
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
 #[allow(clippy::field_reassign_with_default)]
-pub fn create_native_options() -> NativeOptions {
+pub fn read_window_size() -> Result<(), (f32, f32)> {
     if Ini::load_from_file("config.ini").is_err() {
         let mut conf = Ini::new();
 
@@ -30,15 +32,11 @@ pub fn create_native_options() -> NativeOptions {
 
     let config = Ini::load_from_file("config.ini").unwrap();
 
-    let mut options = eframe::NativeOptions::default();
-
     let maximized = config
         .get_from(Some("Window"), "maximized")
         .unwrap_or("true")
         .parse()
         .unwrap_or(true);
-
-    options.viewport = options.viewport.with_maximized(maximized);
 
     if !maximized {
         let w = config
@@ -51,10 +49,10 @@ pub fn create_native_options() -> NativeOptions {
             .unwrap_or("1080")
             .parse()
             .unwrap_or(1080.0f32);
-        options.viewport = options.viewport.with_inner_size(egui::Vec2 { x: w, y: h });
+        Err((w, h))
+    } else {
+        Ok(())
     }
-
-    options
 }
 
 #[derive(Default, Debug)]
@@ -63,13 +61,13 @@ pub struct GraspEditorData {
     pub previous_pan: Vec2,
     pub selected: Vec<Tile>,
     pub debug: bool,
-    pub cursor: Pos2,
+    pub cursor: Vec2,
     pub cursor_delta: Vec2,
     pub rect_delta: Option<Vec2>,
-    pub tab_offset: Pos2,
-    pub link_start_pos: Option<Pos2>,
+    pub tab_offset: Vec2,
+    pub link_start_pos: Option<Vec2>,
     pub link_end: Option<Tile>,
-    pub rect_start_pos: Option<Pos2>,
+    pub rect_start_pos: Option<Vec2>,
     pub tile_changing: Option<EntityId>,
     pub field_changing: Option<String>,
     pub text: String,
@@ -81,7 +79,8 @@ pub struct GraspEditorData {
     pub previous_y_pos: String,
 }
 
-pub struct GraspEditorTab {
+#[derive(Debug)]
+pub struct GraspEditorWindow {
     pub name: String,
     pub tab_tile: Tile,
     pub state: EditorState,
@@ -92,60 +91,72 @@ pub struct GraspEditorTab {
     pub ruler_visible: bool,
     pub grid_visible: bool,
     pub editor_data: GraspEditorData,
-    pub response: Option<Response>,
 }
 
-impl PartialEq for GraspEditorTab {
+impl PartialEq for GraspEditorWindow {
     fn eq(&self, other: &Self) -> bool {
         self.tab_tile.id == other.tab_tile.id
     }
 }
 
-pub trait QuadTreeFetch {
-    fn fetch_tiles(&self, mosaic: &Arc<Mosaic>) -> Vec<Tile>;
-    fn fetch_tile(&self, mosaic: &Arc<Mosaic>) -> Tile;
+// pub trait UiKeyDownExtract {
+//     // Keyboard
+//     fn alt_down(&self) -> bool;
+//     fn delete_down(&self) -> bool;
+
+//     //Mouse
+//     fn mouse_secondary_down(&self) -> bool;
+// }
+
+// impl UiKeyDownExtract for Ui {
+//     fn alt_down(&self) -> bool {
+//         self.input(|input_state| input_state.modifiers.alt)
+//     }
+//     fn delete_down(&self) -> bool {
+//         self.input(|input_state| input_state.keys_down.get(&egui::Key::Delete).is_some())
+//     }
+
+//     fn mouse_secondary_down(&self) -> bool {
+//         self.input(|input| input.pointer.secondary_down())
+//     }
+// }
+
+impl GraspEditorWindow {
+    pub fn show(&self, s: &GuiState) {
+        s.ui.window(self.name.as_str())
+            .size([700.0, 500.0], imgui::Condition::Appearing)
+            .position(
+                [
+                    200.0 + 50.0 * (self.tab_tile.id % 5) as f32,
+                    200.0 - 20.0 * (self.tab_tile.id % 5) as f32,
+                ],
+                imgui::Condition::Appearing,
+            )
+            .build(|| {
+                if s.ui.is_window_focused() {
+                    for mut focus in self
+                        .document_mosaic
+                        .get_all()
+                        .include_component("EditorStateFocusedWindow")
+                    {
+                        focus.set("self", self.tab_tile.id as u64);
+                    }
+                }
+                if let Some(request) = self.document_mosaic.dequeue(&self.tab_tile) {
+                    set_window_focus(&self.name);
+                    request.iter().delete();
+                }
+                s.ui.label_text("This is a graph window", "");
+            });
+    }
 }
 
-impl QuadTreeFetch for Vec<&Entry<i32, EntityId>> {
-    fn fetch_tiles(&self, mosaic: &Arc<Mosaic>) -> Vec<Tile> {
-        self.iter()
-            .flat_map(|next| mosaic.get(*next.value_ref()))
-            .collect_vec()
+impl GraspEditorWindow {
+    pub fn pos_add_editor_offset(&self, v: Vec2) -> Vec2 {
+        v + self.editor_data.tab_offset
     }
 
-    fn fetch_tile(&self, mosaic: &Arc<Mosaic>) -> Tile {
-        mosaic.get(*self.first().unwrap().value_ref()).unwrap()
-    }
-}
-
-pub trait UiKeyDownExtract {
-    // Keyboard
-    fn alt_down(&self) -> bool;
-    fn delete_down(&self) -> bool;
-
-    //Mouse
-    fn mouse_secondary_down(&self) -> bool;
-}
-
-impl UiKeyDownExtract for Ui {
-    fn alt_down(&self) -> bool {
-        self.input(|input_state| input_state.modifiers.alt)
-    }
-    fn delete_down(&self) -> bool {
-        self.input(|input_state| input_state.keys_down.get(&egui::Key::Delete).is_some())
-    }
-
-    fn mouse_secondary_down(&self) -> bool {
-        self.input(|input| input.pointer.secondary_down())
-    }
-}
-
-impl GraspEditorTab {
-    pub fn pos_add_editor_offset(&self, v: Pos2) -> Pos2 {
-        v.add(self.editor_data.tab_offset.to_vec2())
-    }
-
-    pub fn build_circle_area(&self, pos: Pos2, size: i32) -> Area<i32> {
+    pub fn build_circle_area(&self, pos: Vec2, size: i32) -> Area<i32> {
         let pos = self.pos_add_editor_offset(pos);
         AreaBuilder::default()
             .anchor((pos.x as i32 - size, pos.y as i32 - size).into())
@@ -158,15 +169,17 @@ impl GraspEditorTab {
         self.build_circle_area(self.editor_data.cursor, 1)
     }
 
-    pub fn build_rect_area(&self, rect: Rect) -> Area<i32> {
-        let min = self.pos_add_editor_offset(rect.min);
-        let max = self.pos_add_editor_offset(rect.max);
-        let rect = Rect::from_two_pos(min, max);
-        let dim_x = (rect.max.x - rect.min.x) as i32;
-        let dim_y = (rect.max.y - rect.min.y) as i32;
+    pub fn build_rect_area(&self, rect: Rect2) -> Area<i32> {
+        let min = rect.min();
+        let max = rect.max();
+        let min = self.pos_add_editor_offset(min);
+        let max = self.pos_add_editor_offset(max);
+        let rect = Rect2::from_two_pos(min, max);
+        let dim_x = (max.x - min.x) as i32;
+        let dim_y = (max.y - min.y) as i32;
 
         AreaBuilder::default()
-            .anchor((rect.min.x as i32, rect.min.y as i32).into())
+            .anchor((min.x as i32, min.y as i32).into())
             .dimensions((
                 if dim_x < 1 { 1 } else { dim_x },
                 if dim_y < 1 { 1 } else { dim_y },
@@ -175,13 +188,13 @@ impl GraspEditorTab {
             .unwrap()
     }
 
-    pub fn pos_with_pan(&self, v: Pos2) -> Pos2 {
-        v.add(self.editor_data.pan)
+    pub fn pos_with_pan(&self, v: Vec2) -> Vec2 {
+        v + self.editor_data.pan
     }
 }
 
-impl GraspEditorTab {
-    pub fn create_new_object(&mut self, pos: Pos2) {
+impl GraspEditorWindow {
+    pub fn create_new_object(&mut self, pos: Vec2) {
         self.document_mosaic.new_type("Node: unit;").unwrap();
 
         let obj = self.document_mosaic.new_object("Node", void());
@@ -206,8 +219,8 @@ impl GraspEditorTab {
         &mut self,
         source: &Tile,
         target: &Tile,
-        middle_pos: Pos2,
-        bezier_rects: Vec<Rect>,
+        middle_pos: Vec2,
+        bezier_rects: Vec<Rect2>,
     ) {
         println!("Bezier rects: {:?}", bezier_rects);
 
@@ -247,42 +260,42 @@ impl GraspEditorTab {
 }
 
 #[derive(Default, Debug)]
-pub struct GraspEditorTabs {
-    pub current_tab: u32,
+pub struct GraspEditorWindows {
+    pub current_index: u32,
+    pub windows: Vec<GraspEditorWindow>,
+    pub focused: Mutex<EntityId>,
 }
 
-impl GraspEditorTabs {
+impl GraspEditorWindows {
     pub fn increment(&mut self) -> u32 {
-        self.current_tab += 1;
-        self.current_tab
+        self.current_index += 1;
+        self.current_index
+    }
+
+    pub fn show(&self, s: &GuiState) {
+        for window in &self.windows {
+            window.show(s);
+        }
+    }
+
+    pub fn focus(&self, name: &str) {
+        if let Some(pos) = self.windows.iter().position(|w| w.name.as_str() == name) {
+            let window = self.windows.get(pos).unwrap();
+            let request = window.document_mosaic.new_object("void", void());
+            window.document_mosaic.enqueue(&window.tab_tile, &request);
+            *self.focused.lock().unwrap() = window.tab_tile.id;
+        }
     }
 }
 
-pub fn get_pos_from_tile(tile: &Tile) -> Option<Pos2> {
+pub fn get_pos_from_tile(tile: &Tile) -> Option<Vec2> {
     if let Some(tile_pos_component) = tile.get_component("Position") {
         if let (Value::F32(x), Value::F32(y)) = tile_pos_component.get_by(("x", "y")) {
-            Some(Pos2::new(x, y))
+            Some(Vec2::new(x, y))
         } else {
             None
         }
     } else {
         None
-    }
-}
-
-impl TabViewer for GraspEditorTabs {
-    type Tab = GraspEditorTab;
-
-    fn title(&mut self, tab: &mut Self::Tab) -> WidgetText {
-        tab.name.as_str().into()
-    }
-
-    fn ui(&mut self, ui: &mut Ui, tab: &mut Self::Tab) {
-        let xy = ui.clip_rect().left_top();
-        tab.editor_data.tab_offset = xy;
-
-        tab.sense(ui);
-        tab.render(ui);
-        tab.update(ui);
     }
 }

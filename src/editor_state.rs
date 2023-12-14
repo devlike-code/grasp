@@ -1,67 +1,71 @@
-use std::{env, fmt::Display, fs, str::FromStr, sync::Arc};
-
-use egui::{
-    ahash::{HashMap, HashMapExt},
-    Align, Align2, Button, CollapsingHeader, Context, Label, Layout, Pos2, RichText, Sense,
-    TextEdit, Ui,
+use std::{
+    collections::HashMap,
+    env,
+    ffi::{CStr, CString},
+    fs,
+    ptr::{null, null_mut},
+    sync::Arc,
 };
 
-use egui_dock::{DockArea, DockState, Style};
-use egui_extras::Size;
-use egui_grid::GridBuilder;
-use egui_toast::Toasts;
+use imgui::{
+    sys::{
+        ImGuiDir_Down, ImGuiDir_Left, ImGuiDir_Right, ImGuiDir_Up, ImGuiDockNodeFlags_DockSpace,
+        ImGuiDockNodeFlags_None, ImGuiDockNodeFlags_PassthruCentralNode, ImVec2,
+    },
+    Condition, ImString, TreeNodeFlags, Ui, WindowFlags,
+};
 use itertools::Itertools;
+use log::info;
 use mosaic::{
     capabilities::QueueTile,
     internals::{
-        all_tiles, par, void, Collage, Datatype, FromByteArray, Mosaic, MosaicCRUD, MosaicIO,
-        MosaicTypelevelCRUD, Tile, TileFieldSetter, ToByteArray, Value, S32,
+        all_tiles, par, void, Collage, Mosaic, MosaicCRUD, MosaicIO, MosaicTypelevelCRUD, Tile, S32,
     },
-    iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
+    iterators::component_selectors::ComponentSelectors,
 };
 use quadtree_rs::Quadtree;
 
 use crate::{
-    editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
-    grasp_common::{GraspEditorTab, GraspEditorTabs},
+    docking::{new_id, GuiDir, GuiDockNodeFlags, GuiDockspace, GuiViewport},
+    editor_state_machine::EditorState,
+    grasp_common::{GraspEditorWindow, GraspEditorWindows},
     grasp_transitions::QuadtreeUpdateCapability,
+    GuiState,
 };
 use mosaic::capabilities::ArchetypeSubject;
 use mosaic::capabilities::QueueCapability;
 
-type ComponentRenderer = Box<dyn Fn(&mut Ui, &mut GraspEditorTab, Tile)>;
+type ComponentRenderer = Box<dyn Fn(&mut Ui, &mut GraspEditorWindow, Tile)>;
 
-pub trait ToastCapability {
-    fn send_toast(&self, text: &str);
-}
+// pub trait ToastCapability {
+//     fn send_toast(&self, text: &str);
+// }
 
-impl ToastCapability for Arc<Mosaic> {
-    fn send_toast(&self, text: &str) {
-        if text.len() >= 32 {
-            println!(
-                "ERROR: Toast message must be shorter than 32 bytes, in:\n{}",
-                text
-            );
-        } else {
-            let queue = self
-                .get_all()
-                .include_component("ToastRequestQueue")
-                .get_targets()
-                .next()
-                .unwrap();
-            let request = self.new_object("ToastRequest", par(text));
-            self.enqueue(&queue, &request);
-            println!("ToastRequest enqueued");
-        }
-    }
-}
+// impl ToastCapability for Arc<Mosaic> {
+//     fn send_toast(&self, text: &str) {
+//         if text.len() >= 32 {
+//             println!(
+//                 "ERROR: Toast message must be shorter than 32 bytes, in:\n{}",
+//                 text
+//             );
+//         } else {
+//             let queue = self
+//                 .get_all()
+//                 .include_component("ToastRequestQueue")
+//                 .get_targets()
+//                 .next()
+//                 .unwrap();
+//             let request = self.new_object("ToastRequest", par(text));
+//             self.enqueue(&queue, &request);
+//             println!("ToastRequest enqueued");
+//         }
+//     }
+// }
 
 pub struct GraspEditorState {
     pub(crate) document_mosaic: Arc<Mosaic>,
     pub(crate) component_renderers: HashMap<S32, ComponentRenderer>,
-    pub(crate) tabs: GraspEditorTabs,
-    pub(crate) dock_state: DockState<GraspEditorTab>,
-    pub(crate) toasts: Toasts,
+    pub(crate) window_list: GraspEditorWindows,
     pub(crate) editor_state_tile: Tile,
     pub(crate) new_tab_request_queue: QueueTile,
     pub(crate) refresh_quadtree_queue: QueueTile,
@@ -70,12 +74,22 @@ pub struct GraspEditorState {
 }
 
 impl GraspEditorState {
+    pub fn snapshot(&self) {
+        let content = self.document_mosaic.dot();
+        open::that(format!(
+            "https://dreampuf.github.io/GraphvizOnline/#{}",
+            urlencoding::encode(content.as_str())
+        ))
+        .unwrap();
+    }
+
     pub fn prepare_mosaic(mosaic: Arc<Mosaic>) -> Arc<Mosaic> {
         mosaic.new_type("Arrow: unit;").unwrap();
         mosaic.new_type("Label: s32;").unwrap();
         mosaic.new_type("Position: { x: f32, y: f32 };").unwrap();
         mosaic.new_type("Selection: unit;").unwrap();
         mosaic.new_type("EditorState: unit;").unwrap();
+        mosaic.new_type("EditorStateFocusedWindow: u64;").unwrap();
         mosaic.new_type("EditorTab: unit;").unwrap();
         mosaic.new_type("ToTab: unit;").unwrap();
         mosaic.new_type("NewTabRequestQueue: unit;").unwrap();
@@ -91,6 +105,7 @@ impl GraspEditorState {
         Self::prepare_mosaic(Arc::clone(&document_mosaic));
 
         let editor_state_tile = document_mosaic.new_object("EditorState", void());
+        document_mosaic.new_extension(&editor_state_tile, "EditorStateFocusedWindow", par(0u64));
 
         let new_tab_request_queue = document_mosaic.make_queue();
         new_tab_request_queue.add_component("NewTabRequestQueue", void());
@@ -101,20 +116,17 @@ impl GraspEditorState {
         let toast_request_queue = document_mosaic.make_queue();
         toast_request_queue.add_component("ToastRequestQueue", void());
 
-        let toasts = Toasts::new().anchor(Align2::RIGHT_TOP, Pos2::new(-10.0, 10.0));
-        let dock_state = DockState::new(vec![]);
+        //let dock_state = DockState::new(vec![]);
 
         // add here default renderers
-        let mut state = Self {
+        let state = Self {
             document_mosaic,
             component_renderers: HashMap::new(),
-            dock_state,
-            toasts,
             editor_state_tile,
             new_tab_request_queue,
             refresh_quadtree_queue,
             toast_request_queue,
-            tabs: GraspEditorTabs::default(),
+            window_list: GraspEditorWindows::default(),
             show_tabview: false,
         };
 
@@ -126,23 +138,23 @@ impl GraspEditorState {
         //     .component_renderers
         //     .insert("Position".into(), Box::new(Self::draw_position_property));
 
-        let tab = state.new_tab(all_tiles());
-        state.dock_state.main_surface_mut().push_to_first_leaf(tab);
+        //        let tab = state.new_tab(all_tiles());
+        //        state.dock_state.main_surface_mut().push_to_first_leaf(tab);
 
         state
     }
 
-    pub fn new_tab(&mut self, collage: Box<Collage>) -> GraspEditorTab {
-        let tab_tile = self.document_mosaic.make_queue();
-        tab_tile.add_component("EditorTab", void());
+    pub fn new_window(&mut self, collage: Box<Collage>) {
+        let window_tile = self.document_mosaic.make_queue();
+        window_tile.add_component("EditorTab", void());
 
         self.document_mosaic
-            .new_arrow(&self.editor_state_tile, &tab_tile, "ToTab", void());
+            .new_arrow(&self.editor_state_tile, &window_tile, "ToTab", void());
 
-        let new_index = self.tabs.increment();
-        GraspEditorTab {
+        let new_index = self.window_list.increment();
+        self.window_list.windows.push(GraspEditorWindow {
             name: format!("Untitled {}", new_index),
-            tab_tile,
+            tab_tile: window_tile,
             quadtree: Quadtree::new_with_anchor((-1000, -1000).into(), 16),
             document_mosaic: Arc::clone(&self.document_mosaic),
             collage,
@@ -151,149 +163,144 @@ impl GraspEditorState {
             state: EditorState::Idle,
             grid_visible: false,
             ruler_visible: false,
-            response: None,
-        }
-    }
-
-    fn show_tabs(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        DockArea::new(&mut self.dock_state)
-            .style(Style::from_egui(ctx.style().as_ref()))
-            .show(ctx, &mut self.tabs);
-    }
-
-    fn left_sidebar(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        let mut to_focus = vec![];
-        egui::SidePanel::left("tree")
-            .default_width(150.0)
-            .resizable(true)
-            .show(ctx, |ui| {
-                if !self.show_tabview {
-                    return;
-                }
-
-                let mut add_index = vec![];
-                ui.horizontal(|ui| {
-                    ui.heading(RichText::from("Tabs").size(15.0));
-                    if ui.button("+").clicked() {
-                        let tab = self.new_tab(all_tiles());
-                        add_index.push(tab.tab_tile.id);
-                        self.dock_state.main_surface_mut().push_to_first_leaf(tab);
-                    }
-                });
-
-                ui.separator();
-
-                let mut require_focus = vec![];
-                {
-                    for (_, tab) in self.dock_state.iter_all_tabs() {
-                        let tab_button = Button::new(tab.name.clone()).sense(Sense::click());
-                        if ui.add(tab_button).clicked()
-                            || !add_index.is_empty() && add_index.contains(&tab.tab_tile.id)
-                        {
-                            require_focus.push(tab);
-                        }
-                    }
-
-                    for new_tab_focus in require_focus {
-                        if let Some(tab_info) = self.dock_state.find_tab(new_tab_focus) {
-                            to_focus.push(tab_info);
-                        }
-                    }
-                }
-            });
-
-        for (tab_surface, tab_node, index) in to_focus {
-            self.dock_state
-                .set_active_tab((tab_surface, tab_node, index));
-
-            self.dock_state
-                .set_focused_node_and_surface((tab_surface, tab_node));
-        }
-    }
-
-    fn right_sidebar(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        egui::SidePanel::right("properties")
-            .default_width(250.0)
-            .resizable(true)
-            .show(ctx, |ui| {
-                if let Some((_, tab)) = self.dock_state.find_active_focused() {
-                    let selected = tab
-                        .editor_data
-                        .selected
-                        .clone()
-                        .into_iter()
-                        .unique()
-                        .collect_vec();
-                    for t in selected {
-                        CollapsingHeader::new(RichText::from(format!(
-                            "[ID:{}] {}",
-                            t.id, "PROPERTIES"
-                        )))
-                        .default_open(true)
-                        .show(ui, |ui| {
-                            for (part, tiles) in
-                                &t.get_full_archetype().into_iter().sorted().collect_vec()
-                            {
-                                let mut draw_separator = tiles.len() - 1;
-                                for tile in tiles.iter().sorted() {
-                                    if let Some(renderer) =
-                                        self.component_renderers.get(&part.as_str().into())
-                                    {
-                                        CollapsingHeader::new(RichText::from(format!(
-                                            "[ID: {}] {}",
-                                            tile.id,
-                                            part.to_uppercase()
-                                        )))
-                                        .default_open(true)
-                                        .show(ui, |ui| {
-                                            renderer(ui, tab, tile.clone());
-                                        });
-                                    } else {
-                                        CollapsingHeader::new(RichText::from(format!(
-                                            "[ID: {}] {}",
-                                            tile.id,
-                                            part.to_uppercase()
-                                        )))
-                                        .default_open(true)
-                                        .show(ui, |ui| {
-                                            draw_default_renderer(ui, tab, tile.clone());
-                                        });
-                                    }
-
-                                    if draw_separator > 0 {
-                                        ui.separator();
-                                        draw_separator -= 1;
-                                    }
-                                }
-                            }
-                        });
-                    }
-                }
-                ui.separator();
-            });
-    }
-
-    fn menu_bar(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
-        egui::TopBottomPanel::top("topbar").show(ctx, |ui| {
-            egui::menu::bar(ui, |ui| {
-                self.show_document(ui, frame);
-                self.show_view(ui);
-            });
         });
     }
 
-    fn show_document(&mut self, ui: &mut Ui, _frame: &mut eframe::Frame) {
-        ui.menu_button("Document", |ui| {
-            if ui.button("New Tab").clicked() {
-                let tab = self.new_tab(all_tiles());
-                self.dock_state.main_surface_mut().push_to_first_leaf(tab);
+    pub fn show(&mut self, s: &GuiState) {
+        self.show_left_sidebar(s);
+        self.show_menu_bar(s);
+        self.window_list.show(s);
+    }
 
-                ui.close_menu();
+    fn show_left_sidebar(&mut self, s: &GuiState) {
+        let viewport = GuiViewport::get_main_viewport();
+        if let Some(w) =
+            s.ui.window(ImString::new("Hierarchy"))
+                .position([0.0, 18.0], Condition::FirstUseEver)
+                .size(
+                    [viewport.size().x, viewport.size().y - 18.0],
+                    Condition::FirstUseEver,
+                )
+                .begin()
+        {
+            if s.ui
+                .collapsing_header("Windows", TreeNodeFlags::DEFAULT_OPEN)
+            {
+                if s.ui.button("+") {
+                    self.new_window(all_tiles());
+                }
+
+                let focus = self
+                    .document_mosaic
+                    .get_all()
+                    .include_component("EditorStateFocusedWindow")
+                    .next()
+                    .unwrap();
+
+                let mt = focus.get("self").as_u64() as usize;
+                let mut i = self
+                    .window_list
+                    .windows
+                    .iter()
+                    .position(|w| w.tab_tile.id == mt)
+                    .unwrap_or_default() as i32;
+
+                let items = self
+                    .window_list
+                    .windows
+                    .iter()
+                    .map(|w| w.name.as_str())
+                    .collect_vec();
+
+                s.ui.set_next_item_width(-1.0);
+                if s.ui.list_box("##", &mut i, items.as_slice(), 20) {
+                    let item: &str = items.get(i as usize).unwrap();
+                    self.window_list.focus(item);
+                }
             }
 
-            ui.separator();
+            w.end();
+        }
+    }
 
-            if ui.button("Open").clicked() {
+    /*
+       fn right_sidebar(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+           egui::SidePanel::right("properties")
+               .default_width(250.0)
+               .resizable(true)
+               .show(ctx, |ui| {
+                   if let Some((_, tab)) = self.dock_state.find_active_focused() {
+                       let selected = tab
+                           .editor_data
+                           .selected
+                           .clone()
+                           .into_iter()
+                           .unique()
+                           .collect_vec();
+                       for t in selected {
+                           CollapsingHeader::new(RichText::from(format!(
+                               "[ID:{}] {}",
+                               t.id, "PROPERTIES"
+                           )))
+                           .default_open(true)
+                           .show(ui, |ui| {
+                               for (part, tiles) in
+                                   &t.get_full_archetype().into_iter().sorted().collect_vec()
+                               {
+                                   let mut draw_separator = tiles.len() - 1;
+                                   for tile in tiles.iter().sorted() {
+                                       if let Some(renderer) =
+                                           self.component_renderers.get(&part.as_str().into())
+                                       {
+                                           CollapsingHeader::new(RichText::from(format!(
+                                               "[ID: {}] {}",
+                                               tile.id,
+                                               part.to_uppercase()
+                                           )))
+                                           .default_open(true)
+                                           .show(ui, |ui| {
+                                               renderer(ui, tab, tile.clone());
+                                           });
+                                       } else {
+                                           CollapsingHeader::new(RichText::from(format!(
+                                               "[ID: {}] {}",
+                                               tile.id,
+                                               part.to_uppercase()
+                                           )))
+                                           .default_open(true)
+                                           .show(ui, |ui| {
+                                               draw_default_renderer(ui, tab, tile.clone());
+                                           });
+                                       }
+
+                                       if draw_separator > 0 {
+                                           ui.separator();
+                                           draw_separator -= 1;
+                                       }
+                                   }
+                               }
+                           });
+                       }
+                   }
+                   ui.separator();
+               });
+       }
+    */
+    pub fn show_menu_bar(&mut self, s: &GuiState) {
+        if let Some(m) = s.begin_main_menu_bar() {
+            self.show_document_menu(s);
+            self.show_view_menu(s);
+            m.end();
+        }
+    }
+
+    fn show_document_menu(&mut self, s: &GuiState) {
+        if let Some(f) = s.begin_menu("Document") {
+            if s.menu_item("New Tab") {
+                self.new_window(all_tiles());
+            }
+
+            if s.menu_item("Open") {
                 if let Some(file) = rfd::FileDialog::new()
                     .add_filter("Mosaic", &["mos"])
                     .set_directory(env::current_dir().unwrap())
@@ -303,14 +310,13 @@ impl GraspEditorState {
                     Self::prepare_mosaic(Arc::clone(&self.document_mosaic));
 
                     self.document_mosaic.load(&fs::read(file).unwrap()).unwrap();
-                    self.document_mosaic.send_toast("Document loaded");
+                    // self.document_mosaic.send_toast("Document loaded");
 
                     self.document_mosaic.request_quadtree_update();
                 }
-                ui.close_menu();
             }
 
-            if ui.button("Save").clicked() {
+            if s.menu_item("Save") {
                 let document = self.document_mosaic.save();
                 if let Some(file) = rfd::FileDialog::new()
                     .add_filter("Mosaic", &["mos"])
@@ -318,82 +324,79 @@ impl GraspEditorState {
                     .save_file()
                 {
                     fs::write(file, document).unwrap();
-                    self.document_mosaic.send_toast("Document saved");
+                    // self.document_mosaic.send_toast("Document saved");
                 }
-                ui.close_menu();
             }
 
-            ui.separator();
+            s.separator();
 
-            if ui.button("Exit").clicked() {
-                ui.close_menu();
-                ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
+            if s.menu_item("Exit") {
+                s.exit();
             }
-        });
+
+            f.end();
+        }
     }
 
-    fn show_view(&mut self, ui: &mut Ui) {
-        ui.menu_button("View", |ui| {
+    fn show_view_menu(&mut self, s: &GuiState) {
+        if let Some(f) = s.begin_menu("View") {
             let tabview_on = {
                 if self.show_tabview {
-                    "✔"
+                    "x"
                 } else {
                     ""
                 }
             };
 
-            if ui.button(format!("Show Tab View {}", tabview_on)).clicked() {
+            if s.menu_item(format!("Show Tab View {}", tabview_on)) {
                 self.show_tabview = !self.show_tabview;
-                ui.close_menu();
             }
 
             let ruler_on = {
                 let mut checked = "";
-                if let Some((_, tab)) = self.dock_state.find_active_focused() {
-                    if tab.ruler_visible {
-                        checked = "✔";
-                    }
-                }
+                // if let Some((_, tab)) = self.dock_state.find_active_focused() {
+                //     if tab.ruler_visible {
+                //         checked = "x";
+                //     }
+                // }
                 checked
             };
 
-            if ui.button(format!("Toggle Ruler {}", ruler_on)).clicked() {
-                if let Some((_, tab)) = self.dock_state.find_active_focused() {
-                    tab.ruler_visible = !tab.ruler_visible;
-                    ui.close_menu();
-                }
+            if s.menu_item(format!("Toggle Ruler {}", ruler_on)) {
+
+                // if let Some((_, tab)) = self.dock_state.find_active_focused() {
+                //     tab.ruler_visible = !tab.ruler_visible;
+                // }
             }
 
-            if ui
-                .button(format!("Toggle Debug Draw {}", ruler_on))
-                .clicked()
-            {
-                if let Some((_, tab)) = self.dock_state.find_active_focused() {
-                    tab.editor_data.debug = !tab.editor_data.debug;
-                    ui.close_menu();
-                }
+            if s.menu_item(format!("Toggle Debug Draw {}", ruler_on)) {
+                //if let Some((_, tab)) = self.dock_state.find_active_focused() {
+                //    tab.editor_data.debug = !tab.editor_data.debug;
+                //}
             }
 
             let grid_on = {
                 let mut checked = "";
-                if let Some((_, tab)) = self.dock_state.find_active_focused() {
-                    if tab.grid_visible {
-                        checked = "✔";
-                    }
-                }
+                // if let Some((_, tab)) = self.dock_state.find_active_focused() {
+                //     if tab.grid_visible {
+                //         checked = "x";
+                //     }
+                // }
                 checked
             };
 
-            if ui.button(format!("Toggle Grid {}", grid_on)).clicked() {
-                if let Some((_, tab)) = self.dock_state.find_active_focused() {
-                    tab.grid_visible = !tab.grid_visible;
-                    ui.close_menu();
-                }
+            if s.menu_item(format!("Toggle Grid {}", grid_on)) {
+                // if let Some((_, tab)) = self.dock_state.find_active_focused() {
+                //     tab.grid_visible = !tab.grid_visible;
+                // }
             }
-        });
+
+            f.end();
+        }
     }
 }
 
+/*
 fn draw_default_renderer(ui: &mut Ui, tab: &mut GraspEditorTab, d: Tile) {
     let mosaic = &tab.document_mosaic;
     let comp = mosaic
@@ -542,7 +545,7 @@ fn draw_property_value<T: Display + FromStr + ToByteArray>(
 impl eframe::App for GraspEditorState {
     fn update(&mut self, ctx: &Context, frame: &mut eframe::Frame) {
         ctx.set_visuals(egui::Visuals::dark());
-        self.menu_bar(ctx, frame);
+        //self.menu_bar(ctx, frame);
         self.left_sidebar(ctx, frame);
         self.right_sidebar(ctx, frame);
 
@@ -551,4 +554,4 @@ impl eframe::App for GraspEditorState {
         self.show_tabs(ctx, frame);
         self.toasts.show(ctx);
     }
-}
+     */

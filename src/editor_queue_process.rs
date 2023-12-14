@@ -1,5 +1,3 @@
-use egui_toast::{Toast, ToastKind, ToastOptions};
-
 use itertools::Itertools;
 use mosaic::{
     capabilities::{CollageImportCapability, QueueCapability},
@@ -20,19 +18,19 @@ impl GraspEditorState {
     }
 
     fn process_toast_queue(&mut self) {
-        while let Some(request) = self.document_mosaic.dequeue(&self.toast_request_queue) {
-            let toast_message = request.get("self").as_s32();
-            self.toasts.add(Toast {
-                text: toast_message.to_string().into(),
-                kind: ToastKind::Info,
-                options: ToastOptions::default()
-                    .duration_in_seconds(5.0)
-                    .show_icon(false)
-                    .show_progress(true),
-            });
+        // while let Some(request) = self.document_mosaic.dequeue(&self.toast_request_queue) {
+        //     let toast_message = request.get("self").as_s32();
+        //     self.toasts.add(Toast {
+        //         text: toast_message.to_string().into(),
+        //         kind: ToastKind::Info,
+        //         options: ToastOptions::default()
+        //             .duration_in_seconds(5.0)
+        //             .show_icon(false)
+        //             .show_progress(true),
+        //     });
 
-            request.iter().delete();
-        }
+        //     request.iter().delete();
+        // }
     }
 
     fn process_new_tab_queue(&mut self) {
@@ -49,11 +47,11 @@ impl GraspEditorState {
                 .to_string();
 
             if let Some(collage) = request.to_collage() {
-                let mut tab = self.new_tab(collage);
-                tab.name = name.to_string().clone();
-                self.dock_state.main_surface_mut().push_to_first_leaf(tab);
+                //let mut tab = self.new_tab(collage);
+                //tab.name = name.to_string().clone();
+                //self.dock_state.main_surface_mut().push_to_first_leaf(tab);
 
-                request.iter().delete();
+                //request.iter().delete();
             }
         }
     }
