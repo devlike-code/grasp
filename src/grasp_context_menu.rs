@@ -13,6 +13,7 @@ use mosaic::{
 };
 
 use crate::{
+    core::math::Vec2,
     editor_state_machine::{EditorStateTrigger, StateMachine},
     grasp_editor_window::GraspEditorWindow,
     grasp_transitions::QuadtreeUpdateCapability,
@@ -20,24 +21,26 @@ use crate::{
 };
 
 impl GraspEditorWindow {
-    pub(crate) fn update_context_menu(&mut self, s: &GuiState) {
-        // if let Some(response) = self.response.clone() {
-        //     response.context_menu(|ui| {
-        //         if !self.editor_data.selected.is_empty() {
-        //             self.show_selection_menu(ui);
-        //         } else {
-        //             self.show_default_menu(ui);
-        //         }
-        //     });
-        // }
+    pub(crate) fn update_context_menu(&self, s: &GuiState) {
+        if let Some(c) = s.ui.begin_popup("context-menu") {
+            if self.editor_data.selected.is_empty() {
+                self.show_default_menu(s);
+            } else {
+                self.show_selection_menu(s);
+            }
+            c.end();
+        }
+
+        if s.ui.is_mouse_clicked(imgui::MouseButton::Right) {
+            s.ui.open_popup("context-menu");
+        }
     }
 
-    // menu to show when having selection
-    fn show_selection_menu(&mut self, s: &GuiState) {
+    fn show_selection_menu(&self, s: &GuiState) {
         // let queue = self
         //     .document_mosaic
         //     .get_all()
-        //     .include_component("NewTabRequestQueue")
+        //     .include_component("NewWindowRequestQueue")
         //     .get_targets()
         //     .next()
         //     .unwrap();
@@ -92,7 +95,7 @@ impl GraspEditorWindow {
         //         if let Some(queue) = self
         //             .document_mosaic
         //             .get_all()
-        //             .include_component("NewTabRequestQueue")
+        //             .include_component("NewWindowRequestQueue")
         //             .get_targets()
         //             .next()
         //         {
@@ -114,8 +117,11 @@ impl GraspEditorWindow {
         // });
     }
 
-    // default context menu
-    fn show_default_menu(&mut self, s: &GuiState) {
+    fn show_default_menu(&self, s: &GuiState) {
+        if s.ui.button("Create new node") {
+            let pos = s.ui.mouse_pos_on_opening_current_popup();
+            self.create_new_object(Vec2::new(pos[0], pos[1]) - self.editor_data.pan)
+        }
         // let resp = ui.button("Create new node");
         // if resp.clicked() {
         //     if let Some(response) = self.response.clone() {

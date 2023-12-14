@@ -1,5 +1,5 @@
+use crate::core::math::vec2::Vec2;
 use crate::grasp_editor_window::GraspEditorWindow;
-use crate::math::vec2::Vec2;
 use crate::GuiState;
 use ::mosaic::internals::{MosaicIO, Tile, Value};
 use mosaic::capabilities::{ArchetypeSubject, QueueCapability};
@@ -28,7 +28,9 @@ impl GraspEditorWindowList {
         if let Some(pos) = self.windows.iter().position(|w| w.name.as_str() == name) {
             let window = self.windows.get(pos).unwrap();
             let request = window.document_mosaic.new_object("void", void());
-            window.document_mosaic.enqueue(&window.tab_tile, &request);
+            window
+                .document_mosaic
+                .enqueue(&window.window_tile, &request);
         }
     }
 }

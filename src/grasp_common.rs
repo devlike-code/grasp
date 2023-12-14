@@ -1,7 +1,7 @@
 use ini::Ini;
 use mosaic::internals::{EntityId, Tile};
 
-use crate::math::vec2::Vec2;
+use crate::core::math::vec2::Vec2;
 
 #[allow(clippy::field_reassign_with_default)]
 pub fn read_window_size() -> Result<(), (f32, f32)> {

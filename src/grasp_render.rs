@@ -1,6 +1,6 @@
 use crate::grasp_editor_window::GraspEditorWindow;
 
-use crate::math::vec2::Vec2;
+use crate::core::math::vec2::Vec2;
 use crate::utilities::{Label, Pos};
 use crate::GuiState;
 use mosaic::internals::Tile;
@@ -17,7 +17,8 @@ impl GraspEditorWindow {
 
         //let painter = ui.painter();
 
-        self.quadtree.iter().for_each(|area| {
+        let quadtree = self.quadtree.lock().unwrap();
+        quadtree.iter().for_each(|area| {
             let anchor_pos = self
                 .pos_with_pan(Vec2::new(area.anchor().x as f32, area.anchor().y as f32))
                 - self.editor_data.tab_offset;

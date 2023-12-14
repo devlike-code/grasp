@@ -1,4 +1,8 @@
-use std::{collections::HashMap, env, fs, sync::Arc};
+use std::{
+    collections::HashMap,
+    env, fs,
+    sync::{Arc, Mutex},
+};
 
 use imgui::{Condition, ImString, TreeNodeFlags, Ui};
 use itertools::Itertools;
@@ -12,7 +16,7 @@ use mosaic::{
 use quadtree_rs::Quadtree;
 
 use crate::{
-    docking::GuiViewport, editor_state_machine::EditorState,
+    core::gui::docking::GuiViewport, editor_state_machine::EditorState,
     grasp_editor_window::GraspEditorWindow, grasp_editor_window_list::GraspEditorWindowList,
     grasp_transitions::QuadtreeUpdateCapability, GuiState,
 };
@@ -76,7 +80,7 @@ impl GraspEditorState {
         mosaic.new_type("EditorStateFocusedWindow: u64;").unwrap();
         mosaic.new_type("EditorTab: unit;").unwrap();
         mosaic.new_type("ToTab: unit;").unwrap();
-        mosaic.new_type("NewTabRequestQueue: unit;").unwrap();
+        mosaic.new_type("NewWindowRequestQueue: unit;").unwrap();
         mosaic.new_type("RefreshQuadtreeQueue: unit;").unwrap();
         mosaic.new_type("ToastRequestQueue: unit;").unwrap();
         mosaic.new_type("ToastRequest: s32;").unwrap();
@@ -91,8 +95,8 @@ impl GraspEditorState {
         let editor_state_tile = document_mosaic.new_object("EditorState", void());
         document_mosaic.new_extension(&editor_state_tile, "EditorStateFocusedWindow", par(0u64));
 
-        let new_tab_request_queue = document_mosaic.make_queue();
-        new_tab_request_queue.add_component("NewTabRequestQueue", void());
+        let new_window_request_queue = document_mosaic.make_queue();
+        new_window_request_queue.add_component("NewWindowRequestQueue", void());
 
         let refresh_quadtree_queue = document_mosaic.make_queue();
         refresh_quadtree_queue.add_component("RefreshQuadtreeQueue", void());
@@ -107,7 +111,7 @@ impl GraspEditorState {
             document_mosaic,
             component_renderers: HashMap::new(),
             editor_state_tile,
-            new_tab_request_queue,
+            new_tab_request_queue: new_window_request_queue,
             refresh_quadtree_queue,
             toast_request_queue,
             window_list: GraspEditorWindowList::default(),
@@ -138,8 +142,8 @@ impl GraspEditorState {
         let new_index = self.window_list.increment();
         self.window_list.windows.push(GraspEditorWindow {
             name: format!("Untitled {}", new_index),
-            tab_tile: window_tile,
-            quadtree: Quadtree::new_with_anchor((-1000, -1000).into(), 16),
+            window_tile,
+            quadtree: Mutex::new(Quadtree::new_with_anchor((-1000, -1000).into(), 16)),
             document_mosaic: Arc::clone(&self.document_mosaic),
             collage,
             object_to_area: Default::default(),
@@ -187,7 +191,7 @@ impl GraspEditorState {
                     .window_list
                     .windows
                     .iter()
-                    .position(|w| w.tab_tile.id == focused_index)
+                    .position(|w| w.window_tile.id == focused_index)
                     .unwrap_or_default() as i32;
 
                 let items = self

@@ -1,25 +1,22 @@
+use core::gui::imgui_function_keys::ExtraKeyEvents;
+use core::gui::windowing::run_main_forever;
 use editor_state::GraspEditorState;
 use imgui::{Key, Ui};
-use imgui_function_keys::ExtraKeyEvents;
-use windowing::run_main_forever;
 
-mod docking;
-mod editor_queue_process;
+mod core;
 mod editor_state;
 mod editor_state_machine;
 mod grasp_common;
 mod grasp_context_menu;
 mod grasp_editor_window;
 mod grasp_editor_window_list;
+mod grasp_queues;
 mod grasp_render;
 mod grasp_sense;
 mod grasp_transitions;
 mod grasp_update;
-mod imgui_function_keys;
-mod math;
 mod seq;
 mod utilities;
-mod windowing;
 
 use std::{ops::Deref, sync::Mutex};
 

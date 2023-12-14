@@ -1,8 +1,8 @@
+use crate::core::gui::windowing::set_window_focus;
+use crate::core::math::rect2::Rect2;
+use crate::core::math::vec2::Vec2;
 use crate::editor_state_machine::EditorState;
 use crate::grasp_common::GraspEditorData;
-use crate::math::rect2::Rect2;
-use crate::math::vec2::Vec2;
-use crate::windowing::set_window_focus;
 use crate::GuiState;
 use ::mosaic::internals::{EntityId, Mosaic, MosaicCRUD, MosaicIO, Tile, Value};
 use mosaic::capabilities::{ArchetypeSubject, QueueCapability};
@@ -15,16 +15,16 @@ use quadtree_rs::{
     Quadtree,
 };
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 #[derive(Debug)]
 pub struct GraspEditorWindow {
     pub name: String,
-    pub tab_tile: Tile,
+    pub window_tile: Tile,
     pub state: EditorState,
-    pub quadtree: Quadtree<i32, EntityId>,
+    pub quadtree: Mutex<Quadtree<i32, EntityId>>,
     pub document_mosaic: Arc<Mosaic>,
-    pub object_to_area: HashMap<EntityId, Vec<u64>>,
+    pub object_to_area: Mutex<HashMap<EntityId, Vec<u64>>>,
     pub collage: Box<Collage>,
     pub ruler_visible: bool,
     pub grid_visible: bool,
@@ -33,7 +33,7 @@ pub struct GraspEditorWindow {
 
 impl PartialEq for GraspEditorWindow {
     fn eq(&self, other: &Self) -> bool {
-        self.tab_tile.id == other.tab_tile.id
+        self.window_tile.id == other.window_tile.id
     }
 }
 
@@ -43,8 +43,8 @@ impl GraspEditorWindow {
             .size([700.0, 500.0], imgui::Condition::Appearing)
             .position(
                 [
-                    200.0 + 50.0 * (self.tab_tile.id % 5) as f32,
-                    200.0 - 20.0 * (self.tab_tile.id % 5) as f32,
+                    200.0 + 50.0 * (self.window_tile.id % 5) as f32,
+                    200.0 - 20.0 * (self.window_tile.id % 5) as f32,
                 ],
                 imgui::Condition::Appearing,
             )
@@ -55,15 +55,17 @@ impl GraspEditorWindow {
                         .get_all()
                         .include_component("EditorStateFocusedWindow")
                     {
-                        focus.set("self", self.tab_tile.id as u64);
+                        focus.set("self", self.window_tile.id as u64);
                     }
                 }
 
-                if let Some(request) = self.document_mosaic.dequeue(&self.tab_tile) {
+                if let Some(request) = self.document_mosaic.dequeue(&self.window_tile) {
                     set_window_focus(&self.name);
                     request.iter().delete();
                 }
                 s.ui.label_text("This is a graph window", "");
+
+                self.update_context_menu(s);
             });
     }
 }
@@ -111,7 +113,7 @@ impl GraspEditorWindow {
 }
 
 impl GraspEditorWindow {
-    pub fn create_new_object(&mut self, pos: Vec2) {
+    pub fn create_new_object(&self, pos: Vec2) {
         self.document_mosaic.new_type("Node: unit;").unwrap();
 
         let obj = self.document_mosaic.new_object("Node", void());
@@ -127,8 +129,12 @@ impl GraspEditorWindow {
 
         let region = self.build_circle_area(pos, 10);
 
-        if let Some(area_id) = self.quadtree.insert(region, obj.id) {
-            self.object_to_area.insert(obj.id, vec![area_id]);
+        let mut quadtree = self.quadtree.lock().unwrap();
+        if let Some(area_id) = quadtree.insert(region, obj.id) {
+            self.object_to_area
+                .lock()
+                .unwrap()
+                .insert(obj.id, vec![area_id]);
         }
     }
 
@@ -156,18 +162,24 @@ impl GraspEditorWindow {
 
         let region = self.build_circle_area(middle_pos, 10);
 
-        if let Some(area_id) = self.quadtree.insert(region, arr.id) {
-            if let Some(areas_vec) = self.object_to_area.get_mut(&arr.id) {
-                areas_vec.push(area_id);
-            } else {
-                self.object_to_area.insert(arr.id, vec![area_id]);
+        {
+            let mut quadtree = self.quadtree.lock().unwrap();
+            if let Some(area_id) = quadtree.insert(region, arr.id) {
+                let mut object_to_area = self.object_to_area.lock().unwrap();
+                if let Some(areas_vec) = object_to_area.get_mut(&arr.id) {
+                    areas_vec.push(area_id);
+                } else {
+                    object_to_area.insert(arr.id, vec![area_id]);
+                }
             }
         }
 
         for r in bezier_rects {
             let region = self.build_rect_area(r);
-            if let Some(area_id) = self.quadtree.insert(region, arr.id) {
-                if let Some(areas_vec) = self.object_to_area.get_mut(&arr.id) {
+            let mut quadtree = self.quadtree.lock().unwrap();
+            if let Some(area_id) = quadtree.insert(region, arr.id) {
+                let mut object_to_area = self.object_to_area.lock().unwrap();
+                if let Some(areas_vec) = object_to_area.get_mut(&arr.id) {
                     areas_vec.push(area_id);
                     //self.object_to_area.insert(arr.id, areas_vec.to_owned());
                 }

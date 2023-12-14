@@ -1,4 +1,4 @@
-use crate::math::vec2::Vec2;
+use crate::core::math::vec2::Vec2;
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Rect2 {
@@ -17,7 +17,12 @@ impl Rect2 {
         let width = max_x - min_x;
         let height = max_y - min_y;
 
-        Rect2 { x: min_x, y: min_y, width, height }
+        Rect2 {
+            x: min_x,
+            y: min_y,
+            width,
+            height,
+        }
     }
 
     pub fn min(&self) -> Vec2 {

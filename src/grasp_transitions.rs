@@ -12,10 +12,10 @@ use mosaic::{
 };
 
 use crate::{
+    core::math::vec2::Vec2,
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
     grasp_editor_window::GraspEditorWindow,
     grasp_editor_window_list::get_pos_from_tile,
-    math::vec2::Vec2,
     utilities::Pos,
 };
 
@@ -241,15 +241,19 @@ impl GraspEditorWindow {
             .get_targets()
             .collect_vec();
 
-        self.quadtree.reset();
+        let mut quadtree = self.quadtree.lock().unwrap();
+        quadtree.reset();
 
         for tile in &selected {
             let mut selected_pos = Pos(tile.clone()).query();
 
             if tile.is_object() {
                 let region = self.build_circle_area(selected_pos, 10);
-                if let Some(area_id) = self.quadtree.insert(region, tile.id) {
-                    self.object_to_area.insert(tile.id, vec![area_id]);
+                if let Some(area_id) = quadtree.insert(region, tile.id) {
+                    self.object_to_area
+                        .lock()
+                        .unwrap()
+                        .insert(tile.id, vec![area_id]);
                 }
             } else if tile.is_arrow() {
                 let start_pos = Pos(tile.source().clone()).query();

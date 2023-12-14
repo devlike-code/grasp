@@ -3,15 +3,15 @@ use mosaic::{
     capabilities::QueueCapability, internals::MosaicIO, iterators::tile_deletion::TileDeletion,
 };
 
+use crate::core::math::rect2::Rect2;
 use crate::editor_state_machine::EditorState;
 use crate::grasp_editor_window::GraspEditorWindow;
-use crate::math::rect2::Rect2;
 use crate::utilities::QuadTreeFetch;
 use crate::GuiState;
 
 impl GraspEditorWindow {
     pub fn update(&mut self, s: &GuiState) {
-        while let Some(request) = self.document_mosaic.dequeue(&self.tab_tile) {
+        while let Some(request) = self.document_mosaic.dequeue(&self.window_tile) {
             self.update_quadtree(None);
             request.iter().delete();
         }
@@ -22,7 +22,7 @@ impl GraspEditorWindow {
                 //     if let Some(queue) = self
                 //         .document_mosaic
                 //         .get_all()
-                //         .include_component("NewTabRequestQueue")
+                //         .include_component("NewWindowRequestQueue")
                 //         .get_targets()
                 //         .next()
                 //     {
@@ -44,8 +44,9 @@ impl GraspEditorWindow {
             }
 
             EditorState::Link => {
+                let quadtree = self.quadtree.lock().unwrap();
                 let region = self.build_circle_area(self.editor_data.cursor, 1);
-                let query = self.quadtree.query(region).collect_vec();
+                let query = quadtree.query(region).collect_vec();
                 if !query.is_empty() {
                     let tile_id = query.first().unwrap().value_ref();
                     self.editor_data.link_end = self.document_mosaic.get(*tile_id);
@@ -59,9 +60,9 @@ impl GraspEditorWindow {
                     if let Some(delta) = self.editor_data.rect_delta {
                         let end_pos = min + delta;
                         let rect = Rect2::from_two_pos(min, end_pos);
-
+                        let quadtree = self.quadtree.lock().unwrap();
                         let region = self.build_rect_area(rect);
-                        let query = self.quadtree.query(region).collect_vec();
+                        let query = quadtree.query(region).collect_vec();
                         if !query.is_empty() {
                             self.editor_data.selected = query.fetch_tiles(&self.document_mosaic);
                         } else {

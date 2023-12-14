@@ -1,4 +1,4 @@
-use crate::math::vec2::Vec2;
+use crate::core::math::vec2::Vec2;
 use itertools::Itertools;
 use mosaic::internals::{EntityId, Mosaic, MosaicIO};
 use mosaic::{

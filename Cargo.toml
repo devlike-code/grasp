@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 mosaic = { path = "../mosaic" }
+grasp_proc_macros = { path = "./grasp_proc_macros" }
 env_logger = "0.10.0"
 serde = "1.0.190"
 rust-ini = "0.20.0"
