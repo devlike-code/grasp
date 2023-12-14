@@ -1,17 +1,13 @@
-use crate::math::rect::Rect2;
+use crate::grasp_editor_window::GraspEditorWindow;
+
 use crate::math::vec2::Vec2;
+use crate::utilities::{Label, Pos};
 use crate::GuiState;
-use crate::{
-    editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
-    grasp_common::{get_pos_from_tile, GraspEditorWindow},
-    utilities::{Label, Pos},
-};
+use mosaic::internals::Tile;
 use mosaic::internals::TileFieldEmptyQuery;
+use mosaic::iterators::component_selectors::ComponentSelectors;
+use mosaic::iterators::tile_filters::TileFilters;
 use mosaic::{capabilities::ArchetypeSubject, internals::MosaicCollage};
-use mosaic::{
-    internals::{MosaicIO, Tile},
-    iterators::{component_selectors::ComponentSelectors, tile_filters::TileFilters},
-};
 
 impl GraspEditorWindow {
     pub fn draw_debug(&mut self, s: &GuiState) {

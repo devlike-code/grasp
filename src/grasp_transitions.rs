@@ -13,8 +13,9 @@ use mosaic::{
 
 use crate::{
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
-    grasp_common::{get_pos_from_tile, GraspEditorWindow},
-    math::{rect::Rect2, vec2::Vec2},
+    grasp_editor_window::GraspEditorWindow,
+    grasp_editor_window_list::get_pos_from_tile,
+    math::vec2::Vec2,
     utilities::Pos,
 };
 

@@ -3,11 +3,11 @@ use mosaic::{
     capabilities::QueueCapability, internals::MosaicIO, iterators::tile_deletion::TileDeletion,
 };
 
+use crate::editor_state_machine::EditorState;
+use crate::grasp_editor_window::GraspEditorWindow;
+use crate::math::rect2::Rect2;
 use crate::utilities::QuadTreeFetch;
 use crate::GuiState;
-use crate::{
-    editor_state_machine::EditorState, grasp_common::GraspEditorWindow, math::rect::Rect2,
-};
 
 impl GraspEditorWindow {
     pub fn update(&mut self, s: &GuiState) {

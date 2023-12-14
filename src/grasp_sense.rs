@@ -8,7 +8,7 @@ use mosaic::{
 
 use crate::{
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
-    grasp_common::GraspEditorWindow,
+    grasp_editor_window::GraspEditorWindow,
     grasp_transitions::QuadtreeUpdateCapability,
     utilities::QuadTreeFetch,
     GuiState,

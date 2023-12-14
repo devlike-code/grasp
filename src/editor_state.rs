@@ -1,21 +1,7 @@
-use std::{
-    collections::HashMap,
-    env,
-    ffi::{CStr, CString},
-    fs,
-    ptr::{null, null_mut},
-    sync::Arc,
-};
+use std::{collections::HashMap, env, fs, sync::Arc};
 
-use imgui::{
-    sys::{
-        ImGuiDir_Down, ImGuiDir_Left, ImGuiDir_Right, ImGuiDir_Up, ImGuiDockNodeFlags_DockSpace,
-        ImGuiDockNodeFlags_None, ImGuiDockNodeFlags_PassthruCentralNode, ImVec2,
-    },
-    Condition, ImString, TreeNodeFlags, Ui, WindowFlags,
-};
+use imgui::{Condition, ImString, TreeNodeFlags, Ui};
 use itertools::Itertools;
-use log::info;
 use mosaic::{
     capabilities::QueueTile,
     internals::{
@@ -26,11 +12,9 @@ use mosaic::{
 use quadtree_rs::Quadtree;
 
 use crate::{
-    docking::{new_id, GuiDir, GuiDockNodeFlags, GuiDockspace, GuiViewport},
-    editor_state_machine::EditorState,
-    grasp_common::{GraspEditorWindow, GraspEditorWindows},
-    grasp_transitions::QuadtreeUpdateCapability,
-    GuiState,
+    docking::GuiViewport, editor_state_machine::EditorState,
+    grasp_editor_window::GraspEditorWindow, grasp_editor_window_list::GraspEditorWindowList,
+    grasp_transitions::QuadtreeUpdateCapability, GuiState,
 };
 use mosaic::capabilities::ArchetypeSubject;
 use mosaic::capabilities::QueueCapability;
@@ -65,7 +49,7 @@ type ComponentRenderer = Box<dyn Fn(&mut Ui, &mut GraspEditorWindow, Tile)>;
 pub struct GraspEditorState {
     pub(crate) document_mosaic: Arc<Mosaic>,
     pub(crate) component_renderers: HashMap<S32, ComponentRenderer>,
-    pub(crate) window_list: GraspEditorWindows,
+    pub(crate) window_list: GraspEditorWindowList,
     pub(crate) editor_state_tile: Tile,
     pub(crate) new_tab_request_queue: QueueTile,
     pub(crate) refresh_quadtree_queue: QueueTile,
@@ -126,7 +110,7 @@ impl GraspEditorState {
             new_tab_request_queue,
             refresh_quadtree_queue,
             toast_request_queue,
-            window_list: GraspEditorWindows::default(),
+            window_list: GraspEditorWindowList::default(),
             show_tabview: false,
         };
 
@@ -198,12 +182,12 @@ impl GraspEditorState {
                     .next()
                     .unwrap();
 
-                let mt = focus.get("self").as_u64() as usize;
+                let focused_index = focus.get("self").as_u64() as usize;
                 let mut i = self
                     .window_list
                     .windows
                     .iter()
-                    .position(|w| w.tab_tile.id == mt)
+                    .position(|w| w.tab_tile.id == focused_index)
                     .unwrap_or_default() as i32;
 
                 let items = self

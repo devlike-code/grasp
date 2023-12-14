@@ -9,6 +9,8 @@ mod editor_state;
 mod editor_state_machine;
 mod grasp_common;
 mod grasp_context_menu;
+mod grasp_editor_window;
+mod grasp_editor_window_list;
 mod grasp_render;
 mod grasp_sense;
 mod grasp_transitions;
