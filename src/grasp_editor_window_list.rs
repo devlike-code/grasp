@@ -6,7 +6,7 @@ use mosaic::capabilities::{ArchetypeSubject, QueueCapability};
 
 use mosaic::internals::{void, TileFieldQuery};
 
-#[derive(Default, Debug)]
+#[derive(Default)]
 pub struct GraspEditorWindowList {
     pub current_index: u32,
     pub windows: Vec<GraspEditorWindow>,

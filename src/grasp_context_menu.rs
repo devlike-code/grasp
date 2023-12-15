@@ -1,22 +1,7 @@
-use std::ops::Sub;
-
-use itertools::Itertools;
-use mosaic::{
-    capabilities::{
-        Archetype, ArchetypeSubject, CollageExportCapability, GroupingCapability, QueueCapability,
-        SelectionCapability,
-    },
-    internals::{
-        arrows_from, descriptors_from, gather, par, take_components, targets_from, tiles, MosaicIO,
-    },
-    iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
-};
-
 use crate::{
     core::math::Vec2,
     editor_state_machine::{EditorStateTrigger, StateMachine},
     grasp_editor_window::GraspEditorWindow,
-    grasp_transitions::QuadtreeUpdateCapability,
     GuiState,
 };
 
@@ -24,10 +9,13 @@ impl GraspEditorWindow {
     pub(crate) fn update_context_menu(&self, s: &GuiState) {
         if let Some(c) = s.ui.begin_popup("context-menu") {
             if self.editor_data.selected.is_empty() {
-                self.show_default_menu(s);
-            } else {
-                self.show_selection_menu(s);
+                if self.show_default_menu(s) {
+                    s.ui.close_current_popup();
+                }
+            } else if self.show_selection_menu(s) {
+                s.ui.close_current_popup();
             }
+
             c.end();
         }
 
@@ -36,7 +24,7 @@ impl GraspEditorWindow {
         }
     }
 
-    fn show_selection_menu(&self, s: &GuiState) {
+    fn show_selection_menu(&self, s: &GuiState) -> bool {
         // let queue = self
         //     .document_mosaic
         //     .get_all()
@@ -115,23 +103,17 @@ impl GraspEditorWindow {
         //         self.exit_menu(ui);
         //     }
         // });
+        false
     }
 
-    fn show_default_menu(&self, s: &GuiState) {
+    fn show_default_menu(&self, s: &GuiState) -> bool {
         if s.ui.button("Create new node") {
             let pos = s.ui.mouse_pos_on_opening_current_popup();
-            self.create_new_object(Vec2::new(pos[0], pos[1]) - self.editor_data.pan)
+            self.create_new_object(Vec2::new(pos[0], pos[1]) - self.editor_data.pan);
+            return true;
         }
-        // let resp = ui.button("Create new node");
-        // if resp.clicked() {
-        //     if let Some(response) = self.response.clone() {
-        //         if let Some(position) = response.interact_pointer_pos() {
-        //             self.create_new_object(position - self.editor_data.pan);
-        //             self.document_mosaic.request_quadtree_update();
-        //         }
-        //     }
-        //     self.exit_menu(ui);
-        // }
+
+        false
     }
 
     fn exit_menu(&mut self, s: &GuiState) {

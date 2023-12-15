@@ -3,8 +3,10 @@ use crate::core::math::rect2::Rect2;
 use crate::core::math::vec2::Vec2;
 use crate::editor_state_machine::EditorState;
 use crate::grasp_common::GraspEditorData;
+use crate::grasp_render::GraspRenderer;
 use crate::GuiState;
 use ::mosaic::internals::{EntityId, Mosaic, MosaicCRUD, MosaicIO, Tile, Value};
+use itertools::Itertools;
 use mosaic::capabilities::{ArchetypeSubject, QueueCapability};
 use mosaic::internals::collage::Collage;
 use mosaic::internals::{par, void, MosaicTypelevelCRUD, TileFieldSetter};
@@ -17,7 +19,6 @@ use quadtree_rs::{
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-#[derive(Debug)]
 pub struct GraspEditorWindow {
     pub name: String,
     pub window_tile: Tile,
@@ -29,6 +30,7 @@ pub struct GraspEditorWindow {
     pub ruler_visible: bool,
     pub grid_visible: bool,
     pub editor_data: GraspEditorData,
+    pub renderer: Box<dyn GraspRenderer>,
 }
 
 impl PartialEq for GraspEditorWindow {
@@ -63,7 +65,8 @@ impl GraspEditorWindow {
                     set_window_focus(&self.name);
                     request.iter().delete();
                 }
-                s.ui.label_text("This is a graph window", "");
+
+                self.renderer.draw(&self.document_mosaic, s);
 
                 self.update_context_menu(s);
             });

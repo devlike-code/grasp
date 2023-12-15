@@ -8,8 +8,9 @@ use mosaic::{
 use quadtree_rs::entry::Entry;
 use std::sync::Arc;
 
-pub struct Pos(pub Tile);
-impl TileFieldEmptyQuery for Pos {
+pub struct Pos<'a>(pub &'a Tile);
+
+impl<'a> TileFieldEmptyQuery for Pos<'a> {
     type Output = Vec2;
     fn query(&self) -> Self::Output {
         if let Some(pos_component) = self.0.get_component("Position") {
@@ -21,8 +22,8 @@ impl TileFieldEmptyQuery for Pos {
         Default::default()
     }
 }
-pub struct Label(pub Tile);
-impl TileFieldEmptyQuery for Label {
+pub struct Label<'a>(pub &'a Tile);
+impl<'a> TileFieldEmptyQuery for Label<'a> {
     type Output = String;
     fn query(&self) -> Self::Output {
         if let Some(pos_component) = self.0.get_component("Label") {

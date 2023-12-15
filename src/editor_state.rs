@@ -18,7 +18,7 @@ use quadtree_rs::Quadtree;
 use crate::{
     core::gui::docking::GuiViewport, editor_state_machine::EditorState,
     grasp_editor_window::GraspEditorWindow, grasp_editor_window_list::GraspEditorWindowList,
-    grasp_transitions::QuadtreeUpdateCapability, GuiState,
+    grasp_render::DefaultGraspRenderer, grasp_transitions::QuadtreeUpdateCapability, GuiState,
 };
 use mosaic::capabilities::ArchetypeSubject;
 use mosaic::capabilities::QueueCapability;
@@ -151,6 +151,7 @@ impl GraspEditorState {
             state: EditorState::Idle,
             grid_visible: false,
             ruler_visible: false,
+            renderer: Box::new(DefaultGraspRenderer),
         });
     }
 

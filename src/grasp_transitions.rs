@@ -12,10 +12,11 @@ use mosaic::{
 };
 
 use crate::{
-    core::math::vec2::Vec2,
+    core::{math::vec2::Vec2, queues::enqueue},
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
     grasp_editor_window::GraspEditorWindow,
     grasp_editor_window_list::get_pos_from_tile,
+    grasp_queues::QuadtreeUpdateRequestQueue,
     utilities::Pos,
 };
 
@@ -25,14 +26,7 @@ pub trait QuadtreeUpdateCapability {
 
 impl QuadtreeUpdateCapability for Arc<Mosaic> {
     fn request_quadtree_update(&self) {
-        let queue = self
-            .get_all()
-            .include_component("RefreshQuadtreeQueue")
-            .get_targets()
-            .next()
-            .unwrap();
-        let request = self.new_object("void", void());
-        self.enqueue(&queue, &request);
+        enqueue(QuadtreeUpdateRequestQueue, self.new_object("void", void()));
     }
 }
 
@@ -41,7 +35,7 @@ impl StateMachine for GraspEditorWindow {
     type State = EditorState;
 
     fn on_transition(&mut self, from: Self::State, trigger: Self::Trigger) -> Option<EditorState> {
-        info!("TRANSITIION FROM = {:?}, TRIGGER -> {:?}", from, trigger);
+        println!("from {:?} trigger {:?}", from, trigger);
         match (from, trigger) {
             (_, EditorStateTrigger::DblClickToCreate) => {
                 self.create_new_object(self.editor_data.cursor);
@@ -245,7 +239,7 @@ impl GraspEditorWindow {
         quadtree.reset();
 
         for tile in &selected {
-            let mut selected_pos = Pos(tile.clone()).query();
+            let mut selected_pos = Pos(&tile).query();
 
             if tile.is_object() {
                 let region = self.build_circle_area(selected_pos, 10);
@@ -256,8 +250,8 @@ impl GraspEditorWindow {
                         .insert(tile.id, vec![area_id]);
                 }
             } else if tile.is_arrow() {
-                let start_pos = Pos(tile.source().clone()).query();
-                let end_pos = Pos(tile.target().clone()).query();
+                let start_pos = Pos(&tile.source()).query();
+                let end_pos = Pos(&tile.target()).query();
 
                 // let qb = QuadraticBezierShape::from_points_stroke(
                 //     [start_pos, selected_pos, end_pos],

@@ -3,6 +3,7 @@ use std::{
     time::Instant,
 };
 
+use env_logger::Target;
 use imgui::{ConfigFlags, ImString, Ui, WindowFlags};
 use log::info;
 use sdl2::video::GLProfile;
