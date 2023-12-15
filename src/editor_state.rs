@@ -1,6 +1,9 @@
 use std::{
     collections::HashMap,
-    env, fs,
+    env,
+    fmt::Display,
+    fs,
+    str::FromStr,
     sync::{Arc, Mutex},
 };
 
@@ -9,21 +12,25 @@ use itertools::Itertools;
 use mosaic::{
     capabilities::QueueTile,
     internals::{
-        all_tiles, par, void, Collage, Mosaic, MosaicCRUD, MosaicIO, MosaicTypelevelCRUD, Tile, S32,
+        all_tiles, par, void, Collage, Datatype, FromByteArray, Mosaic, MosaicCRUD, MosaicIO,
+        MosaicTypelevelCRUD, Tile, TileFieldSetter, ToByteArray, Value, S32,
     },
     iterators::component_selectors::ComponentSelectors,
 };
 use quadtree_rs::Quadtree;
 
 use crate::{
-    core::gui::docking::GuiViewport, editor_state_machine::EditorState,
-    grasp_editor_window::GraspEditorWindow, grasp_editor_window_list::GraspEditorWindowList,
-    grasp_transitions::QuadtreeUpdateCapability, GuiState,
+    core::gui::docking::GuiViewport,
+    editor_state_machine::{EditorState, EditorStateTrigger},
+    grasp_editor_window::GraspEditorWindow,
+    grasp_editor_window_list::GraspEditorWindowList,
+    grasp_transitions::QuadtreeUpdateCapability,
+    GuiState,
 };
 use mosaic::capabilities::ArchetypeSubject;
 use mosaic::capabilities::QueueCapability;
 
-type ComponentRenderer = Box<dyn Fn(&mut Ui, &mut GraspEditorWindow, Tile)>;
+type ComponentRenderer = Box<dyn Fn(&GuiState, &mut GraspEditorWindow, Tile)>;
 
 // pub trait ToastCapability {
 //     fn send_toast(&self, text: &str);
@@ -72,6 +79,7 @@ impl GraspEditorState {
     }
 
     pub fn prepare_mosaic(mosaic: Arc<Mosaic>) -> Arc<Mosaic> {
+        mosaic.new_type("Node: unit;").unwrap();
         mosaic.new_type("Arrow: unit;").unwrap();
         mosaic.new_type("Label: s32;").unwrap();
         mosaic.new_type("Position: { x: f32, y: f32 };").unwrap();
@@ -85,6 +93,7 @@ impl GraspEditorState {
         mosaic.new_type("ToastRequestQueue: unit;").unwrap();
         mosaic.new_type("ToastRequest: s32;").unwrap();
         println!("Mosaic ready for use in Grasp!");
+
         mosaic
     }
 
@@ -140,7 +149,8 @@ impl GraspEditorState {
             .new_arrow(&self.editor_state_tile, &window_tile, "ToTab", void());
 
         let new_index = self.window_list.increment();
-        self.window_list.windows.push(GraspEditorWindow {
+
+        let mut window = GraspEditorWindow {
             name: format!("Untitled {}", new_index),
             window_tile,
             quadtree: Mutex::new(Quadtree::new_with_anchor((-1000, -1000).into(), 16)),
@@ -151,7 +161,20 @@ impl GraspEditorState {
             state: EditorState::Idle,
             grid_visible: false,
             ruler_visible: false,
-        });
+        };
+
+        let n1 = self.document_mosaic.new_object("Node", void());
+        let n2 = self.document_mosaic.new_object("Node", void());
+        let n3 = self.document_mosaic.new_object("Node", void());
+        n1.add_component(
+            "Position",
+            vec![("x".into(), Value::F32(0.0)), ("y".into(), Value::F32(0.0))],
+        );
+        n1.add_component("Label", par("N1"));
+
+        window.editor_data.selected = vec![n1, n2, n3];
+
+        self.window_list.windows.push(window);
     }
 
     pub fn show(&mut self, s: &GuiState) {
@@ -220,6 +243,51 @@ impl GraspEditorState {
                 .size([300.0, viewport.size().y - 18.0], Condition::FirstUseEver)
                 .begin()
         {
+            let focus = self
+                .document_mosaic
+                .get_all()
+                .include_component("EditorStateFocusedWindow")
+                .next()
+                .unwrap();
+
+            let focused_index = focus.get("self").as_u64() as usize;
+            if let Some(focused_window) = self
+                .window_list
+                .windows
+                .iter_mut()
+                .find(|w| w.window_tile.id == focused_index)
+            {
+                for o in focused_window.editor_data.selected.clone() {
+                    for (part, tiles) in &o.get_full_archetype().into_iter().sorted().collect_vec()
+                    {
+                        let mut draw_separator = tiles.len() - 1;
+                        for tile in tiles.iter().sorted() {
+                            if let Some(renderer) =
+                                self.component_renderers.get(&part.as_str().into())
+                            {
+                                if s.ui.collapsing_header(
+                                    format!("[ID: {}] {}", tile.id, part.to_uppercase()),
+                                    TreeNodeFlags::DEFAULT_OPEN,
+                                ) {
+                                    renderer(s, focused_window, tile.clone());
+                                }
+                            } else {
+                                if s.ui.collapsing_header(
+                                    format!("[ID: {}] {}", tile.id, part.to_uppercase()),
+                                    TreeNodeFlags::DEFAULT_OPEN,
+                                ) {
+                                    draw_default_renderer(s, focused_window, tile.clone());
+                                };
+                            }
+
+                            if draw_separator > 0 {
+                                s.ui.separator();
+                                draw_separator -= 1;
+                            }
+                        }
+                    }
+                }
+            }
             w.end();
         }
     }
@@ -397,8 +465,7 @@ impl GraspEditorState {
     }
 }
 
-/*
-fn draw_default_renderer(ui: &mut Ui, tab: &mut GraspEditorTab, d: Tile) {
+fn draw_default_renderer(ui: &GuiState, tab: &mut GraspEditorWindow, d: Tile) {
     let mosaic = &tab.document_mosaic;
     let comp = mosaic
         .component_registry
@@ -406,78 +473,63 @@ fn draw_default_renderer(ui: &mut Ui, tab: &mut GraspEditorTab, d: Tile) {
         .unwrap();
     let fields = comp.get_fields();
 
-    ui.vertical(|ui| {
-        let mut grid_builder = GridBuilder::new();
-        for _i in 0..fields.len() {
-            grid_builder = grid_builder
-                .new_row(Size::initial(18.0))
-                .cell(Size::exact(60.0))
-                .cell(Size::remainder().at_least(120.0));
+    // let mut grid_builder = GridBuilder::new();
+    // for _i in 0..fields.len() {
+    //     grid_builder = grid_builder
+    //         .new_row(Size::initial(18.0))
+    //         .cell(Size::exact(60.0))
+    //         .cell(Size::remainder().at_least(120.0));
+    // }
+
+    // grid_builder.show(ui, |mut grid| {
+    for field in &fields {
+        let name = if comp.is_alias() {
+            "self".to_string()
+        } else {
+            let name = field.name;
+            name.to_string()
+        };
+
+        let datatype = field.datatype.clone();
+
+        if datatype == Datatype::UNIT {
+            continue;
         }
 
-        grid_builder.show(ui, |mut grid| {
-            for field in &fields {
-                let name = if comp.is_alias() {
-                    "self".to_string()
-                } else {
-                    let name = field.name;
-                    name.to_string()
-                };
+        let value = d.get(name.as_str());
 
-                let datatype = field.datatype.clone();
+        ui.selectable(name.clone());
 
-                if datatype == Datatype::UNIT {
-                    continue;
-                }
-
-                let value = d.get(name.as_str());
-
-                {
-                    grid.cell(|ui| {
-                        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                            ui.label(name.clone());
-                        });
-                    });
-                }
-
-                grid.cell(|ui| {
-                    ui.with_layout(Layout::left_to_right(Align::Center), |ui| match value {
-                        Value::UNIT => {}
-                        Value::I8(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
-                        Value::I16(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
-                        Value::I32(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
-                        Value::I64(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
-                        Value::U8(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
-                        Value::U16(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
-                        Value::U32(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
-                        Value::U64(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
-                        Value::F32(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
-                        Value::F64(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
-                        Value::S32(v) => {
-                            draw_property_value(ui, tab, &d, name.as_str(), v.to_string())
-                        }
-                        Value::S128(v) => draw_property_value(
-                            ui,
-                            tab,
-                            &d,
-                            name.as_str(),
-                            String::from_byte_array(&v),
-                        ),
-
-                        Value::BOOL(v) => {
-                            let mut b = v;
-                            ui.checkbox(&mut b, "");
-                        }
-                    });
-                });
+        match value {
+            Value::UNIT => {}
+            Value::I8(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
+            Value::I16(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
+            Value::I32(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
+            Value::I64(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
+            Value::U8(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
+            Value::U16(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
+            Value::U32(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
+            Value::U64(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
+            Value::F32(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
+            Value::F64(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
+            Value::S32(v) => draw_property_value(ui, tab, &d, name.as_str(), v.to_string()),
+            Value::S128(v) => {
+                draw_property_value(ui, tab, &d, name.as_str(), String::from_byte_array(&v))
             }
-        })
-    });
-}
 
+            Value::BOOL(v) => {
+                let mut b = v;
+                ui.checkbox("", &mut b);
+            }
+        }
+    }
+
+    // }
+}
+/* */
 fn draw_property_value<T: Display + FromStr + ToByteArray>(
-    ui: &mut Ui,
-    tab: &mut GraspEditorTab,
+    ui: &GuiState,
+    tab: &mut GraspEditorWindow,
     tile: &Tile,
     name: &str,
     t: T,
@@ -496,53 +548,54 @@ fn draw_property_value<T: Display + FromStr + ToByteArray>(
 
     if !changing {
         let text = format!("{}", t);
-        let label = Label::new(text.clone()).wrap(true).sense(Sense::click());
 
-        if ui.add(label).double_clicked() {
+        if ui.selectable(text.clone()) {
             tab.editor_data.tile_changing = Some(tile.id);
             tab.editor_data.field_changing = Some(name.to_string());
             tab.editor_data.previous_text = text.clone();
             tab.editor_data.text = text;
-            tab.trigger(EditorStateTrigger::DblClickToRename);
+            //tab.trigger(EditorStateTrigger::DblClickToRename);
         }
-    } else {
-        let mut text = tab.editor_data.text.clone();
-        let datatype = tile.get(name).get_datatype();
+    } /*
+      else {
+          let mut text = tab.editor_data.text.clone();
+          let datatype = tile.get(name).get_datatype();
 
-        let widget = match datatype {
-            Datatype::S32 => {
-                TextEdit::singleline(&mut text)
-                    .char_limit(32)
-                    .show(ui)
-                    .response
-            }
+          let widget = match datatype {
+              Datatype::S32 => {
+                  TextEdit::singleline(&mut text)
+                      .char_limit(32)
+                      .show(ui)
+                      .response
+              }
 
-            Datatype::S128 => {
-                TextEdit::multiline(&mut text)
-                    .char_limit(128)
-                    .show(ui)
-                    .response
-            }
+              Datatype::S128 => {
+                  TextEdit::multiline(&mut text)
+                      .char_limit(128)
+                      .show(ui)
+                      .response
+              }
 
-            _ => ui.text_edit_singleline(&mut text),
-        };
+              _ => ui.text_edit_singleline(&mut text),
+          };
 
-        if widget.changed() {
-            tab.editor_data.text = text.clone();
-        }
+          if widget.changed() {
+              tab.editor_data.text = text.clone();
+          }
 
-        if widget.lost_focus() {
-            let mut tile = tile.clone();
-            if let Ok(parsed) = text.parse::<T>() {
-                tile.set(name, parsed);
-                tile.mosaic.request_quadtree_update();
-            }
+          if widget.lost_focus() {
+              let mut tile = tile.clone();
+              if let Ok(parsed) = text.parse::<T>() {
+                  tile.set(name, parsed);
+                  tile.mosaic.request_quadtree_update();
+              }
 
-            tab.trigger(EditorStateTrigger::EndDrag);
-        }
-    }
+              tab.trigger(EditorStateTrigger::EndDrag);
+          }
+      }
+      */
 }
-
+/*
 impl eframe::App for GraspEditorState {
     fn update(&mut self, ctx: &Context, frame: &mut eframe::Frame) {
         ctx.set_visuals(egui::Visuals::dark());
