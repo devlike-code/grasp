@@ -207,10 +207,9 @@ impl GraspEditorTab {
         source: &Tile,
         target: &Tile,
         middle_pos: Pos2,
+        delta: Vec2,
         bezier_rects: Vec<Rect>,
     ) {
-        println!("Bezier rects: {:?}", bezier_rects);
-
         let arr = self
             .document_mosaic
             .new_arrow(source, target, "Arrow", void());
@@ -220,6 +219,13 @@ impl GraspEditorTab {
             vec![
                 ("x".into(), Value::F32(middle_pos.x)),
                 ("y".into(), Value::F32(middle_pos.y)),
+            ],
+        );
+        arr.add_component(
+            "CurveDelta",
+            vec![
+                ("x".into(), Value::F32(delta.x)),
+                ("y".into(), Value::F32(delta.y)),
             ],
         );
         arr.add_component("Label", par("<Label>"));

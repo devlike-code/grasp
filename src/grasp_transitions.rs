@@ -5,13 +5,18 @@ use itertools::Itertools;
 use log::{info, warn};
 use mosaic::{
     capabilities::{ArchetypeSubject, QueueCapability},
-    internals::{void, Mosaic, MosaicCRUD, MosaicIO, Tile, TileFieldQuery, TileFieldSetter, Value, TileFieldEmptyQuery},
+    internals::{
+        void, Mosaic, MosaicCRUD, MosaicIO, Tile, TileFieldEmptyQuery, TileFieldQuery,
+        TileFieldSetter, Value,
+    },
     iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
 };
+use quadtree_rs::iter;
 
 use crate::{
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
-    grasp_common::{get_pos_from_tile, GraspEditorTab}, utilities::Pos,
+    grasp_common::{get_pos_from_tile, GraspEditorTab},
+    utilities::Pos,
 };
 
 pub trait QuadtreeUpdateCapability {
@@ -40,7 +45,6 @@ impl StateMachine for GraspEditorTab {
         match (from, trigger) {
             (_, EditorStateTrigger::DblClickToCreate) => {
                 self.create_new_object(self.editor_data.cursor);
-                println!("create: {:?}", self.quadtree);
                 self.document_mosaic.request_quadtree_update();
 
                 Some(EditorState::Idle)
@@ -113,7 +117,7 @@ impl StateMachine for GraspEditorTab {
 
                     let rects = Self::generate_rects_for_bezier(qb);
 
-                    self.create_new_arrow(&start, &tile, mid_pos, rects);
+                    self.create_new_arrow(&start, &tile, mid_pos, Vec2::ZERO, rects);
                 }
                 self.editor_data.selected.clear();
                 self.editor_data.link_start_pos = None;
@@ -218,15 +222,55 @@ impl GraspEditorTab {
     }
 
     pub fn update_selected_positions_by(&mut self, dp: Vec2) {
-        for tile in &mut self.editor_data.selected {
-            let mut selected_pos_component = tile.get_component("Position").unwrap();
-            if let (Value::F32(x), Value::F32(y)) = selected_pos_component.get_by(("x", "y")) {
-                selected_pos_component.set("x", x + dp.x);
-                selected_pos_component.set("y", y + dp.y);
+        fn update_dependants(outer_deps: &Vec<Tile>, dp: Vec2) {
+            while let Some(dep) = outer_deps.into_iter().next() {
+                let inner_deps = dep.iter().get_dependents().collect_vec();
+
+                if let Some(mut pos_comp) = dep.get_component("Position") {
+                    if dep.is_arrow() {
+                        let start_pos = Pos(dep.source().clone()).query();
+                        let end_pos = Pos(dep.target().clone()).query();
+
+                        let mid_pos = start_pos.lerp(end_pos, 0.5);
+
+                        let mut curve_component = dep.get_component("CurveDelta").unwrap();
+                        if let (Value::F32(x), Value::F32(y)) = curve_component.get_by(("x", "y")) {
+                            pos_comp.set("x", mid_pos.x + x);
+                            pos_comp.set("y", mid_pos.y + y);
+                        }
+                    } else {
+                        // if let (Value::F32(x), Value::F32(y)) = pos_comp.get_by(("x", "y")) {
+                        //     pos_comp.set("x", x + dp.x);
+                        //     pos_comp.set("y", y + dp.y);
+                        // }
+                    }
+
+                    if !inner_deps.is_empty() {
+                        update_dependants(&inner_deps, dp);
+                    }
+                }
             }
         }
+
+        for tile in &mut self.editor_data.selected {
+            if tile.is_arrow() {
+                let mut curve_pos_component = tile.get_component("CurveDelta").unwrap();
+                if let (Value::F32(x), Value::F32(y)) = curve_pos_component.get_by(("x", "y")) {
+                    curve_pos_component.set("x", x + dp.x);
+                    curve_pos_component.set("y", y + dp.y);
+                }
+            } else {
+                let mut selected_pos_component = tile.get_component("Position").unwrap();
+                if let (Value::F32(x), Value::F32(y)) = selected_pos_component.get_by(("x", "y")) {
+                    selected_pos_component.set("x", x + dp.x);
+                    selected_pos_component.set("y", y + dp.y);
+                }
+            }
+
+            update_dependants(&tile.iter().get_dependents().collect_vec(), dp);
+        }
     }
-    
+
     //TO-DO! --- Decide if we need selection and implement it, instead of re-creating everything every time it's called
     //       --- If and when its impelmented pay atention to those not connected but stil updated because of connecting arrows
     pub fn update_quadtree(&mut self, _selection: Option<Vec<Tile>>) {
@@ -239,7 +283,7 @@ impl GraspEditorTab {
 
         self.quadtree.reset();
 
-        for tile in &selected {     
+        for tile in &selected {
             let mut selected_pos = Pos(tile.clone()).query();
 
             if tile.is_object() {
@@ -247,8 +291,6 @@ impl GraspEditorTab {
                 if let Some(area_id) = self.quadtree.insert(region, tile.id) {
                     self.object_to_area.insert(tile.id, vec![area_id]);
                 }
-
-                
             } else if tile.is_arrow() {
                 let start_pos = Pos(tile.source().clone()).query();
                 let end_pos = Pos(tile.target().clone()).query();

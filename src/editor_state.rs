@@ -74,6 +74,7 @@ impl GraspEditorState {
         mosaic.new_type("Arrow: unit;").unwrap();
         mosaic.new_type("Label: s32;").unwrap();
         mosaic.new_type("Position: { x: f32, y: f32 };").unwrap();
+        mosaic.new_type("CurveDelta: { x: f32, y: f32 };").unwrap();
         mosaic.new_type("Selection: unit;").unwrap();
         mosaic.new_type("EditorState: unit;").unwrap();
         mosaic.new_type("EditorTab: unit;").unwrap();
@@ -118,9 +119,9 @@ impl GraspEditorState {
             show_tabview: false,
         };
 
-        // state
-        //     .component_renderers
-        //     .insert("Label".into(), Box::new(Self::draw_label_property));
+        state
+            .component_renderers
+            .insert("Arrow".into(), Box::new(draw_arrow_renderer));
 
         // state
         //     .component_renderers
@@ -216,60 +217,78 @@ impl GraspEditorState {
             .default_width(250.0)
             .resizable(true)
             .show(ctx, |ui| {
-                if let Some((_, tab)) = self.dock_state.find_active_focused() {
-                    let selected = tab
-                        .editor_data
-                        .selected
-                        .clone()
-                        .into_iter()
-                        .unique()
-                        .collect_vec();
-                    for t in selected {
-                        CollapsingHeader::new(RichText::from(format!(
-                            "[ID:{}] {}",
-                            t.id, "PROPERTIES"
-                        )))
-                        .default_open(true)
-                        .show(ui, |ui| {
-                            for (part, tiles) in
-                                &t.get_full_archetype().into_iter().sorted().collect_vec()
-                            {
-                                let mut draw_separator = tiles.len() - 1;
-                                for tile in tiles.iter().sorted() {
-                                    if let Some(renderer) =
-                                        self.component_renderers.get(&part.as_str().into())
-                                    {
-                                        CollapsingHeader::new(RichText::from(format!(
-                                            "[ID: {}] {}",
-                                            tile.id,
-                                            part.to_uppercase()
-                                        )))
-                                        .default_open(true)
-                                        .show(ui, |ui| {
-                                            renderer(ui, tab, tile.clone());
-                                        });
-                                    } else {
-                                        CollapsingHeader::new(RichText::from(format!(
-                                            "[ID: {}] {}",
-                                            tile.id,
-                                            part.to_uppercase()
-                                        )))
-                                        .default_open(true)
-                                        .show(ui, |ui| {
-                                            draw_default_renderer(ui, tab, tile.clone());
-                                        });
-                                    }
+                let scroll_height = 5000.0;
+                ui.vertical(|ui| {
+                    egui::ScrollArea::vertical()
+                        .auto_shrink([false, false])
+                        .max_height(scroll_height)
+                        .stick_to_bottom(true)
+                        .show_viewport(ui, |ui, r| {
+                            if let Some((_, tab)) = self.dock_state.find_active_focused() {
+                                let selected = tab
+                                    .editor_data
+                                    .selected
+                                    .clone()
+                                    .into_iter()
+                                    .unique()
+                                    .collect_vec();
 
-                                    if draw_separator > 0 {
-                                        ui.separator();
-                                        draw_separator -= 1;
-                                    }
+                                for t in selected {
+                                    CollapsingHeader::new(RichText::from(format!(
+                                        "[ID:{}] {}",
+                                        t.id, "PROPERTIES"
+                                    )))
+                                    .default_open(true)
+                                    .show(ui, |ui| {
+                                        for (part, tiles) in &t
+                                            .get_full_archetype()
+                                            .into_iter()
+                                            .sorted()
+                                            .collect_vec()
+                                        {
+                                            let mut draw_separator = tiles.len() - 1;
+                                            for tile in tiles.iter().sorted() {
+                                                if let Some(renderer) = self
+                                                    .component_renderers
+                                                    .get(&part.as_str().into())
+                                                {
+                                                    CollapsingHeader::new(RichText::from(format!(
+                                                        "[ID: {}] {}",
+                                                        tile.id,
+                                                        part.to_uppercase()
+                                                    )))
+                                                    .default_open(true)
+                                                    .show(ui, |ui| {
+                                                        renderer(ui, tab, tile.clone());
+                                                    });
+                                                } else {
+                                                    CollapsingHeader::new(RichText::from(format!(
+                                                        "[ID: {}] {}",
+                                                        tile.id,
+                                                        part.to_uppercase()
+                                                    )))
+                                                    .default_open(true)
+                                                    .show(ui, |ui| {
+                                                        draw_default_renderer(
+                                                            ui,
+                                                            tab,
+                                                            tile.clone(),
+                                                        );
+                                                    });
+                                                }
+
+                                                if draw_separator > 0 {
+                                                    ui.separator();
+                                                    draw_separator -= 1;
+                                                }
+                                            }
+                                        }
+                                    });
                                 }
                             }
+                            ui.separator();
                         });
-                    }
-                }
-                ui.separator();
+                });
             });
     }
 
@@ -392,6 +411,14 @@ impl GraspEditorState {
             }
         });
     }
+}
+
+fn draw_arrow_renderer(ui: &mut Ui, tab: &mut GraspEditorTab, a: Tile) {
+    ui.label(format!(
+        "src [{}] -> tgt [{}]",
+        a.source_id(),
+        a.target_id()
+    ));
 }
 
 fn draw_default_renderer(ui: &mut Ui, tab: &mut GraspEditorTab, d: Tile) {

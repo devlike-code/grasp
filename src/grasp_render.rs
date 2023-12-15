@@ -6,7 +6,7 @@ use crate::{
 use egui::{
     Align2, Color32, FontId, Painter, Pos2, Rangef, Rect, Rounding, Stroke, TextEdit, Ui, Vec2,
 };
-use mosaic::internals::TileFieldEmptyQuery;
+use mosaic::internals::{TileFieldEmptyQuery, TileFieldSetter};
 use mosaic::{capabilities::ArchetypeSubject, internals::MosaicCollage};
 use mosaic::{
     internals::{MosaicIO, Tile},
@@ -186,7 +186,7 @@ impl GraspEditorTab {
                     },
                 };
 
-                selected_pos = shape.sample(0.5);
+                selected_pos = shape.sample(0.5);    
             }
 
             let stroke = Stroke {
