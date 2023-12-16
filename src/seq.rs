@@ -29,12 +29,12 @@ impl SeqWriter {
                     hash.insert("Source", message.source);
                     hash.insert("User", whoami::username());
                     hash.insert("Platform", whoami::platform().to_string());
-                    req.post(
+                    
+                    let _ = req.post(
                         "http://localhost:5341/api/events/raw?clef&apiKey=XmGfOzkYRFtYq7b72L0r",
                     )
                     .json(&hash)
-                    .send()
-                    .unwrap();
+                    .send();                    
                 }
             }
         });

@@ -7,7 +7,9 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use imgui::{Condition, ImString, TreeNodeFlags, Ui};
+use imgui::{
+    sys::ImGuiInputTextFlags_EnterReturnsTrue, Condition, ImString, InputText, TreeNodeFlags, Ui,
+};
 use itertools::Itertools;
 use mosaic::{
     capabilities::QueueTile,
@@ -21,7 +23,7 @@ use quadtree_rs::Quadtree;
 
 use crate::{
     core::gui::docking::GuiViewport,
-    editor_state_machine::{EditorState, EditorStateTrigger},
+    editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
     grasp_editor_window::GraspEditorWindow,
     grasp_editor_window_list::GraspEditorWindowList,
     grasp_transitions::QuadtreeUpdateCapability,
@@ -528,18 +530,18 @@ fn draw_default_renderer(ui: &GuiState, tab: &mut GraspEditorWindow, d: Tile) {
 }
 /* */
 fn draw_property_value<T: Display + FromStr + ToByteArray>(
-    ui: &GuiState,
-    tab: &mut GraspEditorWindow,
+    state: &GuiState,
+    window: &mut GraspEditorWindow,
     tile: &Tile,
     name: &str,
     t: T,
 ) where
     Tile: TileFieldSetter<T>,
 {
-    let changing: bool = tab.state == EditorState::PropertyChanging && {
+    let changing: bool = window.state == EditorState::PropertyChanging && {
         match (
-            tab.editor_data.tile_changing,
-            &tab.editor_data.field_changing,
+            window.editor_data.tile_changing,
+            &window.editor_data.field_changing,
         ) {
             (Some(tile_id), Some(field_name)) => tile_id == tile.id && field_name.as_str() == name,
             _ => false,
@@ -549,51 +551,59 @@ fn draw_property_value<T: Display + FromStr + ToByteArray>(
     if !changing {
         let text = format!("{}", t);
 
-        if ui.selectable(text.clone()) {
-            tab.editor_data.tile_changing = Some(tile.id);
-            tab.editor_data.field_changing = Some(name.to_string());
-            tab.editor_data.previous_text = text.clone();
-            tab.editor_data.text = text;
-            //tab.trigger(EditorStateTrigger::DblClickToRename);
+        if state.selectable(text.clone()) {
+            window.editor_data.tile_changing = Some(tile.id);
+            window.editor_data.field_changing = Some(name.to_string());
+            window.editor_data.previous_text = text.clone();
+            window.editor_data.text = text;
+            window.trigger(EditorStateTrigger::DblClickToRename);
         }
-    } /*
-      else {
-          let mut text = tab.editor_data.text.clone();
-          let datatype = tile.get(name).get_datatype();
+    } else {
+        let mut text = window.editor_data.text.clone();
+        let datatype = tile.get(name).get_datatype();
 
-          let widget = match datatype {
-              Datatype::S32 => {
-                  TextEdit::singleline(&mut text)
-                      .char_limit(32)
-                      .show(ui)
-                      .response
-              }
+        match datatype {
+            Datatype::S32 => {
+                //TO-DO limit to 32
+                state.ui.input_text(name, &mut text).enter_returns_true(true).build();
+                state.ui.set_keyboard_focus_here();
+            }
 
-              Datatype::S128 => {
-                  TextEdit::multiline(&mut text)
-                      .char_limit(128)
-                      .show(ui)
-                      .response
-              }
+            Datatype::S128 => {
+                //TO-DO limit to 128
+                state
+                    .ui
+                    .input_text_multiline(name, &mut text, state.ui.content_region_avail()).enter_returns_true(true)
+                    .build();
+                state.ui.set_keyboard_focus_here();
+       
+            }
 
-              _ => ui.text_edit_singleline(&mut text),
-          };
+            _ => {
+                state.ui.input_text(name, &mut text).enter_returns_true(true).build();
+                state.ui.set_keyboard_focus_here();
+       
+            }
+        };
 
-          if widget.changed() {
-              tab.editor_data.text = text.clone();
-          }
+        if state.ui.is_item_edited() {
+            window.editor_data.text = text.clone();
 
-          if widget.lost_focus() {
-              let mut tile = tile.clone();
-              if let Ok(parsed) = text.parse::<T>() {
-                  tile.set(name, parsed);
-                  tile.mosaic.request_quadtree_update();
-              }
+            println!("Input text has been edited!");
+        }
 
-              tab.trigger(EditorStateTrigger::EndDrag);
-          }
-      }
-      */
+        if !state.ui.is_item_focused() {
+            println!("Input text lost focus!");
+        
+            let mut tile = tile.clone();
+            if let Ok(parsed) = text.parse::<T>() {
+                tile.set(name, parsed);
+                tile.mosaic.request_quadtree_update();
+            }
+
+            window.trigger(EditorStateTrigger::EndDrag);
+        }
+    }
 }
 /*
 impl eframe::App for GraspEditorState {
