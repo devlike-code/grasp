@@ -6,8 +6,8 @@ use crate::grasp_common::GraspEditorData;
 use crate::grasp_render::GraspRenderer;
 use crate::GuiState;
 use ::mosaic::internals::{EntityId, Mosaic, MosaicCRUD, MosaicIO, Tile, Value};
-use imgui::sys::ImColor;
-use imgui::ImColor32;
+use imgui::sys::{ImColor, ImVec2};
+use imgui::{ImColor32, ImString, Window, WindowFlags};
 use itertools::Itertools;
 use mosaic::capabilities::{ArchetypeSubject, QueueCapability};
 use mosaic::internals::collage::Collage;
@@ -45,8 +45,10 @@ impl GraspEditorWindow {
     pub fn show(&mut self, s: &GuiState) {
         self.sense(s);
         let name = self.name.clone();
-        s.ui.window(name)
-            .size([700.0, 500.0], imgui::Condition::Appearing)
+
+        let mut w = s.ui.window(name);
+
+        w.size([700.0, 500.0], imgui::Condition::Appearing)
             .position(
                 [
                     200.0 + 50.0 * (self.window_tile.id % 5) as f32,

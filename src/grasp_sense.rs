@@ -94,8 +94,8 @@ impl GraspEditorWindow {
             //
         } else if clicked_left && under_cursor.is_empty() {
             //
-            self.trigger(ClickToDeselect);
-        //
+            //self.trigger(ClickToDeselect);
+            //
         } else if clicked_left && !under_cursor.is_empty() {
             //
             self.editor_data.selected = under_cursor.fetch_tiles(&self.document_mosaic);

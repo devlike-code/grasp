@@ -11,6 +11,7 @@ use imgui::{
     sys::ImGuiInputTextFlags_EnterReturnsTrue, Condition, ImString, InputText, TreeNodeFlags, Ui,
 };
 use itertools::Itertools;
+use log::debug;
 use mosaic::{
     capabilities::QueueTile,
     internals::{
@@ -95,6 +96,7 @@ impl GraspEditorState {
         mosaic
             .new_type("QuadtreeUpdateRequestQueue: unit;")
             .unwrap();
+        mosaic.new_type("QuadtreeUpdateRequest: unit;").unwrap();
         mosaic.new_type("ToastRequestQueue: unit;").unwrap();
         mosaic.new_type("ToastRequest: s32;").unwrap();
         println!("Mosaic ready for use in Grasp!");
@@ -252,35 +254,45 @@ impl GraspEditorState {
                 .iter_mut()
                 .find(|w| w.window_tile.id == focused_index)
             {
-                for o in focused_window.editor_data.selected.clone() {
-                    for (part, tiles) in &o.get_full_archetype().into_iter().sorted().collect_vec()
-                    {
-                        let mut draw_separator = tiles.len() - 1;
-                        for tile in tiles.iter().sorted() {
-                            if let Some(renderer) =
-                                self.component_renderers.get(&part.as_str().into())
-                            {
-                                if s.ui.collapsing_header(
-                                    format!("[ID: {}] {}", tile.id, part.to_uppercase()),
-                                    TreeNodeFlags::DEFAULT_OPEN,
-                                ) {
-                                    renderer(s, focused_window, tile.clone());
-                                }
-                            } else {
-                                if s.ui.collapsing_header(
-                                    format!("[ID: {}] {}", tile.id, part.to_uppercase()),
-                                    TreeNodeFlags::DEFAULT_OPEN,
-                                ) {
-                                    draw_default_renderer(s, focused_window, tile.clone());
-                                };
-                            }
+                let mut selected = focused_window.editor_data.selected.clone();
+                selected = selected.into_iter().unique().collect_vec();
 
-                            if draw_separator > 0 {
-                                s.ui.separator();
-                                draw_separator -= 1;
+                for o in selected {
+                    if s.ui.collapsing_header(
+                        format!("ID: {}##{}-header", o.id, o.id),
+                        TreeNodeFlags::DEFAULT_OPEN,
+                    ) {
+                        s.ui.indent();
+                        for (part, tiles) in &o
+                            .get_full_archetype()
+                            .into_iter()
+                            .sorted_by(|a, b| (a.1.first().cmp(&b.1.first())))
+                            .collect_vec()
+                        {
+                            for tile in tiles.iter().sorted_by(|a, b| a.id.cmp(&b.id)) {
+                                if let Some(renderer) =
+                                    self.component_renderers.get(&part.as_str().into())
+                                {
+                                    if s.ui.collapsing_header(
+                                        format!("{} [ID: {}]", part.to_uppercase(), tile.id),
+                                        TreeNodeFlags::DEFAULT_OPEN,
+                                    ) {
+                                        renderer(s, focused_window, tile.clone());
+                                    }
+                                } else if s.ui.collapsing_header(
+                                    format!("{} [ID: {}]", part.to_uppercase(), tile.id),
+                                    TreeNodeFlags::DEFAULT_OPEN,
+                                ) {
+                                    draw_default_property_renderer(s, focused_window, tile.clone());
+                                }
                             }
                         }
+                        s.ui.unindent();
                     }
+
+                    s.ui.spacing();
+                    s.ui.spacing();
+                    s.ui.separator();
                 }
             }
             w.end();
@@ -460,7 +472,7 @@ impl GraspEditorState {
     }
 }
 
-fn draw_default_renderer(ui: &GuiState, tab: &mut GraspEditorWindow, d: Tile) {
+fn draw_default_property_renderer(ui: &GuiState, tab: &mut GraspEditorWindow, d: Tile) {
     let mosaic = &tab.document_mosaic;
     let comp = mosaic
         .component_registry
@@ -468,15 +480,6 @@ fn draw_default_renderer(ui: &GuiState, tab: &mut GraspEditorWindow, d: Tile) {
         .unwrap();
     let fields = comp.get_fields();
 
-    // let mut grid_builder = GridBuilder::new();
-    // for _i in 0..fields.len() {
-    //     grid_builder = grid_builder
-    //         .new_row(Size::initial(18.0))
-    //         .cell(Size::exact(60.0))
-    //         .cell(Size::remainder().at_least(120.0));
-    // }
-
-    // grid_builder.show(ui, |mut grid| {
     for field in &fields {
         let name = if comp.is_alias() {
             "self".to_string()
@@ -492,8 +495,6 @@ fn draw_default_renderer(ui: &GuiState, tab: &mut GraspEditorWindow, d: Tile) {
         }
 
         let value = d.get(name.as_str());
-
-        ui.selectable(name.clone());
 
         match value {
             Value::UNIT => {}
@@ -531,79 +532,162 @@ fn draw_property_value<T: Display + FromStr + ToByteArray>(
 ) where
     Tile: TileFieldSetter<T>,
 {
-    let changing: bool = window.state == EditorState::PropertyChanging && {
-        match (
-            window.editor_data.tile_changing,
-            &window.editor_data.field_changing,
-        ) {
-            (Some(tile_id), Some(field_name)) => tile_id == tile.id && field_name.as_str() == name,
-            _ => false,
-        }
+    let datatype = tile.get(name).get_datatype();
+    let id = format!("##{}.{}", tile.id, name);
+    let mut text = format!("{}", t);
+
+    state.ui.columns(2, "##", false);
+    let region_width = state.ui.window_content_region_max()[0];
+    let max_label_width = 100.0;
+    let mut label_width = region_width * 0.25;
+    let text_width = if label_width > max_label_width {
+        label_width = max_label_width;
+        region_width - max_label_width
+    } else {
+        state.ui.window_content_region_max()[0] * 0.75
     };
 
-    if !changing {
-        let text = format!("{}", t);
+    state.ui.set_column_width(0, label_width);
+    state.ui.set_column_width(1, text_width);
 
-        if state.selectable(text.clone()) {
-            window.editor_data.tile_changing = Some(tile.id);
-            window.editor_data.field_changing = Some(name.to_string());
-            window.editor_data.previous_text = text.clone();
-            window.editor_data.text = text;
-            window.trigger(EditorStateTrigger::DblClickToRename);
-        }
-    } else {
-        let mut text = window.editor_data.text.clone();
-        let datatype = tile.get(name).get_datatype();
+    state.ui.text(name);
+    state.ui.next_column();
+    state.ui.set_next_item_width(-1.0);
+    match datatype {
+        Datatype::S32 => {
+            state
+                .ui
+                .input_text(id, &mut text)
+                .enter_returns_true(true)
+                .build();
 
-        match datatype {
-            Datatype::S32 => {
-                //TO-DO limit to 32
-                state
-                    .ui
-                    .input_text(name, &mut text)
-                    .enter_returns_true(true)
-                    .build();
-                state.ui.set_keyboard_focus_here();
+            if text.len() >= 32 {
+                text = text[0..32].to_string();
             }
-
-            Datatype::S128 => {
-                //TO-DO limit to 128
-                state
-                    .ui
-                    .input_text_multiline(name, &mut text, state.ui.content_region_avail())
-                    .enter_returns_true(true)
-                    .build();
-                state.ui.set_keyboard_focus_here();
-            }
-
-            _ => {
-                state
-                    .ui
-                    .input_text(name, &mut text)
-                    .enter_returns_true(true)
-                    .build();
-                state.ui.set_keyboard_focus_here();
-            }
-        };
-
-        if state.ui.is_item_edited() {
-            window.editor_data.text = text.clone();
-
-            println!("Input text has been edited!");
         }
 
-        if !state.ui.is_item_focused() {
-            println!("Input text lost focus!");
+        Datatype::S128 => {
+            state
+                .ui
+                .input_text_multiline(
+                    id,
+                    &mut window.editor_data.text,
+                    state.ui.content_region_avail(),
+                )
+                .enter_returns_true(true)
+                .build();
 
-            let mut tile = tile.clone();
-            if let Ok(parsed) = text.parse::<T>() {
-                tile.set(name, parsed);
-                tile.mosaic.request_quadtree_update();
+            if text.len() >= 128 {
+                text = text[0..128].to_string();
             }
-
-            window.trigger(EditorStateTrigger::EndDrag);
         }
+
+        _ => {
+            state
+                .ui
+                .input_text(id, &mut text)
+                .enter_returns_true(true)
+                .build();
+        }
+    };
+    state.ui.columns(1, "##", false);
+    if let Ok(t) = text.parse::<T>() {
+        tile.clone().set(name, t);
     }
+
+    //state.ui.set_keyboard_focus_here();
+
+    // if state.ui.is_item_edited() {
+    //     window.editor_data.text = text.clone();
+
+    //     println!("Input text has been edited!");
+    // }
+
+    // if !state.ui.is_item_focused() {
+    //     println!("Input text lost focus!");
+
+    //     let mut tile = tile.clone();
+    //     if let Ok(parsed) = text.parse::<T>() {
+    //         tile.set(name, parsed);
+    //         //tile.mosaic.request_quadtree_update();
+    //     }
+
+    //     window.trigger(EditorStateTrigger::EndDrag);
+    // }
+
+    // let changing: bool = window.state == EditorState::PropertyChanging && {
+    //     match (
+    //         window.editor_data.tile_changing,
+    //         &window.editor_data.field_changing,
+    //     ) {
+    //         (Some(tile_id), Some(field_name)) => tile_id == tile.id && field_name.as_str() == name,
+    //         _ => false,
+    //     }
+    // };
+
+    // if !changing {
+    //     let text = format!("{}", t);
+
+    //     if state.selectable(text.clone()) {
+    //         window.editor_data.tile_changing = Some(tile.id);
+    //         window.editor_data.field_changing = Some(name.to_string());
+    //         window.editor_data.previous_text = text.clone();
+    //         window.editor_data.text = text;
+    //         window.trigger(EditorStateTrigger::DblClickToRename);
+    //     }
+    // } else {
+    //     let mut text = window.editor_data.text.clone();
+    //     let datatype = tile.get(name).get_datatype();
+
+    //     match datatype {
+    //         Datatype::S32 => {
+    //             //TO-DO limit to 32
+    //             state
+    //                 .ui
+    //                 .input_text(name, &mut text)
+    //                 .enter_returns_true(true)
+    //                 .build();
+    //             state.ui.set_keyboard_focus_here();
+    //         }
+
+    //         Datatype::S128 => {
+    //             //TO-DO limit to 128
+    //             state
+    //                 .ui
+    //                 .input_text_multiline(name, &mut text, state.ui.content_region_avail())
+    //                 .enter_returns_true(true)
+    //                 .build();
+    //             state.ui.set_keyboard_focus_here();
+    //         }
+
+    //         _ => {
+    //             state
+    //                 .ui
+    //                 .input_text(name, &mut text)
+    //                 .enter_returns_true(true)
+    //                 .build();
+    //             state.ui.set_keyboard_focus_here();
+    //         }
+    //     };
+
+    //     if state.ui.is_item_edited() {
+    //         window.editor_data.text = text.clone();
+
+    //         println!("Input text has been edited!");
+    //     }
+
+    //     if !state.ui.is_item_focused() {
+    //         println!("Input text lost focus!");
+
+    //         let mut tile = tile.clone();
+    //         if let Ok(parsed) = text.parse::<T>() {
+    //             tile.set(name, parsed);
+    //             tile.mosaic.request_quadtree_update();
+    //         }
+
+    //         window.trigger(EditorStateTrigger::EndDrag);
+    //     }
+    // }
 }
 /*
 impl eframe::App for GraspEditorState {

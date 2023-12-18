@@ -29,7 +29,10 @@ pub trait QuadtreeUpdateCapability {
 
 impl QuadtreeUpdateCapability for Arc<Mosaic> {
     fn request_quadtree_update(&self) {
-        enqueue(QuadtreeUpdateRequestQueue, self.new_object("void", void()));
+        enqueue(
+            QuadtreeUpdateRequestQueue,
+            self.new_object("QuadtreeUpdateRequest", void()),
+        );
     }
 }
 

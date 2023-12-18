@@ -72,6 +72,7 @@ impl GraspEditorState {
             for tab in self.iter_all_windows() {
                 queues::enqueue_direct(tab, self.document_mosaic.new_object("void", void()))
             }
+            request.iter().delete();
         }
     }
 }

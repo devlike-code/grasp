@@ -1,5 +1,6 @@
 use std::{
     path::{Path, PathBuf},
+    ptr::null,
     time::Instant,
 };
 
@@ -72,6 +73,8 @@ pub fn run_main_forever<F: FnMut(&Ui, &mut bool)>(mut update: F) {
 
     let mut last_frame = Instant::now();
     let mut should_quit = false;
+
+    let mut is_visible = true;
     'running: loop {
         use sdl2::event::Event;
         use sdl2::keyboard::Keycode;
@@ -99,9 +102,7 @@ pub fn run_main_forever<F: FnMut(&Ui, &mut bool)>(mut update: F) {
                 }
 
                 e => {
-                    if !imgui_sdl2.ignore_event(&e) {
-                        imgui_sdl2.handle_event(&mut imgui, &e);
-                    }
+                    imgui_sdl2.handle_event(&mut imgui, &e);
                 }
             }
         }
@@ -118,6 +119,7 @@ pub fn run_main_forever<F: FnMut(&Ui, &mut bool)>(mut update: F) {
         ui.dockspace_over_main_viewport();
 
         update(ui, &mut should_quit);
+
         ui.show_demo_window(&mut true);
 
         unsafe {
@@ -125,7 +127,7 @@ pub fn run_main_forever<F: FnMut(&Ui, &mut bool)>(mut update: F) {
             gl::Clear(gl::COLOR_BUFFER_BIT);
         }
 
-        imgui_sdl2.prepare_render(&ui, &window);
+        imgui_sdl2.prepare_render(ui, &window);
         renderer.render(&mut imgui);
 
         window.gl_swap_window();
