@@ -13,7 +13,7 @@ pub trait GraspQueue {
     fn get_queue_name(&self) -> String;
 
     fn get_queue_tile(&self, mosaic: &Arc<Mosaic>) -> Tile {
-        // debug!("Queue: {:?}", self.get_queue_name().as_str());
+        //println!("Queue: {:?}", self.get_queue_name().as_str());
         mosaic
             .get_all()
             .include_component(self.get_queue_name().as_str())

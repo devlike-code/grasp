@@ -31,10 +31,25 @@ impl GraspEditorWindow {
     }
 
     pub fn sense(&mut self, s: &GuiState) {
-        self.editor_data.cursor_delta = s.ui.mouse_drag_delta().into();
+        let pos: Vec2 = s.ui.io().mouse_pos.into();
+        self.editor_data.cursor = pos.sub(self.editor_data.pan);
+
+        let left_clicked = s.ui.is_mouse_clicked(imgui::MouseButton::Left);
+        let left_double_clicked = s.ui.is_mouse_double_clicked(imgui::MouseButton::Left);
+        let start_dragging_left =
+            s.ui.is_mouse_dragging(imgui::MouseButton::Left) && self.state == EditorState::Idle;
+        let start_dragging_middle =
+            s.ui.is_mouse_dragging(imgui::MouseButton::Middle) && self.state == EditorState::Idle;
+
+        let end_dragging_middle =
+            s.ui.is_mouse_released(imgui::MouseButton::Middle) && self.state.uses_dragging();
+        let end_dragging_left =
+            s.ui.is_mouse_released(imgui::MouseButton::Left) && self.state.uses_dragging();
+
+        self.editor_data.cursor_delta = s.ui.io().mouse_delta.into();
 
         if let Some(mut rect_delta) = self.editor_data.rect_delta {
-            rect_delta += s.ui.mouse_drag_delta().into();
+            rect_delta = s.ui.mouse_drag_delta().into();
             self.editor_data.rect_delta = Some(rect_delta);
         } else {
             self.editor_data.rect_delta = Some(Vec2::ZERO);
@@ -53,12 +68,24 @@ impl GraspEditorWindow {
                 .collect_vec()
         };
 
-        if s.ui.is_mouse_double_clicked(imgui::MouseButton::Left) && under_cursor.is_empty() {
+        // println!(
+        //     "{:?}",
+        //     s.ui.io()
+        //         .keys_down
+        //         .iter()
+        //         .enumerate()
+        //         .filter(|(i, &x)| { x == true })
+        //         .collect_vec()
+        // );
+        if s.ui.is_key_index_down(226) {
+            panic!("PANICCCC");
+        }
+
+        if left_double_clicked && under_cursor.is_empty() {
             //
             self.trigger(DblClickToCreate);
             //
-        } else if s.ui.is_mouse_double_clicked(imgui::MouseButton::Left) && !under_cursor.is_empty()
-        {
+        } else if left_double_clicked && !under_cursor.is_empty() {
             //
             let tile = under_cursor.fetch_tile(&self.document_mosaic);
             if let Some(Value::S32(label)) = tile
@@ -76,25 +103,26 @@ impl GraspEditorWindow {
                 self.trigger(DblClickToRename);
             }
             //
-        } else if s.ui.is_mouse_clicked(imgui::MouseButton::Left) && under_cursor.is_empty() {
+        } else if left_clicked && under_cursor.is_empty() {
             //
             self.trigger(ClickToDeselect);
         //
-        } else if s.ui.is_mouse_clicked(imgui::MouseButton::Left) && !under_cursor.is_empty() {
+        } else if left_clicked && !under_cursor.is_empty() {
             //
             self.editor_data.selected = under_cursor.fetch_tiles(&self.document_mosaic);
             self.trigger(ClickToSelect);
             //
-        } else if s.ui.is_mouse_dragging(imgui::MouseButton::Left)
+        } else if start_dragging_left
             && !under_cursor.is_empty()
-            && (s.ui.is_key_down(Key::LeftAlt) || s.ui.is_key_down(Key::RightAlt))
+            && (s.ui.is_key_index_down(226) || s.ui.is_key_index_down(230))
         {
             //
+            println!("Link!");
             let tile_under_mouse = under_cursor.fetch_tile(&self.document_mosaic);
             self.editor_data.selected = vec![tile_under_mouse];
             self.trigger(DragToLink);
             //
-        } else if s.ui.is_mouse_dragging(imgui::MouseButton::Left) && !under_cursor.is_empty() {
+        } else if start_dragging_left && !under_cursor.is_empty() {
             //
             let tile_under_mouse = under_cursor.fetch_tile(&self.document_mosaic);
             if !self.editor_data.selected.contains(&tile_under_mouse) {
@@ -102,19 +130,17 @@ impl GraspEditorWindow {
             }
             self.trigger(DragToMove);
             //
-        } else if s.ui.is_mouse_dragging(imgui::MouseButton::Left) && under_cursor.is_empty() {
+        } else if start_dragging_left && under_cursor.is_empty() {
             //
             self.editor_data.selected = vec![];
             self.editor_data.rect_start_pos = Some(self.editor_data.cursor);
             self.trigger(DragToSelect);
             //
-        } else if s.ui.is_mouse_dragging(imgui::MouseButton::Middle) {
+        } else if start_dragging_middle {
             //
             self.trigger(DragToPan);
             //
-        } else if s.ui.is_mouse_released(imgui::MouseButton::Left)
-            || s.ui.is_mouse_released(imgui::MouseButton::Middle)
-        {
+        } else if end_dragging_middle || end_dragging_left {
             //
             self.trigger(EndDrag);
             //

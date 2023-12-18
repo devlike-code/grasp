@@ -54,6 +54,7 @@ fn main() {
             grasp_editor_state.snapshot();
         }
 
+        grasp_editor_state.process_requests();
         let gui = GuiState::new(ui);
         grasp_editor_state.show(&gui);
 

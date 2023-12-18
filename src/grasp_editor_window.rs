@@ -6,6 +6,8 @@ use crate::grasp_common::GraspEditorData;
 use crate::grasp_render::GraspRenderer;
 use crate::GuiState;
 use ::mosaic::internals::{EntityId, Mosaic, MosaicCRUD, MosaicIO, Tile, Value};
+use imgui::sys::ImColor;
+use imgui::ImColor32;
 use itertools::Itertools;
 use mosaic::capabilities::{ArchetypeSubject, QueueCapability};
 use mosaic::internals::collage::Collage;
@@ -42,8 +44,8 @@ impl PartialEq for GraspEditorWindow {
 impl GraspEditorWindow {
     pub fn show(&mut self, s: &GuiState) {
         self.sense(s);
-
-        s.ui.window(self.name.as_str())
+        let name = self.name.clone();
+        s.ui.window(name)
             .size([700.0, 500.0], imgui::Condition::Appearing)
             .position(
                 [
@@ -64,14 +66,34 @@ impl GraspEditorWindow {
                 }
 
                 if let Some(request) = self.document_mosaic.dequeue(&self.window_tile) {
+                    // todo
+                    self.update_quadtree(None);
                     set_window_focus(&self.name);
                     request.iter().delete();
                 }
 
                 self.renderer.draw(&self.document_mosaic, s);
-
+                self.draw_debug(s);
                 self.update_context_menu(s);
             });
+        self.update(s);
+    }
+
+    pub fn draw_debug(&self, s: &GuiState) {
+        let quadtree = self.quadtree.lock().unwrap();
+        quadtree.iter().for_each(|area| {
+            let anchor_pos = self.pos_with_pan(Vec2 {
+                x: area.anchor().x as f32,
+                y: area.anchor().y as f32,
+            }) - self.editor_data.tab_offset;
+
+            let anchor_size = Vec2::new(area.width() as f32, area.height() as f32);
+            let anchor_end = anchor_pos + anchor_size;
+            let painter = s.ui.get_window_draw_list();
+            let a: [f32; 2] = anchor_pos.into();
+            let b: [f32; 2] = anchor_end.into();
+            painter.add_rect(a, b, ImColor32::WHITE).build();
+        });
     }
 }
 

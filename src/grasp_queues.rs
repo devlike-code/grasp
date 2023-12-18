@@ -19,7 +19,7 @@ use crate::{
 pub struct ToastRequestQueue;
 
 #[derive(GraspQueue)]
-pub struct NewTabRequestQueue;
+pub struct NewWindowRequestQueue;
 
 #[derive(GraspQueue)]
 pub struct QuadtreeUpdateRequestQueue;
@@ -59,7 +59,7 @@ impl GraspEditorState {
     }
 
     fn process_new_tab_queue(&mut self) {
-        while let Some(request) = queues::dequeue(NewTabRequestQueue, &self.document_mosaic) {
+        while let Some(request) = queues::dequeue(NewWindowRequestQueue, &self.document_mosaic) {
             if let Some(collage) = request.to_collage() {
                 self.new_window(collage);
                 request.iter().delete();

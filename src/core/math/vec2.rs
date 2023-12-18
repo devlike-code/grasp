@@ -15,6 +15,12 @@ impl From<[f32; 2]> for Vec2 {
     }
 }
 
+impl From<Vec2> for [f32; 2] {
+    fn from(value: Vec2) -> Self {
+        [value.x, value.y]
+    }
+}
+
 impl Vec2 {
     pub const ZERO: Vec2 = Vec2 { x: 0.0, y: 0.0 };
     pub fn new(x: f32, y: f32) -> Vec2 {

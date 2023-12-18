@@ -62,6 +62,7 @@ pub fn run_main_forever<F: FnMut(&Ui, &mut bool)>(mut update: F) {
     let mut imgui = imgui::Context::create();
     imgui.set_ini_filename(Some(Path::new("grasp.ini").to_path_buf()));
     imgui.io_mut().config_flags = ConfigFlags::DOCKING_ENABLE | ConfigFlags::VIEWPORTS_ENABLE;
+    imgui.io_mut().config_windows_move_from_title_bar_only = true;
     let mut imgui_sdl2 = imgui_sdl2::ImguiSdl2::new(&mut imgui, &window);
 
     let renderer =

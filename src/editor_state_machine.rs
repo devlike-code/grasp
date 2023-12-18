@@ -11,6 +11,15 @@ pub enum EditorState {
     ContextMenu,
 }
 
+impl EditorState {
+    pub fn uses_dragging(&self) -> bool {
+        self == &EditorState::Pan
+            || self == &EditorState::Move
+            || self == &EditorState::Rect
+            || self == &EditorState::Link
+    }
+}
+
 #[allow(dead_code)]
 #[derive(Clone, Copy, Debug)]
 pub enum EditorStateTrigger {
