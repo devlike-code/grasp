@@ -1,4 +1,4 @@
-use core::gui::imgui_function_keys::ExtraKeyEvents;
+use core::gui::imgui_keys::ExtraKeyEvents;
 use core::gui::windowing::run_main_forever;
 use editor_state::GraspEditorState;
 use imgui::{Key, Ui};

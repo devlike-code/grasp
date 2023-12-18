@@ -72,7 +72,7 @@ impl GraspEditorWindow {
                     request.iter().delete();
                 }
 
-                self.renderer.draw(&self.document_mosaic, s);
+                self.renderer.draw(self, s);
                 self.draw_debug(s);
                 self.update_context_menu(s);
             });

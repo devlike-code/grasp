@@ -2,13 +2,14 @@ use std::ops::Sub;
 
 use imgui::Key;
 use itertools::Itertools;
+use log::debug;
 use mosaic::{
     internals::{Tile, Value},
     iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
 };
 
 use crate::{
-    core::math::Vec2,
+    core::{gui::imgui_keys::ExtraKeyEvents, math::Vec2},
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
     grasp_editor_window::GraspEditorWindow,
     grasp_transitions::QuadtreeUpdateCapability,
@@ -34,8 +35,9 @@ impl GraspEditorWindow {
         let pos: Vec2 = s.ui.io().mouse_pos.into();
         self.editor_data.cursor = pos.sub(self.editor_data.pan);
 
-        let left_clicked = s.ui.is_mouse_clicked(imgui::MouseButton::Left);
-        let left_double_clicked = s.ui.is_mouse_double_clicked(imgui::MouseButton::Left);
+        let clicked_left = s.ui.is_mouse_clicked(imgui::MouseButton::Left);
+        let double_clicked_left = s.ui.is_mouse_double_clicked(imgui::MouseButton::Left);
+
         let start_dragging_left =
             s.ui.is_mouse_dragging(imgui::MouseButton::Left) && self.state == EditorState::Idle;
         let start_dragging_middle =
@@ -68,24 +70,11 @@ impl GraspEditorWindow {
                 .collect_vec()
         };
 
-        // println!(
-        //     "{:?}",
-        //     s.ui.io()
-        //         .keys_down
-        //         .iter()
-        //         .enumerate()
-        //         .filter(|(i, &x)| { x == true })
-        //         .collect_vec()
-        // );
-        if s.ui.is_key_index_down(226) {
-            panic!("PANICCCC");
-        }
-
-        if left_double_clicked && under_cursor.is_empty() {
+        if double_clicked_left && under_cursor.is_empty() {
             //
             self.trigger(DblClickToCreate);
             //
-        } else if left_double_clicked && !under_cursor.is_empty() {
+        } else if double_clicked_left && !under_cursor.is_empty() {
             //
             let tile = under_cursor.fetch_tile(&self.document_mosaic);
             if let Some(Value::S32(label)) = tile
@@ -103,18 +92,18 @@ impl GraspEditorWindow {
                 self.trigger(DblClickToRename);
             }
             //
-        } else if left_clicked && under_cursor.is_empty() {
+        } else if clicked_left && under_cursor.is_empty() {
             //
             self.trigger(ClickToDeselect);
         //
-        } else if left_clicked && !under_cursor.is_empty() {
+        } else if clicked_left && !under_cursor.is_empty() {
             //
             self.editor_data.selected = under_cursor.fetch_tiles(&self.document_mosaic);
             self.trigger(ClickToSelect);
             //
         } else if start_dragging_left
             && !under_cursor.is_empty()
-            && (s.ui.is_key_index_down(226) || s.ui.is_key_index_down(230))
+            && (s.ui.is_modkey_down(Key::LeftAlt) || s.ui.is_modkey_down(Key::RightAlt))
         {
             //
             println!("Link!");

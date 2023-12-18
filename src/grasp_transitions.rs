@@ -12,7 +12,10 @@ use mosaic::{
 };
 
 use crate::{
-    core::{math::vec2::Vec2, queues::enqueue},
+    core::{
+        math::{vec2::Vec2, Rect2},
+        queues::enqueue,
+    },
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
     grasp_editor_window::GraspEditorWindow,
     grasp_editor_window_list::get_pos_from_tile,
@@ -99,19 +102,13 @@ impl StateMachine for GraspEditorWindow {
                     let angle: f32 = 45.0; // Adjust the angle as needed
                     let radius: f32 = 50.0; // Adjust the radius as needed
 
-                    let control_point =
-                        mid_pos + Vec2::new(angle.cos() * radius, -angle.sin() * radius);
-                    //
-                    // let qb = QuadraticBezierShape::from_points_stroke(
-                    //     [src_pos, control_point, tgt_pos],
-                    //     false,
-                    //     Color32::TRANSPARENT,
-                    //     Stroke::new(1.0, Color32::LIGHT_BLUE),
-                    // );
-                    //
-                    // let rects = Self::generate_rects_for_bezier(qb);
-                    //
-                    // self.create_new_arrow(&start, &tile, mid_pos, rects);
+                    let bez = (1..=9)
+                        .map(|i| src_pos.lerp(tgt_pos, i as f32 / 10.0))
+                        .map(|p| {
+                            Rect2::from_two_pos(p - Vec2::new(5.0, 5.0), p + Vec2::new(5.0, 5.0))
+                        });
+
+                    self.create_new_arrow(&start, &tile, mid_pos, bez.collect_vec());
                 }
                 self.editor_data.selected.clear();
                 self.editor_data.link_start_pos = None;
@@ -235,13 +232,13 @@ impl GraspEditorWindow {
             .get_targets()
             .collect_vec();
 
-        let mut quadtree = self.quadtree.lock().unwrap();
-        quadtree.reset();
+        self.quadtree.lock().unwrap().reset();
 
         for tile in &selected {
             let mut selected_pos = Pos(&tile).query();
 
             if tile.is_object() {
+                let mut quadtree = self.quadtree.lock().unwrap();
                 let region = self.build_circle_area(selected_pos, 10);
                 if let Some(area_id) = quadtree.insert(region, tile.id) {
                     self.object_to_area
@@ -253,6 +250,22 @@ impl GraspEditorWindow {
                 let start_pos = Pos(&tile.source()).query();
                 let end_pos = Pos(&tile.target()).query();
 
+                let bez = (1..=9)
+                    .map(|i| start_pos.lerp(end_pos, i as f32 / 10.0))
+                    .map(|p| Rect2::from_two_pos(p - Vec2::new(5.0, 5.0), p + Vec2::new(5.0, 5.0)));
+
+                for r in bez {
+                    let region = self.build_rect_area(r);
+                    let mut quadtree = self.quadtree.lock().unwrap();
+                    if let Some(area_id) = quadtree.insert(region, tile.id) {
+                        let mut object_to_area = self.object_to_area.lock().unwrap();
+                        if let Some(areas_vec) = object_to_area.get_mut(&tile.id) {
+                            areas_vec.push(area_id);
+                        } else {
+                            object_to_area.insert(tile.id, vec![area_id]);
+                        }
+                    }
+                }
                 // let qb = QuadraticBezierShape::from_points_stroke(
                 //     [start_pos, selected_pos, end_pos],
                 //     false,
@@ -261,16 +274,6 @@ impl GraspEditorWindow {
                 // );
 
                 // let bezier_rects = Self::generate_rects_for_bezier(qb);
-                // for r in bezier_rects {
-                //     let region = self.build_rect_area(r);
-                //     if let Some(area_id) = self.quadtree.insert(region, tile.id) {
-                //         if let Some(areas_vec) = self.object_to_area.get_mut(&tile.id) {
-                //             areas_vec.push(area_id);
-                //         } else {
-                //             self.object_to_area.insert(tile.id, vec![area_id]);
-                //         }
-                //     }
-                // }
             }
         }
     }
