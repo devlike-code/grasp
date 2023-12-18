@@ -1,12 +1,14 @@
 use std::ops::Sub;
 
+use imgui::Key;
 use itertools::Itertools;
 use mosaic::{
-    internals::{MosaicCRUD, Value},
+    internals::{MosaicCRUD, Tile, Value},
     iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
 };
 
 use crate::{
+    core::math::Vec2,
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
     grasp_editor_window::GraspEditorWindow,
     grasp_transitions::QuadtreeUpdateCapability,
@@ -16,25 +18,38 @@ use crate::{
 
 impl GraspEditorWindow {
     fn sense_begin_frame(&mut self, s: &GuiState) {
-        // let (resp, _) = ui.allocate_painter(ui.available_size(), Sense::click_and_drag());
-        //
-        // if let Some(pos) = resp.hover_pos() {
-        //     self.editor_data.cursor = pos - self.editor_data.pan;
-        // }
-        //
-        // self.editor_data.cursor_delta = resp.drag_delta();
-        //
-        // if let Some(mut rect_delta) = self.editor_data.rect_delta {
-        //     rect_delta += resp.drag_delta();
-        //     self.editor_data.rect_delta = Some(rect_delta);
-        // } else {
-        //     self.editor_data.rect_delta = Some(Vec2::ZERO);
-        // }
-        //
-        // resp
+        self.editor_data.cursor_delta = s.ui.mouse_drag_delta().into();
+
+        if let Some(mut rect_delta) = self.editor_data.rect_delta {
+            rect_delta += s.ui.mouse_drag_delta().into();
+            self.editor_data.rect_delta = Some(rect_delta);
+        } else {
+            self.editor_data.rect_delta = Some(Vec2::ZERO);
+        }
     }
 
     pub fn sense(&mut self, s: &GuiState) {
+        let under_cursor = self.quadtree.lock().unwrap();
+
+        if s.ui.is_key_down(Key::Delete) && self.state == EditorState::Idle {
+            let quadtree = self.quadtree.lock().unwrap();
+            let mut object_to_area = self.object_to_area.lock().unwrap();
+
+            let under_cursor = quadtree.query(self.build_cursor_area()).collect_vec();
+
+            for selected in &self.editor_data.selected {
+                self.document_mosaic.delete_tile(selected.id);
+                if let Some(area_id) = object_to_area.get(&selected.id) {
+                    areas_to_remove.push(area_id.clone());
+                    object_to_area.remove(&selected.id);
+                }
+            }
+            self.editor_data.selected.clear();
+
+            //self.update_quadtree(None);
+            self.document_mosaic.request_quadtree_update();
+        }
+
         // // fn fn_areas_to_remove(areas: Vec<Vec<u64>>, arr: Tile) -> Vec<Vec<u64>>{
         // //     for dep_arr in arr.iter().get_arrows(){
         // //         fn_areas_to_remove(areas, dep_arr);

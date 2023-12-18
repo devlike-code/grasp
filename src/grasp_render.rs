@@ -30,6 +30,7 @@ impl GraspRenderer for DefaultGraspRenderer {
                 if tile.is_object() {
                     let pos = Pos(&tile).query();
                     let label = Label(&tile).query();
+
                     painter
                         .add_circle([pos.x, pos.y], 10.0, ImColor32::from_rgb(255, 0, 0))
                         .build();

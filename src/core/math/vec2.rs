@@ -6,7 +6,17 @@ pub struct Vec2 {
     pub y: f32,
 }
 
+impl From<[f32; 2]> for Vec2 {
+    fn from(value: [f32; 2]) -> Self {
+        Vec2 {
+            x: value[0],
+            y: value[1],
+        }
+    }
+}
+
 impl Vec2 {
+    pub const ZERO: Vec2 = Vec2 { x: 0.0, y: 0.0 };
     pub fn new(x: f32, y: f32) -> Vec2 {
         Vec2 { x, y }
     }
