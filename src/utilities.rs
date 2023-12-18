@@ -52,3 +52,13 @@ impl QuadTreeFetch for Vec<&Entry<i32, EntityId>> {
         mosaic.get(*self.first().unwrap().value_ref()).unwrap()
     }
 }
+
+impl QuadTreeFetch for Vec<usize> {
+    fn fetch_tiles(&self, mosaic: &Arc<Mosaic>) -> Vec<Tile> {
+        self.iter().flat_map(|next| mosaic.get(*next)).collect_vec()
+    }
+
+    fn fetch_tile(&self, mosaic: &Arc<Mosaic>) -> Tile {
+        mosaic.get(*self.first().unwrap()).unwrap()
+    }
+}

@@ -3,7 +3,7 @@ use std::ops::Sub;
 use imgui::Key;
 use itertools::Itertools;
 use mosaic::{
-    internals::{MosaicCRUD, Tile, Value},
+    internals::{MosaicCRUD, MosaicIO, Tile, Value},
     iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
 };
 
@@ -16,8 +16,21 @@ use crate::{
     GuiState,
 };
 
+use crate::grasp_sense::EditorStateTrigger::*;
+
 impl GraspEditorWindow {
-    fn sense_begin_frame(&mut self, s: &GuiState) {
+    pub fn delete_tiles(&self, tiles: &Vec<Tile>) {
+        let quadtree = self.quadtree.lock().unwrap();
+        let mut object_to_area = self.object_to_area.lock().unwrap();
+
+        let under_cursor = quadtree.query(self.build_cursor_area()).collect_vec();
+
+        // DELETE HERE (consider recursive deletion too) -- maybe we could do two passes, one to select everything, and one to delete
+
+        self.document_mosaic.request_quadtree_update();
+    }
+
+    pub fn sense(&mut self, s: &GuiState) {
         self.editor_data.cursor_delta = s.ui.mouse_drag_delta().into();
 
         if let Some(mut rect_delta) = self.editor_data.rect_delta {
@@ -26,125 +39,89 @@ impl GraspEditorWindow {
         } else {
             self.editor_data.rect_delta = Some(Vec2::ZERO);
         }
-    }
-
-    pub fn sense(&mut self, s: &GuiState) {
-        let under_cursor = self.quadtree.lock().unwrap();
 
         if s.ui.is_key_down(Key::Delete) && self.state == EditorState::Idle {
-            let quadtree = self.quadtree.lock().unwrap();
-            let mut object_to_area = self.object_to_area.lock().unwrap();
-
-            let under_cursor = quadtree.query(self.build_cursor_area()).collect_vec();
-
-            for selected in &self.editor_data.selected {
-                self.document_mosaic.delete_tile(selected.id);
-                if let Some(area_id) = object_to_area.get(&selected.id) {
-                    areas_to_remove.push(area_id.clone());
-                    object_to_area.remove(&selected.id);
-                }
-            }
-            self.editor_data.selected.clear();
-
-            //self.update_quadtree(None);
+            self.delete_tiles(&self.editor_data.selected);
             self.document_mosaic.request_quadtree_update();
         }
 
-        // // fn fn_areas_to_remove(areas: Vec<Vec<u64>>, arr: Tile) -> Vec<Vec<u64>>{
-        // //     for dep_arr in arr.iter().get_arrows(){
-        // //         fn_areas_to_remove(areas, dep_arr);
-        // //     }
-        // // }
-        // use egui::PointerButton::*;
-        // use EditorStateTrigger::*;
+        let under_cursor = {
+            let quadtree = self.quadtree.lock().unwrap();
+            quadtree
+                .query(self.build_cursor_area())
+                .map(|e| *e.value_ref())
+                .collect_vec()
+        };
+
+        if s.ui.is_mouse_double_clicked(imgui::MouseButton::Left) && under_cursor.is_empty() {
+            //
+            self.trigger(DblClickToCreate);
+            //
+        } else if s.ui.is_mouse_double_clicked(imgui::MouseButton::Left) && !under_cursor.is_empty()
+        {
+            //
+            let tile = under_cursor.fetch_tile(&self.document_mosaic);
+            if let Some(Value::S32(label)) = tile
+                .iter()
+                .get_descriptors()
+                .include_component("Label")
+                .next()
+                .map(|tile| tile.get("self"))
+            {
+                self.editor_data.tile_changing = Some(tile.id);
+                self.editor_data.selected = vec![tile];
+                self.editor_data.text = label.to_string();
+                self.editor_data.previous_text = label.to_string();
+
+                self.trigger(DblClickToRename);
+            }
+            //
+        } else if s.ui.is_mouse_clicked(imgui::MouseButton::Left) && under_cursor.is_empty() {
+            //
+            self.trigger(ClickToDeselect);
         //
-        // let mouse = self.sense_begin_frame(ui);
-        // let under_cursor = self.quadtree.query(self.build_cursor_area()).collect_vec();
-        // let mut areas_to_remove: Vec<Vec<u64>> = vec![];
-        //
-        // if ui.delete_down() && self.state == EditorState::Idle {
-        //     for selected in &self.editor_data.selected {
-        //         self.document_mosaic.delete_tile(selected.id);
-        //         if let Some(area_id) = self.object_to_area.get(&selected.id) {
-        //             areas_to_remove.push(area_id.clone());
-        //             self.object_to_area.remove(&selected.id);
-        //         }
-        //     }
-        //     self.editor_data.selected.clear();
-        //
-        //     //self.update_quadtree(None);
-        //     self.document_mosaic.request_quadtree_update();
-        // }
-        //
-        // if mouse.double_clicked() && under_cursor.is_empty() {
-        //     //
-        //     self.trigger(DblClickToCreate);
-        //     //
-        // } else if mouse.double_clicked() && !under_cursor.is_empty() {
-        //     //
-        //     let tile = under_cursor.fetch_tile(&self.document_mosaic);
-        //     if let Some(Value::S32(label)) = tile
-        //         .iter()
-        //         .get_descriptors()
-        //         .include_component("Label")
-        //         .next()
-        //         .map(|tile| tile.get("self"))
-        //     {
-        //         self.editor_data.tile_changing = Some(tile.id);
-        //         self.editor_data.selected = vec![tile];
-        //         self.editor_data.text = label.to_string();
-        //         self.editor_data.previous_text = label.to_string();
-        //
-        //         self.trigger(DblClickToRename);
-        //     }
-        //     //
-        // } else if mouse.clicked() && under_cursor.is_empty() {
-        //     //
-        //     self.trigger(ClickToDeselect);
-        //     //
-        // } else if mouse.clicked() && !under_cursor.is_empty() {
-        //     //
-        //     self.editor_data.selected = under_cursor.fetch_tiles(&self.document_mosaic);
-        //     self.trigger(ClickToSelect);
-        //     //
-        // } else if mouse.drag_started_by(Primary) && !under_cursor.is_empty() && ui.alt_down() {
-        //     //
-        //     let tile_under_mouse = under_cursor.fetch_tile(&self.document_mosaic);
-        //     self.editor_data.selected = vec![tile_under_mouse];
-        //     self.trigger(DragToLink);
-        //     //
-        // } else if mouse.drag_started_by(Primary) && !under_cursor.is_empty() {
-        //     //
-        //     let tile_under_mouse = under_cursor.fetch_tile(&self.document_mosaic);
-        //     if !self.editor_data.selected.contains(&tile_under_mouse) {
-        //         self.editor_data.selected = vec![tile_under_mouse];
-        //     }
-        //     self.trigger(DragToMove);
-        //     //
-        // } else if mouse.drag_started_by(egui::PointerButton::Primary) && under_cursor.is_empty() {
-        //     //
-        //     self.editor_data.selected = vec![];
-        //     self.editor_data.rect_start_pos = Some(self.editor_data.cursor);
-        //     self.trigger(DragToSelect);
-        //     //
-        // } else if mouse.drag_started_by(egui::PointerButton::Middle) {
-        //     //
-        //     self.trigger(DragToPan);
-        //     //
-        // } else if mouse.drag_released_by(egui::PointerButton::Primary)
-        //     || mouse.drag_released_by(egui::PointerButton::Middle)
-        // {
-        //     //
-        //     self.trigger(EndDrag);
-        //     //
-        // } else if ui.mouse_secondary_down() {
-        //     if !under_cursor.is_empty() && self.editor_data.selected.is_empty() {
-        //         self.editor_data.selected = under_cursor.fetch_tiles(&self.document_mosaic);
-        //     }
-        //     self.response = Some(mouse.clone());
-        //     self.trigger(ClickToContextMenu);
-        // }
-        //
+        } else if s.ui.is_mouse_clicked(imgui::MouseButton::Left) && !under_cursor.is_empty() {
+            //
+            self.editor_data.selected = under_cursor.fetch_tiles(&self.document_mosaic);
+            self.trigger(ClickToSelect);
+            //
+        } else if s.ui.is_mouse_dragging(imgui::MouseButton::Left)
+            && !under_cursor.is_empty()
+            && (s.ui.is_key_down(Key::LeftAlt) || s.ui.is_key_down(Key::RightAlt))
+        {
+            //
+            let tile_under_mouse = under_cursor.fetch_tile(&self.document_mosaic);
+            self.editor_data.selected = vec![tile_under_mouse];
+            self.trigger(DragToLink);
+            //
+        } else if s.ui.is_mouse_dragging(imgui::MouseButton::Left) && !under_cursor.is_empty() {
+            //
+            let tile_under_mouse = under_cursor.fetch_tile(&self.document_mosaic);
+            if !self.editor_data.selected.contains(&tile_under_mouse) {
+                self.editor_data.selected = vec![tile_under_mouse];
+            }
+            self.trigger(DragToMove);
+            //
+        } else if s.ui.is_mouse_dragging(imgui::MouseButton::Left) && under_cursor.is_empty() {
+            //
+            self.editor_data.selected = vec![];
+            self.editor_data.rect_start_pos = Some(self.editor_data.cursor);
+            self.trigger(DragToSelect);
+            //
+        } else if s.ui.is_mouse_dragging(imgui::MouseButton::Middle) {
+            //
+            self.trigger(DragToPan);
+            //
+        } else if s.ui.is_mouse_released(imgui::MouseButton::Left)
+            || s.ui.is_mouse_released(imgui::MouseButton::Middle)
+        {
+            //
+            self.trigger(EndDrag);
+            //
+        }
+
+        // TODO: do we still need this?
+
         // areas_to_remove.into_iter().for_each(|areas_vec: Vec<u64>| {
         //     for a in areas_vec {
         //         self.quadtree.delete_by_handle(a);
