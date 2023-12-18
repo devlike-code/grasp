@@ -40,7 +40,9 @@ impl PartialEq for GraspEditorWindow {
 }
 
 impl GraspEditorWindow {
-    pub fn show(&self, s: &GuiState) {
+    pub fn show(&mut self, s: &GuiState) {
+        self.sense(s);
+
         s.ui.window(self.name.as_str())
             .size([700.0, 500.0], imgui::Condition::Appearing)
             .position(

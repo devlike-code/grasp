@@ -6,7 +6,7 @@ fn impl_grasp_queue(ast: &syn::DeriveInput) -> TokenStream {
     let gen = quote! {
         impl GraspQueue for #name {
             fn get_queue_name(&self) -> String {
-                "#name".to_string()
+                stringify!(#name).to_string()
             }
         }
     };

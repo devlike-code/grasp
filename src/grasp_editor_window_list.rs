@@ -18,8 +18,8 @@ impl GraspEditorWindowList {
         self.current_index
     }
 
-    pub fn show(&self, s: &GuiState) {
-        for window in &self.windows {
+    pub fn show(&mut self, s: &GuiState) {
+        for window in &mut self.windows {
             window.show(s);
         }
     }

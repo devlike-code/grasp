@@ -3,7 +3,7 @@ use std::ops::Sub;
 use imgui::Key;
 use itertools::Itertools;
 use mosaic::{
-    internals::{MosaicCRUD, MosaicIO, Tile, Value},
+    internals::{Tile, Value},
     iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
 };
 

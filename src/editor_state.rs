@@ -92,7 +92,9 @@ impl GraspEditorState {
         mosaic.new_type("EditorTab: unit;").unwrap();
         mosaic.new_type("ToTab: unit;").unwrap();
         mosaic.new_type("NewWindowRequestQueue: unit;").unwrap();
-        mosaic.new_type("RefreshQuadtreeQueue: unit;").unwrap();
+        mosaic
+            .new_type("QuadtreeUpdateRequestQueue: unit;")
+            .unwrap();
         mosaic.new_type("ToastRequestQueue: unit;").unwrap();
         mosaic.new_type("ToastRequest: s32;").unwrap();
         println!("Mosaic ready for use in Grasp!");
@@ -111,7 +113,7 @@ impl GraspEditorState {
         new_window_request_queue.add_component("NewWindowRequestQueue", void());
 
         let refresh_quadtree_queue = document_mosaic.make_queue();
-        refresh_quadtree_queue.add_component("RefreshQuadtreeQueue", void());
+        refresh_quadtree_queue.add_component("QuadtreeUpdateRequestQueue", void());
 
         let toast_request_queue = document_mosaic.make_queue();
         toast_request_queue.add_component("ToastRequestQueue", void());
@@ -166,6 +168,8 @@ impl GraspEditorState {
             ruler_visible: false,
             renderer: Box::new(DefaultGraspRenderer),
         };
+
+        self.window_list.windows.push(window);
     }
 
     pub fn show(&mut self, s: &GuiState) {

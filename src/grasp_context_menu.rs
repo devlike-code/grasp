@@ -1,3 +1,5 @@
+use log::debug;
+
 use crate::{
     core::math::Vec2,
     editor_state_machine::{EditorStateTrigger, StateMachine},
@@ -8,6 +10,7 @@ use crate::{
 impl GraspEditorWindow {
     pub(crate) fn update_context_menu(&self, s: &GuiState) {
         if let Some(c) = s.ui.begin_popup("context-menu") {
+            debug!("Selection: {:?}", self.editor_data.selected);
             if self.editor_data.selected.is_empty() {
                 if self.show_default_menu(s) {
                     s.ui.close_current_popup();
