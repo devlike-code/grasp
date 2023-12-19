@@ -1,4 +1,8 @@
-use std::ops::Sub;
+use std::{
+    collections::hash_map::DefaultHasher,
+    hash::{Hash, Hasher},
+    ops::Sub,
+};
 
 use imgui::Key;
 use itertools::Itertools;
@@ -19,6 +23,12 @@ use crate::{
 
 use crate::grasp_sense::EditorStateTrigger::*;
 
+pub fn hash_input(s: &str) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    s.hash(&mut hasher);
+    hasher.finish()
+}
+
 impl GraspEditorWindow {
     pub fn delete_tiles(&self, tiles: &Vec<Tile>) {
         let quadtree = self.quadtree.lock().unwrap();
@@ -31,24 +41,41 @@ impl GraspEditorWindow {
         self.document_mosaic.request_quadtree_update();
     }
 
-    pub fn sense(&mut self, s: &GuiState) {
+    pub fn sense(&mut self, s: &GuiState, caught_events: &mut Vec<u64>) {
+        if caught_events.contains(&hash_input("all")) {
+            return;
+        }
+
         let pos: Vec2 = s.ui.io().mouse_pos.into();
+
+        let mouse_in_window = self.rect.contains(pos);
+
         self.editor_data.cursor = pos.sub(self.editor_data.pan);
 
-        let clicked_left = s.ui.is_mouse_clicked(imgui::MouseButton::Left);
-        let double_clicked_left = s.ui.is_mouse_double_clicked(imgui::MouseButton::Left);
+        let clicked_left = !caught_events.contains(&hash_input("click left"))
+            && s.ui.is_mouse_clicked(imgui::MouseButton::Left);
 
-        let start_dragging_left =
-            s.ui.is_mouse_dragging(imgui::MouseButton::Left) && self.state == EditorState::Idle;
-        let start_dragging_middle =
-            s.ui.is_mouse_dragging(imgui::MouseButton::Middle) && self.state == EditorState::Idle;
+        let double_clicked_left = !caught_events.contains(&hash_input("double click left"))
+            && s.ui.is_mouse_double_clicked(imgui::MouseButton::Left);
+
+        let start_dragging_left = !caught_events.contains(&hash_input("start drag left"))
+            && !self.left_drag_last_frame
+            && s.ui.is_mouse_dragging(imgui::MouseButton::Left)
+            && self.state == EditorState::Idle;
+
+        let start_dragging_middle = !caught_events.contains(&hash_input("start drag middle"))
+            && !self.middle_drag_last_frame
+            && s.ui.is_mouse_dragging(imgui::MouseButton::Middle)
+            && self.state == EditorState::Idle;
 
         let end_dragging_middle =
             s.ui.is_mouse_released(imgui::MouseButton::Middle) && self.state.uses_dragging();
         let end_dragging_left =
             s.ui.is_mouse_released(imgui::MouseButton::Left) && self.state.uses_dragging();
 
-        self.editor_data.cursor_delta = s.ui.io().mouse_delta.into();
+        if !caught_events.contains(&hash_input("left drag")) {
+            self.editor_data.cursor_delta = s.ui.io().mouse_delta.into();
+        }
 
         if let Some(mut rect_delta) = self.editor_data.rect_delta {
             rect_delta = s.ui.mouse_drag_delta().into();
@@ -70,8 +97,9 @@ impl GraspEditorWindow {
                 .collect_vec()
         };
 
-        if double_clicked_left && under_cursor.is_empty() {
+        if double_clicked_left && under_cursor.is_empty() && mouse_in_window {
             //
+            caught_events.push(hash_input("double click left"));
             self.trigger(DblClickToCreate);
             //
         } else if double_clicked_left && !under_cursor.is_empty() {
@@ -88,45 +116,51 @@ impl GraspEditorWindow {
                 self.editor_data.selected = vec![tile];
                 self.editor_data.text = label.to_string();
                 self.editor_data.previous_text = label.to_string();
-
+                caught_events.push(hash_input("double click left"));
                 self.trigger(DblClickToRename);
             }
             //
-        } else if clicked_left && under_cursor.is_empty() {
+        } else if clicked_left && under_cursor.is_empty() && mouse_in_window {
             //
-            //self.trigger(ClickToDeselect);
+            caught_events.push(hash_input("click left"));
+            self.trigger(ClickToDeselect);
             //
-        } else if clicked_left && !under_cursor.is_empty() {
+        } else if clicked_left && !under_cursor.is_empty() && mouse_in_window {
             //
+            caught_events.push(hash_input("click left"));
             self.editor_data.selected = under_cursor.fetch_tiles(&self.document_mosaic);
             self.trigger(ClickToSelect);
             //
         } else if start_dragging_left
             && !under_cursor.is_empty()
             && (s.ui.is_modkey_down(Key::LeftAlt) || s.ui.is_modkey_down(Key::RightAlt))
+            && mouse_in_window
         {
             //
-            println!("Link!");
             let tile_under_mouse = under_cursor.fetch_tile(&self.document_mosaic);
             self.editor_data.selected = vec![tile_under_mouse];
+            caught_events.push(hash_input("start drag left"));
             self.trigger(DragToLink);
             //
-        } else if start_dragging_left && !under_cursor.is_empty() {
+        } else if start_dragging_left && !under_cursor.is_empty() && mouse_in_window {
             //
             let tile_under_mouse = under_cursor.fetch_tile(&self.document_mosaic);
             if !self.editor_data.selected.contains(&tile_under_mouse) {
                 self.editor_data.selected = vec![tile_under_mouse];
             }
+            caught_events.push(hash_input("start drag left"));
             self.trigger(DragToMove);
             //
-        } else if start_dragging_left && under_cursor.is_empty() {
+        } else if start_dragging_left && under_cursor.is_empty() && mouse_in_window {
             //
             self.editor_data.selected = vec![];
             self.editor_data.rect_start_pos = Some(self.editor_data.cursor);
+            caught_events.push(hash_input("start drag left"));
             self.trigger(DragToSelect);
             //
-        } else if start_dragging_middle {
+        } else if start_dragging_middle && mouse_in_window {
             //
+            caught_events.push(hash_input("start drag middle"));
             self.trigger(DragToPan);
             //
         } else if end_dragging_middle || end_dragging_left {
@@ -135,6 +169,8 @@ impl GraspEditorWindow {
             //
         }
 
+        self.left_drag_last_frame = s.ui.is_mouse_dragging(imgui::MouseButton::Left);
+        self.middle_drag_last_frame = s.ui.is_mouse_dragging(imgui::MouseButton::Middle);
         // TODO: do we still need this?
 
         // areas_to_remove.into_iter().for_each(|areas_vec: Vec<u64>| {

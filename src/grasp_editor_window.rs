@@ -4,6 +4,7 @@ use crate::core::math::vec2::Vec2;
 use crate::editor_state_machine::EditorState;
 use crate::grasp_common::GraspEditorData;
 use crate::grasp_render::GraspRenderer;
+use crate::grasp_sense::hash_input;
 use crate::GuiState;
 use ::mosaic::internals::{EntityId, Mosaic, MosaicCRUD, MosaicIO, Tile, Value};
 use imgui::sys::{ImColor, ImVec2};
@@ -33,6 +34,10 @@ pub struct GraspEditorWindow {
     pub grid_visible: bool,
     pub editor_data: GraspEditorData,
     pub renderer: Box<dyn GraspRenderer>,
+    pub left_drag_last_frame: bool,
+    pub middle_drag_last_frame: bool,
+    pub title_bar_drag: bool,
+    pub rect: Rect2,
 }
 
 impl PartialEq for GraspEditorWindow {
@@ -42,10 +47,10 @@ impl PartialEq for GraspEditorWindow {
 }
 
 impl GraspEditorWindow {
-    pub fn show(&mut self, s: &GuiState) {
-        self.sense(s);
+    pub fn show(&mut self, s: &GuiState, caught_events: &mut Vec<u64>) {
         let name = self.name.clone();
 
+        let window_name = name.clone();
         let mut w = s.ui.window(name);
 
         w.size([700.0, 500.0], imgui::Condition::Appearing)
@@ -57,6 +62,24 @@ impl GraspEditorWindow {
                 imgui::Condition::Appearing,
             )
             .build(|| {
+                self.rect =
+                    Rect2::from_pos_size(s.ui.window_pos().into(), s.ui.window_size().into());
+
+                let title_bar_rect =
+                    Rect2::from_pos_size(self.rect.min(), Vec2::new(self.rect.width, 18.0));
+
+                if self.title_bar_drag && s.ui.is_mouse_released(imgui::MouseButton::Left) {
+                    self.title_bar_drag = false;
+                } else if !self.title_bar_drag {
+                    if title_bar_rect.contains(s.ui.io().mouse_pos.into())
+                        && s.ui.is_mouse_clicked(imgui::MouseButton::Left)
+                    {
+                        self.title_bar_drag = true;
+                    } else {
+                        self.sense(s, caught_events);
+                    }
+                }
+
                 if s.ui.is_window_focused() {
                     for mut focus in self
                         .document_mosaic
@@ -78,6 +101,18 @@ impl GraspEditorWindow {
                 self.draw_debug(s);
                 self.update_context_menu(s);
             });
+
+        // let a: [f32; 2] = self.rect.min().into();
+        // let b: [f32; 2] = (self.rect.min() + Vec2::new(self.rect.width, 18.0)).into();
+
+        // s.ui.get_window_draw_list().add_rect_filled_multicolor(
+        //     a,
+        //     b,
+        //     ImColor32::from_rgba(250, 0, 0, 50),
+        //     ImColor32::from_rgba(150, 150, 0, 50),
+        //     ImColor32::from_rgba(0, 150, 150, 50),
+        //     ImColor32::from_rgba(0, 0, 250, 50),
+        // );
         self.update(s);
     }
 

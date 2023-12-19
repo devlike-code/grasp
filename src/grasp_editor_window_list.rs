@@ -19,9 +19,13 @@ impl GraspEditorWindowList {
     }
 
     pub fn show(&mut self, s: &GuiState) {
+        let mut caught_events = vec![];
+
         for window in &mut self.windows {
-            window.show(s);
+            window.show(s, &mut caught_events);
         }
+
+        caught_events.clear();
     }
 
     pub fn focus(&self, name: &str) {

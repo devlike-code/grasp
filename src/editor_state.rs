@@ -23,7 +23,7 @@ use mosaic::{
 use quadtree_rs::Quadtree;
 
 use crate::{
-    core::gui::docking::GuiViewport,
+    core::{gui::docking::GuiViewport, math::Rect2},
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
     grasp_editor_window::GraspEditorWindow,
     grasp_editor_window_list::GraspEditorWindowList,
@@ -157,7 +157,7 @@ impl GraspEditorState {
 
         let new_index = self.window_list.increment();
 
-        let mut window = GraspEditorWindow {
+        let window = GraspEditorWindow {
             name: format!("Untitled {}", new_index),
             window_tile,
             quadtree: Mutex::new(Quadtree::new_with_anchor((-1000, -1000).into(), 16)),
@@ -169,6 +169,15 @@ impl GraspEditorState {
             grid_visible: false,
             ruler_visible: false,
             renderer: Box::new(DefaultGraspRenderer),
+            left_drag_last_frame: false,
+            middle_drag_last_frame: false,
+            title_bar_drag: false,
+            rect: Rect2 {
+                x: 0.0,
+                y: 0.0,
+                width: 0.0,
+                height: 0.0,
+            },
         };
 
         self.window_list.windows.push(window);
@@ -299,69 +308,6 @@ impl GraspEditorState {
         }
     }
 
-    /*
-       fn right_sidebar(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-           egui::SidePanel::right("properties")
-               .default_width(250.0)
-               .resizable(true)
-               .show(ctx, |ui| {
-                   if let Some((_, tab)) = self.dock_state.find_active_focused() {
-                       let selected = tab
-                           .editor_data
-                           .selected
-                           .clone()
-                           .into_iter()
-                           .unique()
-                           .collect_vec();
-                       for t in selected {
-                           CollapsingHeader::new(RichText::from(format!(
-                               "[ID:{}] {}",
-                               t.id, "PROPERTIES"
-                           )))
-                           .default_open(true)
-                           .show(ui, |ui| {
-                               for (part, tiles) in
-                                   &t.get_full_archetype().into_iter().sorted().collect_vec()
-                               {
-                                   let mut draw_separator = tiles.len() - 1;
-                                   for tile in tiles.iter().sorted() {
-                                       if let Some(renderer) =
-                                           self.component_renderers.get(&part.as_str().into())
-                                       {
-                                           CollapsingHeader::new(RichText::from(format!(
-                                               "[ID: {}] {}",
-                                               tile.id,
-                                               part.to_uppercase()
-                                           )))
-                                           .default_open(true)
-                                           .show(ui, |ui| {
-                                               renderer(ui, tab, tile.clone());
-                                           });
-                                       } else {
-                                           CollapsingHeader::new(RichText::from(format!(
-                                               "[ID: {}] {}",
-                                               tile.id,
-                                               part.to_uppercase()
-                                           )))
-                                           .default_open(true)
-                                           .show(ui, |ui| {
-                                               draw_default_renderer(ui, tab, tile.clone());
-                                           });
-                                       }
-
-                                       if draw_separator > 0 {
-                                           ui.separator();
-                                           draw_separator -= 1;
-                                       }
-                                   }
-                               }
-                           });
-                       }
-                   }
-                   ui.separator();
-               });
-       }
-    */
     pub fn show_menu_bar(&mut self, s: &GuiState) {
         if let Some(m) = s.begin_main_menu_bar() {
             self.show_document_menu(s);
