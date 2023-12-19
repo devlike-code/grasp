@@ -242,7 +242,7 @@ impl GraspEditorWindow {
 
             if tile.is_object() {
                 let mut quadtree = self.quadtree.lock().unwrap();
-                let region = self.build_circle_area(selected_pos, 10);
+                let region = self.build_circle_area(selected_pos, 12);
                 if let Some(area_id) = quadtree.insert(region, tile.id) {
                     self.object_to_area
                         .lock()

@@ -27,6 +27,14 @@ impl Vec2 {
         Vec2 { x, y }
     }
 
+    pub fn len(&self) -> f32 {
+        self.len_sqr().sqrt()
+    }
+
+    pub fn len_sqr(&self) -> f32 {
+        self.x * self.x + self.y * self.y
+    }
+
     pub fn normalized(&self) -> Vec2 {
         let len = (self.x * self.x + self.y * self.y).sqrt();
         if len < f32::EPSILON {
@@ -43,6 +51,13 @@ impl Vec2 {
     }
 }
 
+impl std::ops::Neg for Vec2 {
+    type Output = Vec2;
+
+    fn neg(self) -> Self::Output {
+        -1.0 * self
+    }
+}
 impl Add<Vec2> for Vec2 {
     type Output = Vec2;
 
@@ -76,6 +91,17 @@ impl SubAssign<Vec2> for Vec2 {
     fn sub_assign(&mut self, rhs: Vec2) {
         self.x -= rhs.x;
         self.y -= rhs.y;
+    }
+}
+
+impl Mul<Vec2> for f32 {
+    type Output = Vec2;
+
+    fn mul(self, rhs: Vec2) -> Self::Output {
+        Vec2 {
+            x: self * rhs.x,
+            y: self * rhs.y,
+        }
     }
 }
 

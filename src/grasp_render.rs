@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use crate::core::math::bezier::{gui_draw_bezier_with_arrows, BezierArrowHead};
 use crate::editor_state_machine::EditorState;
 use crate::grasp_editor_window::GraspEditorWindow;
 
@@ -23,7 +24,7 @@ pub struct DefaultGraspRenderer;
 
 impl GraspRenderer for DefaultGraspRenderer {
     fn draw(&self, window: &GraspEditorWindow, s: &GuiState) {
-        let painter = s.ui.get_window_draw_list();
+        let mut painter = s.ui.get_window_draw_list();
 
         let tiles = window
             .document_mosaic
@@ -49,8 +50,34 @@ impl GraspRenderer for DefaultGraspRenderer {
         let arrows = window.document_mosaic.get_all().include_component("Arrow");
 
         for arrow in arrows {
-            let a: [f32; 2] = Pos(&arrow.source()).query().into();
-            let b: [f32; 2] = Pos(&arrow.target()).query().into();
+            let p1 = Pos(&arrow.source()).query();
+            let p2 = Pos(&arrow.target()).query();
+            let a: [f32; 2] = p1.into();
+            let b: [f32; 2] = p2.into();
+            gui_draw_bezier_with_arrows(
+                &mut painter,
+                [p1, p1.lerp(p2, 0.5), p1.lerp(p2, 0.5), p2],
+                2.0,
+                ImColor32::WHITE,
+                BezierArrowHead {
+                    length: 5.0,
+                    width: 3.0,
+                    direction: None,
+                },
+                BezierArrowHead {
+                    length: 5.0,
+                    width: 3.0,
+                    direction: None,
+                },
+            );
+            /*
+            draw_list: &mut DrawListMut<'a>,
+            points: [Vec2; 4],
+            thickness: f32,
+            color: ImColor32,
+            start_arrow: BezierArrowHead,
+            end_arrow: BezierArrowHead,
+            */
             painter.add_line(a, b, ImColor32::WHITE).build();
         }
 
@@ -70,6 +97,7 @@ impl GraspRenderer for DefaultGraspRenderer {
                 let b: [f32; 2] = (window.editor_data.rect_start_pos.unwrap()
                     + window.editor_data.rect_delta.unwrap())
                 .into();
+
                 painter.add_rect_filled_multicolor(
                     a,
                     b,

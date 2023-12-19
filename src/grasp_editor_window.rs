@@ -93,7 +93,6 @@ impl GraspEditorWindow {
                 if let Some(request) = self.document_mosaic.dequeue(&self.window_tile) {
                     // todo
                     self.update_quadtree(None);
-                    set_window_focus(&self.name);
                     request.iter().delete();
                 }
 
@@ -101,18 +100,6 @@ impl GraspEditorWindow {
                 self.draw_debug(s);
                 self.update_context_menu(s);
             });
-
-        // let a: [f32; 2] = self.rect.min().into();
-        // let b: [f32; 2] = (self.rect.min() + Vec2::new(self.rect.width, 18.0)).into();
-
-        // s.ui.get_window_draw_list().add_rect_filled_multicolor(
-        //     a,
-        //     b,
-        //     ImColor32::from_rgba(250, 0, 0, 50),
-        //     ImColor32::from_rgba(150, 150, 0, 50),
-        //     ImColor32::from_rgba(0, 150, 150, 50),
-        //     ImColor32::from_rgba(0, 0, 250, 50),
-        // );
         self.update(s);
     }
 
@@ -191,7 +178,7 @@ impl GraspEditorWindow {
         );
         obj.add_component("Label", par("<Label>"));
 
-        let region = self.build_circle_area(pos, 10);
+        let region = self.build_circle_area(pos, 12);
 
         let mut quadtree = self.quadtree.lock().unwrap();
         if let Some(area_id) = quadtree.insert(region, obj.id) {
@@ -224,7 +211,7 @@ impl GraspEditorWindow {
         );
         arr.add_component("Label", par("<Label>"));
 
-        let region = self.build_circle_area(middle_pos, 10);
+        let region = self.build_circle_area(middle_pos, 12);
 
         {
             let mut quadtree = self.quadtree.lock().unwrap();

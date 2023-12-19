@@ -6,7 +6,6 @@ use std::{
 
 use imgui::Key;
 use itertools::Itertools;
-use log::debug;
 use mosaic::{
     internals::{Tile, Value},
     iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
@@ -49,8 +48,6 @@ impl GraspEditorWindow {
         let pos: Vec2 = s.ui.io().mouse_pos.into();
 
         let mouse_in_window = self.rect.contains(pos);
-
-        self.editor_data.cursor = pos.sub(self.editor_data.pan);
 
         let clicked_left = !caught_events.contains(&hash_input("click left"))
             && s.ui.is_mouse_clicked(imgui::MouseButton::Left);
@@ -169,8 +166,11 @@ impl GraspEditorWindow {
             //
         }
 
+        self.editor_data.cursor = pos.sub(self.editor_data.pan);
+
         self.left_drag_last_frame = s.ui.is_mouse_dragging(imgui::MouseButton::Left);
         self.middle_drag_last_frame = s.ui.is_mouse_dragging(imgui::MouseButton::Middle);
+
         // TODO: do we still need this?
 
         // areas_to_remove.into_iter().for_each(|areas_vec: Vec<u64>| {

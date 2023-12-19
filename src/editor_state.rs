@@ -8,7 +8,8 @@ use std::{
 };
 
 use imgui::{
-    sys::ImGuiInputTextFlags_EnterReturnsTrue, Condition, ImString, InputText, TreeNodeFlags, Ui,
+    sys::ImGuiInputTextFlags_EnterReturnsTrue, Condition, ImColor32, ImString, InputText,
+    StyleColor, TreeNodeFlags, Ui,
 };
 use itertools::Itertools;
 use log::debug;
@@ -180,7 +181,13 @@ impl GraspEditorState {
             },
         };
 
+        let id = self.window_list.current_index as usize - 1;
         self.window_list.windows.push(window);
+        self.window_list
+            .depth_sorted_by_index
+            .lock()
+            .unwrap()
+            .push_front(id);
     }
 
     pub fn show(&mut self, s: &GuiState) {
@@ -231,10 +238,29 @@ impl GraspEditorState {
                     .collect_vec();
 
                 s.ui.set_next_item_width(-1.0);
+                let color =
+                    s.ui.push_style_color(StyleColor::FrameBg, [0.1, 0.1, 0.15, 1.0]);
                 if s.ui.list_box("##", &mut i, items.as_slice(), 20) {
                     let item: &str = items.get(i as usize).unwrap();
                     self.window_list.focus(item);
                 }
+                color.end();
+
+                let items = self
+                    .window_list
+                    .depth_sorted_by_index
+                    .lock()
+                    .unwrap()
+                    .iter()
+                    .map(|w| self.window_list.windows.get(*w).unwrap().name.as_str())
+                    .collect_vec();
+
+                s.ui.separator();
+                s.ui.set_next_item_width(-1.0);
+                let color =
+                    s.ui.push_style_color(StyleColor::FrameBg, [0.1, 0.1, 0.15, 1.0]);
+                s.ui.list_box("##depth-index", &mut 0, items.as_slice(), 20);
+                color.end();
             }
 
             w.end();
@@ -267,10 +293,15 @@ impl GraspEditorState {
                 selected = selected.into_iter().unique().collect_vec();
 
                 for o in selected {
+                    let header_color = s.ui.push_style_color(
+                        imgui::StyleColor::Header,
+                        [34.0 / 255.0, 43.0 / 255.0, 90.0 / 255.0, 1.0],
+                    );
                     if s.ui.collapsing_header(
                         format!("ID: {}##{}-header", o.id, o.id),
                         TreeNodeFlags::DEFAULT_OPEN,
                     ) {
+                        header_color.end();
                         s.ui.indent();
                         for (part, tiles) in &o
                             .get_full_archetype()
@@ -279,6 +310,10 @@ impl GraspEditorState {
                             .collect_vec()
                         {
                             for tile in tiles.iter().sorted_by(|a, b| a.id.cmp(&b.id)) {
+                                let subheader_color = s.ui.push_style_color(
+                                    imgui::StyleColor::Header,
+                                    [66.0 / 255.0, 64.0 / 255.0, 123.0 / 255.0, 1.0],
+                                );
                                 if let Some(renderer) =
                                     self.component_renderers.get(&part.as_str().into())
                                 {
@@ -286,12 +321,14 @@ impl GraspEditorState {
                                         format!("{} [ID: {}]", part.to_uppercase(), tile.id),
                                         TreeNodeFlags::DEFAULT_OPEN,
                                     ) {
+                                        subheader_color.end();
                                         renderer(s, focused_window, tile.clone());
                                     }
                                 } else if s.ui.collapsing_header(
                                     format!("{} [ID: {}]", part.to_uppercase(), tile.id),
                                     TreeNodeFlags::DEFAULT_OPEN,
                                 ) {
+                                    subheader_color.end();
                                     draw_default_property_renderer(s, focused_window, tile.clone());
                                 }
                             }
@@ -499,6 +536,11 @@ fn draw_property_value<T: Display + FromStr + ToByteArray>(
     state.ui.text(name);
     state.ui.next_column();
     state.ui.set_next_item_width(-1.0);
+
+    let color = state.ui.push_style_color(
+        StyleColor::FrameBg,
+        [98.0 / 255.0, 86.0 / 255.0, 160.0 / 255.0, 1.0],
+    );
     match datatype {
         Datatype::S32 => {
             state
@@ -536,116 +578,9 @@ fn draw_property_value<T: Display + FromStr + ToByteArray>(
                 .build();
         }
     };
+    color.end();
     state.ui.columns(1, "##", false);
     if let Ok(t) = text.parse::<T>() {
         tile.clone().set(name, t);
     }
-
-    //state.ui.set_keyboard_focus_here();
-
-    // if state.ui.is_item_edited() {
-    //     window.editor_data.text = text.clone();
-
-    //     println!("Input text has been edited!");
-    // }
-
-    // if !state.ui.is_item_focused() {
-    //     println!("Input text lost focus!");
-
-    //     let mut tile = tile.clone();
-    //     if let Ok(parsed) = text.parse::<T>() {
-    //         tile.set(name, parsed);
-    //         //tile.mosaic.request_quadtree_update();
-    //     }
-
-    //     window.trigger(EditorStateTrigger::EndDrag);
-    // }
-
-    // let changing: bool = window.state == EditorState::PropertyChanging && {
-    //     match (
-    //         window.editor_data.tile_changing,
-    //         &window.editor_data.field_changing,
-    //     ) {
-    //         (Some(tile_id), Some(field_name)) => tile_id == tile.id && field_name.as_str() == name,
-    //         _ => false,
-    //     }
-    // };
-
-    // if !changing {
-    //     let text = format!("{}", t);
-
-    //     if state.selectable(text.clone()) {
-    //         window.editor_data.tile_changing = Some(tile.id);
-    //         window.editor_data.field_changing = Some(name.to_string());
-    //         window.editor_data.previous_text = text.clone();
-    //         window.editor_data.text = text;
-    //         window.trigger(EditorStateTrigger::DblClickToRename);
-    //     }
-    // } else {
-    //     let mut text = window.editor_data.text.clone();
-    //     let datatype = tile.get(name).get_datatype();
-
-    //     match datatype {
-    //         Datatype::S32 => {
-    //             //TO-DO limit to 32
-    //             state
-    //                 .ui
-    //                 .input_text(name, &mut text)
-    //                 .enter_returns_true(true)
-    //                 .build();
-    //             state.ui.set_keyboard_focus_here();
-    //         }
-
-    //         Datatype::S128 => {
-    //             //TO-DO limit to 128
-    //             state
-    //                 .ui
-    //                 .input_text_multiline(name, &mut text, state.ui.content_region_avail())
-    //                 .enter_returns_true(true)
-    //                 .build();
-    //             state.ui.set_keyboard_focus_here();
-    //         }
-
-    //         _ => {
-    //             state
-    //                 .ui
-    //                 .input_text(name, &mut text)
-    //                 .enter_returns_true(true)
-    //                 .build();
-    //             state.ui.set_keyboard_focus_here();
-    //         }
-    //     };
-
-    //     if state.ui.is_item_edited() {
-    //         window.editor_data.text = text.clone();
-
-    //         println!("Input text has been edited!");
-    //     }
-
-    //     if !state.ui.is_item_focused() {
-    //         println!("Input text lost focus!");
-
-    //         let mut tile = tile.clone();
-    //         if let Ok(parsed) = text.parse::<T>() {
-    //             tile.set(name, parsed);
-    //             tile.mosaic.request_quadtree_update();
-    //         }
-
-    //         window.trigger(EditorStateTrigger::EndDrag);
-    //     }
-    // }
 }
-/*
-impl eframe::App for GraspEditorState {
-    fn update(&mut self, ctx: &Context, frame: &mut eframe::Frame) {
-        ctx.set_visuals(egui::Visuals::dark());
-        //self.menu_bar(ctx, frame);
-        self.left_sidebar(ctx, frame);
-        self.right_sidebar(ctx, frame);
-
-        self.process_requests();
-
-        self.show_tabs(ctx, frame);
-        self.toasts.show(ctx);
-    }
-     */
