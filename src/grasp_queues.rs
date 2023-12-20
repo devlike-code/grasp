@@ -12,7 +12,7 @@ use grasp_proc_macros::GraspQueue;
 
 use crate::{
     core::queues::{self, dequeue, GraspQueue},
-    editor_state::GraspEditorState,
+    grasp_editor_state::GraspEditorState,
 };
 
 #[derive(GraspQueue)]
@@ -29,7 +29,7 @@ pub struct WindowMessageInboxQueue(Tile);
 
 impl GraspEditorState {
     fn iter_all_windows(&self) -> IntoIter<Tile> {
-        //each window tile has arrow "ToWindow" pointing to "Queue" tile that has descriptor "EditorWindowQueue" attached, and descriptors 
+        //each window tile has arrow "ToWindow" pointing to "Queue" tile that has descriptor "EditorWindowQueue" attached, and descriptors
         self.editor_state_tile
             .iter()
             .get_arrows_from()
@@ -73,10 +73,14 @@ impl GraspEditorState {
         //for all QuadtreeUpdateRequest requests we are directly passing this message request by enquing "EditorWindowQueue" queue.
         while let Some(request) = dequeue(QuadtreeUpdateRequestQueue, &self.document_mosaic) {
             let all_window_queues = self.iter_all_windows();
-            for window_queue in  all_window_queues{
-                queues::enqueue_direct(window_queue, self.document_mosaic.new_object("NewObject_QuadtreeUpdateRequest", void()))
+            for window_queue in all_window_queues {
+                queues::enqueue_direct(
+                    window_queue,
+                    self.document_mosaic
+                        .new_object("NewObject_QuadtreeUpdateRequest", void()),
+                )
             }
             request.iter().delete();
-        } 
+        }
     }
 }

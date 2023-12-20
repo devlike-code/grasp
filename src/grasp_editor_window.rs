@@ -3,23 +3,21 @@ use crate::core::math::rect2::Rect2;
 use crate::core::math::vec2::Vec2;
 use crate::editor_state_machine::EditorState;
 use crate::grasp_common::GraspEditorData;
+use crate::grasp_editor_window_list::{GetWindowFocus, GraspEditorWindowList, SetWindowFocus};
 use crate::grasp_render::GraspRenderer;
-use crate::grasp_sense::hash_input;
 use crate::GuiState;
 use ::mosaic::internals::{EntityId, Mosaic, MosaicCRUD, MosaicIO, Tile, Value};
-use imgui::sys::{ImColor, ImVec2};
-use imgui::{ImColor32, ImString, Window, WindowFlags};
-use itertools::Itertools;
+use imgui::ImColor32;
 use mosaic::capabilities::{ArchetypeSubject, QueueCapability};
 use mosaic::internals::collage::Collage;
-use mosaic::internals::{par, void, MosaicTypelevelCRUD, TileFieldSetter};
-use mosaic::iterators::component_selectors::ComponentSelectors;
+use mosaic::internals::{par, void, MosaicTypelevelCRUD, TileFieldEmptyQuery};
 use mosaic::iterators::tile_deletion::TileDeletion;
 use quadtree_rs::{
     area::{Area, AreaBuilder},
     Quadtree,
 };
 use std::collections::HashMap;
+use std::rc::Weak;
 use std::sync::{Arc, Mutex};
 
 pub struct GraspEditorWindow {
@@ -38,6 +36,7 @@ pub struct GraspEditorWindow {
     pub middle_drag_last_frame: bool,
     pub title_bar_drag: bool,
     pub rect: Rect2,
+    pub window_list: Weak<GraspEditorWindowList>,
     pub window_list_index: usize,
 }
 
@@ -81,14 +80,15 @@ impl GraspEditorWindow {
                     }
                 }
 
-                if s.ui.is_window_focused() {
-                    //editor_state_tile only has descroiptor "EditorStateFocusedWindow" that holds Id as value of currently focused window tile
-                    for mut focus in self
-                        .document_mosaic
-                        .get_all()
-                        .include_component("EditorStateFocusedWindow")
-                    {
-                        focus.set("self", self.window_tile.id as u64);
+                if s.ui.is_window_focused()
+                    && GetWindowFocus(&self.document_mosaic)
+                        .query()
+                        .is_some_and(|m| m != self.window_tile.id)
+                {
+                    println!("Window should refocus");
+                    SetWindowFocus(&self.document_mosaic, self.window_tile.id).query();
+                    if let Some(window_list) = self.window_list.upgrade() {
+                        window_list.focus(&self.name);
                     }
                 }
 
@@ -96,12 +96,12 @@ impl GraspEditorWindow {
                     // todo
                     match request.component.to_string().as_str() {
                         "QuadtreeUpdateRequest" => {
-                            println!("UPDATING QUAD TREE {} FROM QUEUE",self.name );
+                            println!("UPDATING QUAD TREE {} FROM QUEUE", self.name);
                             self.update_quadtree(None);
                             request.iter().delete();
                         }
                         "FocusWindowRequest" => {
-                            println!("FOCUSING WINDOW {} FROM QUEUE",self.name );
+                            println!("FOCUSING WINDOW {} FROM QUEUE", self.name);
                             set_window_focus(&self.name);
                             request.iter().delete();
                         }

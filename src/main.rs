@@ -1,14 +1,14 @@
 use core::gui::imgui_keys::ExtraKeyEvents;
 use core::gui::windowing::run_main_forever;
-use editor_state::GraspEditorState;
+use grasp_editor_state::GraspEditorState;
 use imgui::{Key, Ui};
 use log::debug;
 
 mod core;
-mod editor_state;
 mod editor_state_machine;
 mod grasp_common;
 mod grasp_context_menu;
+mod grasp_editor_state;
 mod grasp_editor_window;
 mod grasp_editor_window_list;
 mod grasp_queues;

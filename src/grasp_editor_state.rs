@@ -3,6 +3,7 @@ use std::{
     env,
     fmt::Display,
     fs,
+    rc::Weak,
     str::FromStr,
     sync::{Arc, Mutex},
 };
@@ -12,12 +13,11 @@ use imgui::{
     StyleColor, TreeNodeFlags, Ui,
 };
 use itertools::Itertools;
-use log::debug;
 use mosaic::{
     capabilities::QueueTile,
     internals::{
         all_tiles, par, void, Collage, Datatype, FromByteArray, Mosaic, MosaicCRUD, MosaicIO,
-        MosaicTypelevelCRUD, Tile, TileFieldSetter, ToByteArray, Value, S32,
+        MosaicTypelevelCRUD, Tile, TileFieldEmptyQuery, TileFieldSetter, ToByteArray, Value, S32,
     },
     iterators::component_selectors::ComponentSelectors,
 };
@@ -25,9 +25,9 @@ use quadtree_rs::Quadtree;
 
 use crate::{
     core::{gui::docking::GuiViewport, math::Rect2},
-    editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
+    editor_state_machine::EditorState,
     grasp_editor_window::GraspEditorWindow,
-    grasp_editor_window_list::GraspEditorWindowList,
+    grasp_editor_window_list::{GetWindowFocus, GraspEditorWindowList},
     grasp_render::DefaultGraspRenderer,
     grasp_transitions::QuadtreeUpdateCapability,
     GuiState,
@@ -186,6 +186,7 @@ impl GraspEditorState {
                 width: 0.0,
                 height: 0.0,
             },
+            window_list: unsafe { Weak::from_raw(&self.window_list) },
             window_list_index: id,
         };
 
@@ -202,6 +203,14 @@ impl GraspEditorState {
         self.show_right_sidebar(s);
         self.show_menu_bar(s);
         self.window_list.show(s);
+    }
+
+    fn get_window_by_index(&self, focused_index: usize) -> i32 {
+        self.window_list
+            .windows
+            .iter()
+            .position(|w| w.window_tile.id == focused_index)
+            .unwrap_or_default() as i32
     }
 
     fn show_left_sidebar(&mut self, s: &GuiState) {
@@ -222,53 +231,44 @@ impl GraspEditorState {
                     self.new_window(all_tiles());
                 }
 
-                let focus = self
-                    .document_mosaic
-                    .get_all()
-                    .include_component("EditorStateFocusedWindow")
-                    .next()
-                    .unwrap();
+                if let Some(focused_index) = GetWindowFocus(&self.document_mosaic).query() {
+                    let mut i = self.get_window_by_index(focused_index);
 
-                let focused_index = focus.get("self").as_u64() as usize;
-                let mut i = self
-                    .window_list
-                    .windows
-                    .iter()
-                    .position(|w| w.window_tile.id == focused_index)
-                    .unwrap_or_default() as i32;
+                    let items = self
+                        .window_list
+                        .windows
+                        .iter()
+                        .map(|w| w.name.as_str())
+                        .collect_vec();
 
-                let items = self
-                    .window_list
-                    .windows
-                    .iter()
-                    .map(|w| w.name.as_str())
-                    .collect_vec();
+                    s.ui.set_next_item_width(-1.0);
+                    let color =
+                        s.ui.push_style_color(StyleColor::FrameBg, [0.1, 0.1, 0.15, 1.0]);
 
-                s.ui.set_next_item_width(-1.0);
-                let color =
-                    s.ui.push_style_color(StyleColor::FrameBg, [0.1, 0.1, 0.15, 1.0]);
-                if s.ui.list_box("##", &mut i, items.as_slice(), 20) {
-                    let item: &str = items.get(i as usize).unwrap();
+                    if s.ui.list_box("##", &mut i, items.as_slice(), 20) {
+                        let item: &str = items.get(i as usize).unwrap();
 
-                    self.window_list.focus(item);
+                        self.window_list.focus(item);
+                    }
+
+                    color.end();
+
+                    let items = self
+                        .window_list
+                        .depth_sorted_by_index
+                        .lock()
+                        .unwrap()
+                        .iter()
+                        .map(|w| self.window_list.windows.get(*w).unwrap().name.as_str())
+                        .collect_vec();
+
+                    s.ui.separator();
+                    s.ui.set_next_item_width(-1.0);
+                    let color =
+                        s.ui.push_style_color(StyleColor::FrameBg, [0.1, 0.1, 0.15, 1.0]);
+                    s.ui.list_box("##depth-index", &mut 0, items.as_slice(), 20);
+                    color.end();
                 }
-                color.end();
-
-                let items = self
-                    .window_list
-                    .depth_sorted_by_index
-                    .lock()
-                    .unwrap()
-                    .iter()
-                    .map(|w| self.window_list.windows.get(*w).unwrap().name.as_str())
-                    .collect_vec();
-
-                s.ui.separator();
-                s.ui.set_next_item_width(-1.0);
-                let color =
-                    s.ui.push_style_color(StyleColor::FrameBg, [0.1, 0.1, 0.15, 1.0]);
-                s.ui.list_box("##depth-index", &mut 0, items.as_slice(), 20);
-                color.end();
             }
 
             w.end();
@@ -283,23 +283,9 @@ impl GraspEditorState {
                 .size([300.0, viewport.size().y - 18.0], Condition::FirstUseEver)
                 .begin()
         {
-            //fetching single descriptor tile that holds focused window tile id as value
-            let focus = self
-                .document_mosaic
-                .get_all()
-                .include_component("EditorStateFocusedWindow")
-                .next()
-                .unwrap();
+            let focused_index = GetWindowFocus(&self.document_mosaic).query();
 
-            //getting the value
-            let focused_index = focus.get("self").as_u64() as usize;
-
-            if let Some(focused_window) = self
-                .window_list
-                .windows
-                .iter_mut()
-                .find(|w| w.window_tile.id == focused_index)
-            {
+            if let Some(focused_window) = self.window_list.get_position(focused_index) {
                 let mut selected = focused_window.editor_data.selected.clone();
                 selected = selected.into_iter().unique().collect_vec();
 
@@ -378,10 +364,7 @@ impl GraspEditorState {
                 {
                     self.document_mosaic.clear();
                     Self::prepare_mosaic(Arc::clone(&self.document_mosaic));
-
                     self.document_mosaic.load(&fs::read(file).unwrap()).unwrap();
-                    // self.document_mosaic.send_toast("Document loaded");
-
                     self.document_mosaic.request_quadtree_update();
                 }
             }
