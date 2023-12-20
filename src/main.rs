@@ -2,6 +2,7 @@ use core::gui::imgui_keys::ExtraKeyEvents;
 use core::gui::windowing::run_main_forever;
 use editor_state::GraspEditorState;
 use imgui::{Key, Ui};
+use log::debug;
 
 mod core;
 mod editor_state;

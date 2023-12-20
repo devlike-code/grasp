@@ -31,10 +31,10 @@ impl SeqWriter {
                     hash.insert("Platform", whoami::platform().to_string());
                     
                     let _ = req.post(
-                        "http://localhost:5341/api/events/raw?clef&apiKey=XmGfOzkYRFtYq7b72L0r",
+                        "http://localhost:5341/api/events/raw?clef",
                     )
                     .json(&hash)
-                    .send();                    
+                    .send().unwrap();                    
                 }
             }
         });

@@ -91,12 +91,17 @@ impl GraspEditorState {
         mosaic.new_type("Selection: unit;").unwrap();
         mosaic.new_type("EditorState: unit;").unwrap();
         mosaic.new_type("EditorStateFocusedWindow: u64;").unwrap();
-        mosaic.new_type("EditorTab: unit;").unwrap();
-        mosaic.new_type("ToTab: unit;").unwrap();
+        mosaic.new_type("EditorWindowQueue: unit;").unwrap();
+        mosaic.new_type("ToWindow: unit;").unwrap();
         mosaic.new_type("NewWindowRequestQueue: unit;").unwrap();
         mosaic
             .new_type("QuadtreeUpdateRequestQueue: unit;")
             .unwrap();
+
+        mosaic
+            .new_type("NewObject_QuadtreeUpdateRequest: unit;")
+            .unwrap();
+        mosaic.new_type("FocusWindowRequest: unit;").unwrap();
         mosaic.new_type("QuadtreeUpdateRequest: unit;").unwrap();
         mosaic.new_type("ToastRequestQueue: unit;").unwrap();
         mosaic.new_type("ToastRequest: s32;").unwrap();
@@ -150,14 +155,16 @@ impl GraspEditorState {
     }
 
     pub fn new_window(&mut self, collage: Box<Collage>) {
+        //new window tile that is at the same time "Queue" component
         let window_tile = self.document_mosaic.make_queue();
-        window_tile.add_component("EditorTab", void());
+        window_tile.add_component("EditorWindowQueue", void());
 
+        //connecting all new windows with editor state tile
         self.document_mosaic
-            .new_arrow(&self.editor_state_tile, &window_tile, "ToTab", void());
+            .new_arrow(&self.editor_state_tile, &window_tile, "ToWindow", void());
 
         let new_index = self.window_list.increment();
-
+        let id = self.window_list.current_index as usize - 1;
         let window = GraspEditorWindow {
             name: format!("Untitled {}", new_index),
             window_tile,
@@ -179,9 +186,9 @@ impl GraspEditorState {
                 width: 0.0,
                 height: 0.0,
             },
+            window_list_index: id,
         };
 
-        let id = self.window_list.current_index as usize - 1;
         self.window_list.windows.push(window);
         self.window_list
             .depth_sorted_by_index
@@ -242,6 +249,7 @@ impl GraspEditorState {
                     s.ui.push_style_color(StyleColor::FrameBg, [0.1, 0.1, 0.15, 1.0]);
                 if s.ui.list_box("##", &mut i, items.as_slice(), 20) {
                     let item: &str = items.get(i as usize).unwrap();
+
                     self.window_list.focus(item);
                 }
                 color.end();
@@ -275,6 +283,7 @@ impl GraspEditorState {
                 .size([300.0, viewport.size().y - 18.0], Condition::FirstUseEver)
                 .begin()
         {
+            //fetching single descriptor tile that holds focused window tile id as value
             let focus = self
                 .document_mosaic
                 .get_all()
@@ -282,7 +291,9 @@ impl GraspEditorState {
                 .next()
                 .unwrap();
 
+            //getting the value
             let focused_index = focus.get("self").as_u64() as usize;
+
             if let Some(focused_window) = self
                 .window_list
                 .windows
@@ -355,7 +366,7 @@ impl GraspEditorState {
 
     fn show_document_menu(&mut self, s: &GuiState) {
         if let Some(f) = s.begin_menu("Document") {
-            if s.menu_item("New Tab") {
+            if s.menu_item("New Window") {
                 self.new_window(all_tiles());
             }
 

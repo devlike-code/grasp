@@ -38,6 +38,7 @@ pub struct GraspEditorWindow {
     pub middle_drag_last_frame: bool,
     pub title_bar_drag: bool,
     pub rect: Rect2,
+    pub window_list_index: usize,
 }
 
 impl PartialEq for GraspEditorWindow {
@@ -81,6 +82,7 @@ impl GraspEditorWindow {
                 }
 
                 if s.ui.is_window_focused() {
+                    //editor_state_tile only has descroiptor "EditorStateFocusedWindow" that holds Id as value of currently focused window tile
                     for mut focus in self
                         .document_mosaic
                         .get_all()
@@ -92,8 +94,19 @@ impl GraspEditorWindow {
 
                 if let Some(request) = self.document_mosaic.dequeue(&self.window_tile) {
                     // todo
-                    self.update_quadtree(None);
-                    request.iter().delete();
+                    match request.component.to_string().as_str() {
+                        "QuadtreeUpdateRequest" => {
+                            println!("UPDATING QUAD TREE {} FROM QUEUE",self.name );
+                            self.update_quadtree(None);
+                            request.iter().delete();
+                        }
+                        "FocusWindowRequest" => {
+                            println!("FOCUSING WINDOW {} FROM QUEUE",self.name );
+                            set_window_focus(&self.name);
+                            request.iter().delete();
+                        }
+                        _ => {}
+                    }
                 }
 
                 self.renderer.draw(self, s);
@@ -200,8 +213,6 @@ impl GraspEditorWindow {
         middle_pos: Vec2,
         bezier_rects: Vec<Rect2>,
     ) {
-        println!("Bezier rects: {:?}", bezier_rects);
-
         let arr = self
             .document_mosaic
             .new_arrow(source, target, "Arrow", void());

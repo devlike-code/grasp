@@ -37,20 +37,23 @@ impl GraspEditorWindowList {
 
     // TODO: never gets called
     pub fn focus(&self, name: &str) {
-        if let Some(pos) = self.windows.iter().position(|w| w.name.as_str() == name) {
-            let window = self.windows.get(pos).unwrap();
-            let request = window.document_mosaic.new_object("void", void());
+        if let Some(index) = self.windows.iter().position(|w| w.name.as_str() == name) {
+            let window = self.windows.get(index).unwrap();
+            let request = window.document_mosaic.new_object("FocusWindowRequest", void());
             window
                 .document_mosaic
                 .enqueue(&window.window_tile, &request);
             let id = window.window_tile.id;
 
             let mut depth = self.depth_sorted_by_index.lock().unwrap();
-            if let Some(pos) = depth.iter().position(|p| *p == id) {
+            if let Some(pos) = depth.iter().position(|p| *p == window.window_list_index) {
                 depth.remove(pos);
-                depth.push_front(id);
-                debug!("{}: REMOVED FROM {} AND PUSHED FORWARD", id, pos);
+                depth.push_front(window.window_list_index);
+                debug!("{}: REMOVED FROM {} AND PUSHED FORWARD", window.window_list_index, pos);
             }
+        }
+        else{
+            println!("CANNOT FIND WINDOW NAME {}", name);
         }
     }
 }
