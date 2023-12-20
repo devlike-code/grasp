@@ -8,7 +8,7 @@ use crate::{
 };
 
 impl GraspEditorWindow {
-    pub(crate) fn update_context_menu(&self, s: &GuiState) {
+    pub(crate) fn update_context_menu(&mut self, s: &GuiState) {
         if let Some(c) = s.ui.begin_popup("context-menu") {
             if self.editor_data.selected.is_empty() {
                 if self.show_default_menu(s) {
@@ -26,7 +26,7 @@ impl GraspEditorWindow {
         }
     }
 
-    fn show_selection_menu(&self, s: &GuiState) -> bool {
+    fn show_selection_menu(&mut self, s: &GuiState) -> bool {
         // let queue = self
         //     .document_mosaic
         //     .get_all()
@@ -108,10 +108,15 @@ impl GraspEditorWindow {
         false
     }
 
-    fn show_default_menu(&self, s: &GuiState) -> bool {
+    fn show_default_menu(&mut self, s: &GuiState) -> bool {
         if s.ui.button("Create new node") {
             let pos = s.ui.mouse_pos_on_opening_current_popup();
             self.create_new_object(Vec2::new(pos[0], pos[1]) - self.editor_data.pan);
+            return true;
+        }
+
+        if s.ui.button("Toggle debug draw") {
+            self.editor_data.debug = !self.editor_data.debug;
             return true;
         }
 

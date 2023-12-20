@@ -518,6 +518,7 @@ fn draw_property_value<T: Display + FromStr + ToByteArray>(
     let datatype = tile.get(name).get_datatype();
     let id = format!("##{}.{}", tile.id, name);
     let mut text = format!("{}", t);
+    let previous_text = format!("{}", t);
 
     state.ui.columns(2, "##", false);
     let region_width = state.ui.window_content_region_max()[0];
@@ -581,6 +582,10 @@ fn draw_property_value<T: Display + FromStr + ToByteArray>(
     color.end();
     state.ui.columns(1, "##", false);
     if let Ok(t) = text.parse::<T>() {
-        tile.clone().set(name, t);
+        if previous_text != text {
+            tile.clone().set(name, t);
+            //todo discuss better solution for this, can we have something like tile changed queue?
+            tile.mosaic.request_quadtree_update();
+        }
     }
 }

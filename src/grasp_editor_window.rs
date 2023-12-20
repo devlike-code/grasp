@@ -104,6 +104,10 @@ impl GraspEditorWindow {
     }
 
     pub fn draw_debug(&self, s: &GuiState) {
+        if !self.editor_data.debug {
+            return;
+        }
+
         let quadtree = self.quadtree.lock().unwrap();
         quadtree.iter().for_each(|area| {
             let anchor_pos = self.pos_with_pan(Vec2 {

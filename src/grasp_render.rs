@@ -1,3 +1,4 @@
+use std::ops::Add;
 use std::sync::Arc;
 
 use crate::core::math::bezier::{gui_draw_bezier_with_arrows, BezierArrowHead};
@@ -18,6 +19,7 @@ use mosaic::{capabilities::ArchetypeSubject, internals::MosaicCollage};
 
 pub trait GraspRenderer {
     fn draw(&self, window: &GraspEditorWindow, s: &GuiState);
+    fn get_position_with_pan(&self, window: &GraspEditorWindow, position: Vec2) -> Vec2;
 }
 
 pub struct DefaultGraspRenderer;
@@ -35,7 +37,7 @@ impl GraspRenderer for DefaultGraspRenderer {
         if tiles.len() > 0 {
             for tile in tiles {
                 if tile.is_object() {
-                    let pos = Pos(&tile).query();
+                    let pos = self.get_position_with_pan(window, Pos(&tile).query());
                     let label = Label(&tile).query();
 
                     painter
@@ -50,8 +52,8 @@ impl GraspRenderer for DefaultGraspRenderer {
         let arrows = window.document_mosaic.get_all().include_component("Arrow");
 
         for arrow in arrows {
-            let p1 = Pos(&arrow.source()).query();
-            let p2 = Pos(&arrow.target()).query();
+            let p1 = self.get_position_with_pan(window, Pos(&arrow.source()).query());
+            let p2 = self.get_position_with_pan(window, Pos(&arrow.target()).query());
             let a: [f32; 2] = p1.into();
             let b: [f32; 2] = p2.into();
             gui_draw_bezier_with_arrows(
@@ -85,7 +87,7 @@ impl GraspRenderer for DefaultGraspRenderer {
             EditorState::Link => {
                 let a: [f32; 2] = window.editor_data.link_start_pos.unwrap().into();
                 let pos: [f32; 2] = if let Some(b) = window.editor_data.link_end.as_ref() {
-                    Pos(b).query().into()
+                    self.get_position_with_pan(window, Pos(b).query()).into()
                 } else {
                     s.ui.io().mouse_pos
                 };
@@ -93,10 +95,16 @@ impl GraspRenderer for DefaultGraspRenderer {
                 painter.add_line(a, pos, ImColor32::WHITE).build();
             }
             EditorState::Rect => {
-                let a: [f32; 2] = window.editor_data.rect_start_pos.unwrap().into();
-                let b: [f32; 2] = (window.editor_data.rect_start_pos.unwrap()
-                    + window.editor_data.rect_delta.unwrap())
-                .into();
+                let a: [f32; 2] = {
+                    let position = window.editor_data.rect_start_pos.unwrap();
+                    self.get_position_with_pan(window, position).into()
+                };
+
+                let b: [f32; 2] = {
+                    let position = window.editor_data.rect_start_pos.unwrap()
+                        + window.editor_data.rect_delta.unwrap();
+                    self.get_position_with_pan(window, position).into()
+                };
 
                 painter.add_rect_filled_multicolor(
                     a,
@@ -112,5 +120,9 @@ impl GraspRenderer for DefaultGraspRenderer {
             }
             _ => {}
         }
+    }
+
+    fn get_position_with_pan(&self, window: &GraspEditorWindow, position: Vec2) -> Vec2 {
+        position.add(window.editor_data.pan)
     }
 }
