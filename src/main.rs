@@ -2,12 +2,12 @@ use core::gui::imgui_keys::ExtraKeyEvents;
 use core::gui::windowing::run_main_forever;
 use grasp_editor_state::GraspEditorState;
 use imgui::{Key, Ui};
-use log::debug;
 
 mod core;
 mod editor_state_machine;
 mod grasp_common;
 mod grasp_context_menu;
+#[allow(unused_mut, clippy::let_and_return)]
 mod grasp_editor_state;
 mod grasp_editor_window;
 mod grasp_editor_window_list;

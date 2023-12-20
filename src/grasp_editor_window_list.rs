@@ -6,7 +6,7 @@ use crate::grasp_editor_window::GraspEditorWindow;
 use crate::GuiState;
 use ::mosaic::internals::{MosaicIO, Tile, Value};
 use itertools::Itertools;
-use log::{debug, error};
+use log::error;
 use mosaic::capabilities::{ArchetypeSubject, QueueCapability};
 
 use mosaic::internals::{void, Mosaic, TileFieldEmptyQuery, TileFieldQuery, TileFieldSetter};

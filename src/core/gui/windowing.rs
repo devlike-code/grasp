@@ -1,13 +1,8 @@
-use std::{
-    path::{Path, PathBuf},
-    ptr::null,
-    time::Instant,
-};
+use std::{path::Path, time::Instant};
 
-use env_logger::Target;
 use imgui::{ConfigFlags, ImString, Ui, WindowFlags};
 use log::info;
-use sdl2::{rect::Rect, video::GLProfile};
+use sdl2::video::GLProfile;
 
 use crate::{grasp_common::read_window_size, seq::SeqWriter};
 
@@ -73,8 +68,6 @@ pub fn run_main_forever<F: FnMut(&Ui, &mut bool)>(mut update: F) {
 
     let mut last_frame = Instant::now();
     let mut should_quit = false;
-
-    let mut is_visible = true;
 
     'running: loop {
         use sdl2::event::Event;

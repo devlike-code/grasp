@@ -29,11 +29,10 @@ pub fn hash_input(s: &str) -> u64 {
 }
 
 impl GraspEditorWindow {
-    pub fn delete_tiles(&self, tiles: &Vec<Tile>) {
+    pub fn delete_tiles(&self, _tiles: &[Tile]) {
         let quadtree = self.quadtree.lock().unwrap();
-        let mut object_to_area = self.object_to_area.lock().unwrap();
-
-        let under_cursor = quadtree.query(self.build_cursor_area()).collect_vec();
+        let _object_to_area = self.object_to_area.lock().unwrap();
+        let _under_cursor = quadtree.query(self.build_cursor_area()).collect_vec();
 
         // DELETE HERE (consider recursive deletion too) -- maybe we could do two passes, one to select everything, and one to delete
 

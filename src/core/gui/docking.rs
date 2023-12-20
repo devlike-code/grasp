@@ -1,11 +1,8 @@
 use std::ptr::{null, null_mut};
 
-use imgui::{
-    sys::{
-        ImGuiDir_Down, ImGuiDir_Left, ImGuiDir_None, ImGuiDir_Right, ImGuiDir_Up,
-        ImGuiDockNodeFlags_None, ImGuiDockNodeFlags_PassthruCentralNode, ImGuiID, ImVec2,
-    },
-    Id,
+use imgui::sys::{
+    ImGuiDir_Down, ImGuiDir_Left, ImGuiDir_None, ImGuiDir_Right, ImGuiDir_Up,
+    ImGuiDockNodeFlags_None, ImGuiDockNodeFlags_PassthruCentralNode, ImGuiID, ImVec2,
 };
 
 #[derive(Clone, Copy)]
@@ -135,7 +132,7 @@ impl GuiDockspace {
         }
     }
 
-    pub fn finish(mut self) {
+    pub fn finish(self) {
         unsafe {
             imgui::sys::igDockBuilderFinish(self.id);
         }

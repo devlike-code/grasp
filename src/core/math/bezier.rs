@@ -1,4 +1,4 @@
-use imgui::{DrawList, DrawListMut, ImColor32};
+use imgui::{DrawListMut, ImColor32};
 use itertools::Itertools;
 
 use super::Vec2;
@@ -24,7 +24,7 @@ pub fn gui_cubic_bezier_dt(p0: Vec2, p1: Vec2, p2: Vec2, p3: Vec2, t: f32) -> Ve
     let c = t * t;
     let d = 2.0 * t * a;
 
-    return -3.0 * p0 * b + 3.0 * p1 * (b - d) + 3.0 * p2 * (d - c) + 3.0 * p3 * c;
+    -3.0 * p0 * b + 3.0 * p1 * (b - d) + 3.0 * p2 * (d - c) + 3.0 * p3 * c
 }
 
 pub fn gui_bezier_tangent(p0: Vec2, p1: Vec2, p2: Vec2, p3: Vec2, t: f32) -> Vec2 {
@@ -39,8 +39,8 @@ pub fn gui_bezier_tangent(p0: Vec2, p1: Vec2, p2: Vec2, p3: Vec2, t: f32) -> Vec
     }
 }
 
-pub fn gui_draw_bezier_with_arrows<'a>(
-    draw_list: &mut DrawListMut<'a>,
+pub fn gui_draw_bezier_with_arrows(
+    draw_list: &mut DrawListMut<'_>,
     points: [Vec2; 4],
     thickness: f32,
     color: ImColor32,

@@ -1,11 +1,4 @@
-use log::debug;
-
-use crate::{
-    core::math::Vec2,
-    editor_state_machine::{EditorStateTrigger, StateMachine},
-    grasp_editor_window::GraspEditorWindow,
-    GuiState,
-};
+use crate::{ core::math::Vec2, grasp_editor_window::GraspEditorWindow, GuiState};
 
 impl GraspEditorWindow {
     pub(crate) fn update_context_menu(&mut self, s: &GuiState) {
@@ -26,7 +19,7 @@ impl GraspEditorWindow {
         }
     }
 
-    fn show_selection_menu(&mut self, s: &GuiState) -> bool {
+    fn show_selection_menu(&mut self, _s: &GuiState) -> bool {
         // let queue = self
         //     .document_mosaic
         //     .get_all()
@@ -121,9 +114,5 @@ impl GraspEditorWindow {
         }
 
         false
-    }
-
-    fn exit_menu(&mut self, s: &GuiState) {
-        self.trigger(EditorStateTrigger::ExitContextMenu);
     }
 }

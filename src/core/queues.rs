@@ -1,9 +1,8 @@
 use std::sync::Arc;
 
-use log::debug;
 use mosaic::{
     capabilities::QueueCapability,
-    internals::{par, Mosaic, MosaicIO, Tile},
+    internals::{Mosaic, MosaicIO, Tile},
     iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
 };
 
@@ -34,6 +33,6 @@ pub fn enqueue<Q: GraspQueue>(queue: Q, message: Tile) {
 }
 
 pub fn dequeue<Q: GraspQueue>(queue: Q, mosaic: &Arc<Mosaic>) -> Option<Tile> {
-    let tile = queue.get_queue_tile(&mosaic);
+    let tile = queue.get_queue_tile(mosaic);
     mosaic.dequeue(&tile)
 }

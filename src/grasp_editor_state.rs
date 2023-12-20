@@ -8,10 +8,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use imgui::{
-    sys::ImGuiInputTextFlags_EnterReturnsTrue, Condition, ImColor32, ImString, InputText,
-    StyleColor, TreeNodeFlags, Ui,
-};
+use imgui::{Condition, ImString, StyleColor, TreeNodeFlags};
 use itertools::Itertools;
 use mosaic::{
     capabilities::QueueTile,
@@ -19,7 +16,6 @@ use mosaic::{
         all_tiles, par, void, Collage, Datatype, FromByteArray, Mosaic, MosaicCRUD, MosaicIO,
         MosaicTypelevelCRUD, Tile, TileFieldEmptyQuery, TileFieldSetter, ToByteArray, Value, S32,
     },
-    iterators::component_selectors::ComponentSelectors,
 };
 use quadtree_rs::Quadtree;
 
@@ -62,6 +58,7 @@ type ComponentRenderer = Box<dyn Fn(&GuiState, &mut GraspEditorWindow, Tile)>;
 //     }
 // }
 
+#[allow(dead_code)]
 pub struct GraspEditorState {
     pub(crate) document_mosaic: Arc<Mosaic>,
     pub(crate) component_renderers: HashMap<S32, ComponentRenderer>,
@@ -129,16 +126,6 @@ impl GraspEditorState {
         //let dock_state = DockState::new(vec![]);
 
         // add here default renderers
-        let state = Self {
-            document_mosaic,
-            component_renderers: HashMap::new(),
-            editor_state_tile,
-            new_tab_request_queue: new_window_request_queue,
-            refresh_quadtree_queue,
-            toast_request_queue,
-            window_list: GraspEditorWindowList::default(),
-            show_tabview: false,
-        };
 
         // state
         //     .component_renderers
@@ -151,7 +138,16 @@ impl GraspEditorState {
         //        let tab = state.new_tab(all_tiles());
         //        state.dock_state.main_surface_mut().push_to_first_leaf(tab);
 
-        state
+        Self {
+            document_mosaic,
+            component_renderers: HashMap::new(),
+            editor_state_tile,
+            new_tab_request_queue: new_window_request_queue,
+            refresh_quadtree_queue,
+            toast_request_queue,
+            window_list: GraspEditorWindowList::default(),
+            show_tabview: false,
+        }
     }
 
     pub fn new_window(&mut self, collage: Box<Collage>) {

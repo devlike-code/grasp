@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
 use itertools::Itertools;
-use log::{info, warn};
+use log::warn;
 use mosaic::{
-    capabilities::{ArchetypeSubject, QueueCapability},
+    capabilities::ArchetypeSubject,
     internals::{
         void, Mosaic, MosaicCRUD, MosaicIO, Tile, TileFieldEmptyQuery, TileFieldQuery,
         TileFieldSetter, Value,
@@ -102,8 +102,8 @@ impl StateMachine for GraspEditorWindow {
 
                     let mid_pos = src_pos.lerp(tgt_pos, 0.5);
                     // Calculate the angle and radius for the new control point
-                    let angle: f32 = 45.0; // Adjust the angle as needed
-                    let radius: f32 = 50.0; // Adjust the radius as needed
+                    let _angle: f32 = 45.0; // Adjust the angle as needed
+                    let _radius: f32 = 50.0; // Adjust the radius as needed
 
                     let bez = (1..=9)
                         .map(|i| src_pos.lerp(tgt_pos, i as f32 / 10.0))
@@ -238,7 +238,7 @@ impl GraspEditorWindow {
         self.quadtree.lock().unwrap().reset();
 
         for tile in &selected {
-            let mut selected_pos = Pos(&tile).query();
+            let selected_pos = Pos(tile).query();
 
             if tile.is_object() {
                 let mut quadtree = self.quadtree.lock().unwrap();

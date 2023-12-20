@@ -1,5 +1,4 @@
 use std::ops::Add;
-use std::sync::Arc;
 
 use crate::core::math::bezier::{gui_draw_bezier_with_arrows, BezierArrowHead};
 use crate::editor_state_machine::EditorState;
@@ -9,13 +8,10 @@ use crate::core::math::vec2::Vec2;
 use crate::utilities::{Label, Pos};
 use crate::GuiState;
 use imgui::ImColor32;
-use log::{debug, info};
-use mosaic::internals::{Mosaic, TileFieldEmptyQuery, TileFieldQuery};
-use mosaic::internals::{MosaicIO, Tile};
+use mosaic::internals::MosaicIO;
+use mosaic::internals::TileFieldEmptyQuery;
 use mosaic::iterators::component_selectors::ComponentSelectors;
-use mosaic::iterators::tile_filters::TileFilters;
 use mosaic::iterators::tile_getters::TileGetters;
-use mosaic::{capabilities::ArchetypeSubject, internals::MosaicCollage};
 
 pub trait GraspRenderer {
     fn draw(&self, window: &GraspEditorWindow, s: &GuiState);

@@ -50,8 +50,7 @@ impl GraspEditorWindow {
     pub fn show(&mut self, s: &GuiState, caught_events: &mut Vec<u64>) {
         let name = self.name.clone();
 
-        let window_name = name.clone();
-        let mut w = s.ui.window(name);
+        let w = s.ui.window(name);
 
         w.size([700.0, 500.0], imgui::Condition::Appearing)
             .position(
@@ -161,7 +160,7 @@ impl GraspEditorWindow {
         let max = rect.max();
         let min = self.pos_add_editor_offset(min);
         let max = self.pos_add_editor_offset(max);
-        let rect = Rect2::from_two_pos(min, max);
+        let _rect = Rect2::from_two_pos(min, max);
         let dim_x = (max.x - min.x) as i32;
         let dim_y = (max.y - min.y) as i32;
 
