@@ -52,7 +52,7 @@ impl GraspEditorWindow {
             return;
         }
         let under_cursor = self.under_cursor();
-        
+
         let pos: Vec2 = s.ui.io().mouse_pos.into();
 
         let is_context = self.state == EditorState::ContextMenu;
@@ -105,7 +105,7 @@ impl GraspEditorWindow {
             caught_events.push(hash_input("double click left"));
             self.trigger(DblClickToCreate);
             //
-        } else if double_clicked_left && !under_cursor.is_empty() {
+        } else if double_clicked_left && !under_cursor.is_empty() && is_focused{
             //
             let tile = under_cursor.fetch_tile(&self.document_mosaic);
             if let Some(Value::S32(label)) = tile
@@ -116,10 +116,11 @@ impl GraspEditorWindow {
                 .map(|tile| tile.get("self"))
             {
                 self.editor_data.tile_changing = Some(tile.id);
-                self.editor_data.selected = vec![tile];
+                self.editor_data.selected = vec![tile];            
+
                 self.editor_data.text = label.to_string();
                 self.editor_data.previous_text = label.to_string();
-                caught_events.push(hash_input("double click left"));
+                caught_events.push(hash_input("double click left"));                
                 self.trigger(DblClickToRename);
             }
             //
