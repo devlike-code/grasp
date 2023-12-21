@@ -48,7 +48,9 @@ fn default_renderer_draw_object(
     let mut cancel: bool = true;
     let mut trigger_end_drag = true;
 
-    if window.state == EditorState::PropertyChanging {
+    if window.state == EditorState::PropertyChanging
+        && window.editor_data.tile_changing == Some(tile.id)
+    {
         if let Some(selected) = window.editor_data.selected.first() {
             if tile.id == selected.id {
                 let cx = pos.x - window.rect.x + 10.0;
