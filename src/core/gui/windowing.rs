@@ -65,6 +65,21 @@ fn load_image(data: &Vec<u8>, width: i32, height: i32, depth: i32) -> u32 {
     texture_id
 }
 
+pub fn gl_smooth() {
+    unsafe {
+        gl::Enable(gl::POLYGON_SMOOTH);
+        gl::Hint(gl::POLYGON_SMOOTH_HINT, gl::NICEST);
+        gl::Enable(gl::BLEND);
+        gl::BlendFunc(gl::ONE, gl::SRC_ALPHA_SATURATE);
+    }
+}
+
+pub fn gl_not_smooth() {
+    unsafe {
+        gl::Disable(gl::POLYGON_SMOOTH);
+    }
+}
+
 pub fn run_main_forever<F: FnMut(&Ui, &mut bool)>(mut update: F) {
     let writer = SeqWriter::new();
 

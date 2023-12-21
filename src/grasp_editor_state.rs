@@ -95,9 +95,6 @@ impl GraspEditorState {
             .new_type("QuadtreeUpdateRequestQueue: unit;")
             .unwrap();
 
-        mosaic
-            .new_type("NewObject_QuadtreeUpdateRequest: unit;")
-            .unwrap();
         mosaic.new_type("FocusWindowRequest: unit;").unwrap();
         mosaic.new_type("QuadtreeUpdateRequest: unit;").unwrap();
         mosaic.new_type("ToastRequestQueue: unit;").unwrap();
@@ -419,9 +416,9 @@ impl GraspEditorState {
             }
 
             if s.menu_item(format!("Toggle Debug Draw {}", ruler_on)) {
-                //if let Some((_, tab)) = self.dock_state.find_active_focused() {
-                //    tab.editor_data.debug = !tab.editor_data.debug;
-                //}
+                if let Some(window) = self.window_list.get_focused_mut() {
+                    window.editor_data.debug = !window.editor_data.debug;
+                }
             }
 
             let grid_on = {

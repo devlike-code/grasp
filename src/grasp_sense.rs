@@ -7,7 +7,7 @@ use std::{
 use imgui::Key;
 use itertools::Itertools;
 use mosaic::{
-    internals::{Tile, Value},
+    internals::{Tile, TileFieldEmptyQuery, Value},
     iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
 };
 
@@ -15,6 +15,7 @@ use crate::{
     core::{gui::imgui_keys::ExtraKeyEvents, math::Vec2},
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
     grasp_editor_window::GraspEditorWindow,
+    grasp_editor_window_list::GetWindowFocus,
     grasp_transitions::QuadtreeUpdateCapability,
     utilities::QuadTreeFetch,
     GuiState,
@@ -45,6 +46,11 @@ impl GraspEditorWindow {
         }
 
         let pos: Vec2 = s.ui.io().mouse_pos.into();
+
+        let is_focused = GetWindowFocus(&self.document_mosaic)
+            .query()
+            .map(|index| index == self.window_tile.id)
+            .unwrap_or(false);
 
         let mouse_in_window = self.rect.contains(pos);
 
@@ -131,6 +137,7 @@ impl GraspEditorWindow {
             && !under_cursor.is_empty()
             && (s.ui.is_modkey_down(Key::LeftAlt) || s.ui.is_modkey_down(Key::RightAlt))
             && mouse_in_window
+            && is_focused
         {
             //
             let tile_under_mouse = under_cursor.fetch_tile(&self.document_mosaic);
@@ -138,7 +145,7 @@ impl GraspEditorWindow {
             caught_events.push(hash_input("start drag left"));
             self.trigger(DragToLink);
             //
-        } else if start_dragging_left && !under_cursor.is_empty() && mouse_in_window {
+        } else if start_dragging_left && !under_cursor.is_empty() && mouse_in_window && is_focused {
             //
             let tile_under_mouse = under_cursor.fetch_tile(&self.document_mosaic);
             if !self.editor_data.selected.contains(&tile_under_mouse) {
@@ -147,14 +154,14 @@ impl GraspEditorWindow {
             caught_events.push(hash_input("start drag left"));
             self.trigger(DragToMove);
             //
-        } else if start_dragging_left && under_cursor.is_empty() && mouse_in_window {
+        } else if start_dragging_left && under_cursor.is_empty() && mouse_in_window && is_focused {
             //
             self.editor_data.selected = vec![];
             self.editor_data.rect_start_pos = Some(self.editor_data.cursor);
             caught_events.push(hash_input("start drag left"));
             self.trigger(DragToSelect);
             //
-        } else if start_dragging_middle && mouse_in_window {
+        } else if start_dragging_middle && mouse_in_window && is_focused {
             //
             caught_events.push(hash_input("start drag middle"));
             self.trigger(DragToPan);

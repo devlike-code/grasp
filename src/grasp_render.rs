@@ -1,6 +1,6 @@
 use std::ops::Add;
 
-use crate::core::gui::windowing::get_texture;
+use crate::core::gui::windowing::{get_texture, gl_not_smooth, gl_smooth};
 use crate::core::math::bezier::gui_draw_bezier_arrow;
 use crate::editor_state_machine::EditorState;
 use crate::grasp_editor_window::GraspEditorWindow;
@@ -25,6 +25,22 @@ pub struct DefaultGraspRenderer;
 impl GraspRenderer for DefaultGraspRenderer {
     fn draw(&self, window: &GraspEditorWindow, s: &GuiState) {
         let mut painter = s.ui.get_window_draw_list();
+
+        let arrows = window.document_mosaic.get_all().include_component("Arrow");
+
+        for arrow in arrows {
+            let p1 = self.get_position_with_pan(window, Pos(&arrow.source()).query());
+            let p2 = self.get_position_with_pan(window, Pos(&arrow.target()).query());
+            let a: [f32; 2] = p1.into();
+            let b: [f32; 2] = p2.into();
+
+            gui_draw_bezier_arrow(
+                &mut painter,
+                [p1, p1.lerp(p2, 0.5), p2],
+                2.0,
+                ImColor32::WHITE,
+            );
+        }
 
         let tiles = window
             .document_mosaic
@@ -58,30 +74,6 @@ impl GraspRenderer for DefaultGraspRenderer {
                     painter.add_text([pos.x + 10.0, pos.y], ImColor32::WHITE, label);
                 }
             }
-        }
-
-        let arrows = window.document_mosaic.get_all().include_component("Arrow");
-
-        for arrow in arrows {
-            let p1 = self.get_position_with_pan(window, Pos(&arrow.source()).query());
-            let p2 = self.get_position_with_pan(window, Pos(&arrow.target()).query());
-            let a: [f32; 2] = p1.into();
-            let b: [f32; 2] = p2.into();
-            gui_draw_bezier_arrow(
-                &mut painter,
-                [p1, p1.lerp(p2, 0.5), p2],
-                2.0,
-                ImColor32::WHITE,
-            );
-            /*
-            draw_list: &mut DrawListMut<'a>,
-            points: [Vec2; 4],
-            thickness: f32,
-            color: ImColor32,
-            start_arrow: BezierArrowHead,
-            end_arrow: BezierArrowHead,
-            */
-            painter.add_line(a, b, ImColor32::WHITE).build();
         }
 
         match window.state {
