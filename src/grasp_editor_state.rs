@@ -24,7 +24,7 @@ use crate::{
     editor_state_machine::EditorState,
     grasp_editor_window::GraspEditorWindow,
     grasp_editor_window_list::{GetWindowFocus, GraspEditorWindowList},
-    grasp_render::DefaultGraspRenderer,
+    grasp_render,
     grasp_transitions::QuadtreeUpdateCapability,
     GuiState,
 };
@@ -93,10 +93,6 @@ impl GraspEditorState {
         mosaic.new_type("NewWindowRequestQueue: unit;").unwrap();
         mosaic
             .new_type("QuadtreeUpdateRequestQueue: unit;")
-            .unwrap();
-
-        mosaic
-            .new_type("NewObject_QuadtreeUpdateRequest: unit;")
             .unwrap();
         mosaic.new_type("FocusWindowRequest: unit;").unwrap();
         mosaic.new_type("QuadtreeUpdateRequest: unit;").unwrap();
@@ -172,7 +168,7 @@ impl GraspEditorState {
             state: EditorState::Idle,
             grid_visible: false,
             ruler_visible: false,
-            renderer: Box::new(DefaultGraspRenderer),
+            renderer: grasp_render::default_renderer_draw,
             left_drag_last_frame: false,
             middle_drag_last_frame: false,
             title_bar_drag: false,

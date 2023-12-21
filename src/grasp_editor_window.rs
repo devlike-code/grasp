@@ -17,6 +17,7 @@ use quadtree_rs::{
     Quadtree,
 };
 use std::collections::HashMap;
+use std::ops::Add;
 use std::rc::Weak;
 use std::sync::{Arc, Mutex};
 
@@ -31,7 +32,7 @@ pub struct GraspEditorWindow {
     pub ruler_visible: bool,
     pub grid_visible: bool,
     pub editor_data: GraspEditorData,
-    pub renderer: Box<dyn GraspRenderer>,
+    pub renderer: GraspRenderer,
     pub left_drag_last_frame: bool,
     pub middle_drag_last_frame: bool,
     pub title_bar_drag: bool,
@@ -47,6 +48,10 @@ impl PartialEq for GraspEditorWindow {
 }
 
 impl GraspEditorWindow {
+    pub fn get_position_with_pan(&self, position: Vec2) -> Vec2 {
+        position.add(self.editor_data.pan)
+    }
+
     pub fn show(&mut self, s: &GuiState, caught_events: &mut Vec<u64>) {
         let name = self.name.clone();
 
@@ -108,7 +113,7 @@ impl GraspEditorWindow {
                     }
                 }
 
-                self.renderer.draw(self, s);
+                (self.renderer)(self, s);
                 self.draw_debug(s);
                 self.update_context_menu(s);
             });

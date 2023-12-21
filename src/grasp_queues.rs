@@ -77,7 +77,7 @@ impl GraspEditorState {
                 queues::enqueue_direct(
                     window_queue,
                     self.document_mosaic
-                        .new_object("NewObject_QuadtreeUpdateRequest", void()),
+                        .new_object("QuadtreeUpdateRequest", void()),
                 )
             }
             request.iter().delete();

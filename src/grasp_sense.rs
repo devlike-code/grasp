@@ -38,12 +38,20 @@ impl GraspEditorWindow {
 
         self.document_mosaic.request_quadtree_update();
     }
+    pub fn under_cursor(&self) -> Vec<usize> {
+        let quadtree = self.quadtree.lock().unwrap();
 
+        quadtree
+            .query(self.build_cursor_area())
+            .map(|e| *e.value_ref())
+            .collect_vec()
+    }
     pub fn sense(&mut self, s: &GuiState, caught_events: &mut Vec<u64>) {
         if caught_events.contains(&hash_input("all")) {
             return;
         }
-
+        let under_cursor = self.under_cursor();
+        
         let pos: Vec2 = s.ui.io().mouse_pos.into();
 
         let mouse_in_window = self.rect.contains(pos);
@@ -84,14 +92,6 @@ impl GraspEditorWindow {
             self.delete_tiles(&self.editor_data.selected);
             self.document_mosaic.request_quadtree_update();
         }
-
-        let under_cursor = {
-            let quadtree = self.quadtree.lock().unwrap();
-            quadtree
-                .query(self.build_cursor_area())
-                .map(|e| *e.value_ref())
-                .collect_vec()
-        };
 
         if double_clicked_left && under_cursor.is_empty() && mouse_in_window {
             //
