@@ -269,14 +269,6 @@ impl GraspEditorWindow {
                         }
                     }
                 }
-                // let qb = QuadraticBezierShape::from_points_stroke(
-                //     [start_pos, selected_pos, end_pos],
-                //     false,
-                //     Color32::TRANSPARENT,
-                //     Stroke::new(1.0, Color32::LIGHT_BLUE),
-                // );
-
-                // let bezier_rects = Self::generate_rects_for_bezier(qb);
             }
         }
     }

@@ -39,6 +39,30 @@ pub fn gui_bezier_tangent(p0: Vec2, p1: Vec2, p2: Vec2, p3: Vec2, t: f32) -> Vec
     }
 }
 
+pub fn gui_draw_bezier_arrow(
+    draw_list: &mut DrawListMut<'_>,
+    points: [Vec2; 3],
+    thickness: f32,
+    color: ImColor32,
+) {
+    gui_draw_bezier_with_arrows(
+        draw_list,
+        [points[0], points[1], points[1], points[2]],
+        thickness,
+        color,
+        BezierArrowHead {
+            length: 0.0,
+            width: 0.0,
+            direction: None,
+        },
+        BezierArrowHead {
+            length: 5.0,
+            width: 5.0,
+            direction: None,
+        },
+    )
+}
+
 pub fn gui_draw_bezier_with_arrows(
     draw_list: &mut DrawListMut<'_>,
     points: [Vec2; 4],
@@ -66,7 +90,7 @@ pub fn gui_draw_bezier_with_arrows(
         if half_width > half_thickness {
             polyline.push((p0 + start_n * half_width).into());
         }
-        draw_list.add_polyline(polyline, color).build();
+        draw_list.add_polyline(polyline, color).filled(true).build();
     }
 
     if end_arrow.length > 0.0 {
@@ -87,7 +111,7 @@ pub fn gui_draw_bezier_with_arrows(
         if half_width > half_thickness {
             polyline.push((p3 - end_n * half_width).into());
         }
-        draw_list.add_polyline(polyline, color).build();
+        draw_list.add_polyline(polyline, color).filled(true).build();
     }
 
     let ps: Vec<[f32; 2]> = points.iter().map(|p| (*p).into()).collect_vec();

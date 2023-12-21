@@ -1,12 +1,14 @@
 use std::ops::Add;
 
-use crate::core::math::bezier::{gui_draw_bezier_with_arrows, BezierArrowHead};
+use crate::core::gui::windowing::get_texture;
+use crate::core::math::bezier::gui_draw_bezier_arrow;
 use crate::editor_state_machine::EditorState;
 use crate::grasp_editor_window::GraspEditorWindow;
 
 use crate::core::math::vec2::Vec2;
 use crate::utilities::{Label, Pos};
 use crate::GuiState;
+use imgui::sys::{ImVec2, ImVec4};
 use imgui::ImColor32;
 use mosaic::internals::MosaicIO;
 use mosaic::internals::TileFieldEmptyQuery;
@@ -39,7 +41,20 @@ impl GraspRenderer for DefaultGraspRenderer {
                     painter
                         .add_circle([pos.x, pos.y], 10.0, ImColor32::from_rgb(255, 0, 0))
                         .build();
-
+                    unsafe {
+                        imgui::sys::igSetCursorPos(ImVec2::new(
+                            pos.x - window.rect.x - 10.0,
+                            pos.y - window.rect.y - 10.0,
+                        ));
+                        imgui::sys::igImage(
+                            get_texture("dot") as *mut _,
+                            ImVec2::new(20.0, 20.0),
+                            ImVec2::new(0.0, 0.0),
+                            ImVec2::new(1.0, 1.0),
+                            ImVec4::new(1.0, 1.0, 1.0, 1.0),
+                            ImVec4::new(0.0, 0.0, 0.0, 0.0),
+                        );
+                    }
                     painter.add_text([pos.x + 10.0, pos.y], ImColor32::WHITE, label);
                 }
             }
@@ -52,21 +67,11 @@ impl GraspRenderer for DefaultGraspRenderer {
             let p2 = self.get_position_with_pan(window, Pos(&arrow.target()).query());
             let a: [f32; 2] = p1.into();
             let b: [f32; 2] = p2.into();
-            gui_draw_bezier_with_arrows(
+            gui_draw_bezier_arrow(
                 &mut painter,
-                [p1, p1.lerp(p2, 0.5), p1.lerp(p2, 0.5), p2],
+                [p1, p1.lerp(p2, 0.5), p2],
                 2.0,
                 ImColor32::WHITE,
-                BezierArrowHead {
-                    length: 5.0,
-                    width: 3.0,
-                    direction: None,
-                },
-                BezierArrowHead {
-                    length: 5.0,
-                    width: 3.0,
-                    direction: None,
-                },
             );
             /*
             draw_list: &mut DrawListMut<'a>,

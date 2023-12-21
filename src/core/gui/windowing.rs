@@ -1,10 +1,69 @@
-use std::{path::Path, time::Instant};
+use std::{
+    collections::HashMap,
+    ffi::CString,
+    fs::File,
+    io::{Cursor, Read},
+    path::Path,
+    sync::{Arc, Mutex},
+    time::Instant,
+};
 
+use gl::{types::GLuint, TEXTURE};
+use image::{codecs::png::PngDecoder, EncodableLayout, ImageDecoder};
 use imgui::{ConfigFlags, ImString, Ui, WindowFlags};
-use log::info;
-use sdl2::video::GLProfile;
+use lazy_static::lazy_static;
+use log::{error, info};
+
+use gl::types::GLvoid;
+use sdl2::{
+    image::LoadTexture,
+    render::{Texture, TextureCreator},
+    video::{GLProfile, Window},
+};
 
 use crate::{grasp_common::read_window_size, seq::SeqWriter};
+
+pub const LOAD_TEXTURE_EVENT: u32 = 10101;
+
+lazy_static! {
+    static ref TEXTURES: Arc<Mutex<HashMap<String, u32>>> =
+        Arc::new(Mutex::new(HashMap::default()));
+}
+
+pub fn get_texture(name: &str) -> u32 {
+    *TEXTURES.lock().unwrap().get(name).unwrap()
+}
+
+fn load_image(data: &Vec<u8>, width: i32, height: i32, depth: i32) -> u32 {
+    let mut texture_id: gl::types::GLuint = 0;
+    unsafe {
+        gl::GenTextures(1, &mut texture_id);
+        gl::BindTexture(gl::TEXTURE_2D, texture_id);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
+        gl::GenerateMipmap(gl::TEXTURE_2D);
+        info!("Loaded texture with size {}x{}x{}", width, height, depth);
+        let depth_channels = if depth == 3 {
+            gl::RGB as i32
+        } else {
+            gl::RGBA as i32
+        };
+        gl::TexImage2D(
+            gl::TEXTURE_2D,
+            0,
+            depth_channels,
+            width,
+            height,
+            0,
+            depth_channels as u32,
+            gl::UNSIGNED_BYTE,
+            data.as_ptr() as *const GLvoid,
+        );
+        gl::BindTexture(gl::TEXTURE_2D, 0);
+    }
+
+    texture_id
+}
 
 pub fn run_main_forever<F: FnMut(&Ui, &mut bool)>(mut update: F) {
     let writer = SeqWriter::new();
@@ -64,10 +123,26 @@ pub fn run_main_forever<F: FnMut(&Ui, &mut bool)>(mut update: F) {
     let renderer =
         imgui_opengl_renderer::Renderer::new(&mut imgui, |s| video.gl_get_proc_address(s) as _);
 
+    let canvas = window.into_canvas().build().unwrap();
+
     let mut event_pump = sdl_context.event_pump().unwrap();
 
     let mut last_frame = Instant::now();
     let mut should_quit = false;
+
+    let mut asset = File::open("assets//dot.png").unwrap();
+    let mut buffer: Vec<u8> = vec![];
+    asset.read_to_end(&mut buffer).unwrap();
+
+    match stb_image::image::load_from_memory(buffer.as_slice()) {
+        stb_image::image::LoadResult::ImageU8(i) => {
+            let texture = load_image(&i.data, i.width as i32, i.height as i32, i.depth as i32);
+            assert!(texture != 0);
+            TEXTURES.lock().unwrap().insert("dot".to_string(), texture);
+        }
+        stb_image::image::LoadResult::Error(err) => panic!("{:?}", err),
+        stb_image::image::LoadResult::ImageF32(_) => todo!(),
+    }
 
     'running: loop {
         use sdl2::event::Event;
@@ -101,7 +176,7 @@ pub fn run_main_forever<F: FnMut(&Ui, &mut bool)>(mut update: F) {
             }
         }
 
-        imgui_sdl2.prepare_frame(imgui.io_mut(), &window, &event_pump.mouse_state());
+        imgui_sdl2.prepare_frame(imgui.io_mut(), canvas.window(), &event_pump.mouse_state());
 
         let now = Instant::now();
         let delta = now - last_frame;
@@ -121,10 +196,11 @@ pub fn run_main_forever<F: FnMut(&Ui, &mut bool)>(mut update: F) {
             gl::Clear(gl::COLOR_BUFFER_BIT);
         }
 
-        imgui_sdl2.prepare_render(ui, &window);
+        imgui_sdl2.prepare_render(ui, canvas.window());
 
         renderer.render(&mut imgui);
-        window.gl_swap_window();
+
+        canvas.window().gl_swap_window();
 
         ::std::thread::sleep(::std::time::Duration::new(0, 1_000_000_000u32 / 60));
 

@@ -20,9 +20,10 @@ rfd = "0.12.1"
 reqwest = { version = "0.11.22", features = [ "blocking", "json" ] }
 iso8601-timestamp = "0.2.13"
 whoami = "1.4.1"
-
+lazy_static = "1.4.0"
+stb_image = "0.3.0"
 gl = "0.14.0"
-sdl2 = "0.36.0"
+sdl2 = { version = "0.36.0", features = [ "image" ] }
 
 imgui = { version = "0.11.0", features = [ "docking" ] }
 imgui-sdl2 = "0.15.3"
