@@ -70,7 +70,6 @@ impl GraspEditorState {
     }
 
     fn process_quadtree_queue(&mut self) {
-        //for all QuadtreeUpdateRequest requests we are directly passing this message request by enquing "EditorWindowQueue" queue.
         while let Some(request) = dequeue(QuadtreeUpdateRequestQueue, &self.document_mosaic) {
             let all_window_queues = self.iter_all_windows();
             for window_queue in all_window_queues {

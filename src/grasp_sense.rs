@@ -47,6 +47,7 @@ impl GraspEditorWindow {
 
         let pos: Vec2 = s.ui.io().mouse_pos.into();
 
+        let is_context = self.state == EditorState::ContextMenu;
         let is_focused = GetWindowFocus(&self.document_mosaic)
             .query()
             .map(|index| index == self.window_tile.id)
