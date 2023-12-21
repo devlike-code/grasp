@@ -1,6 +1,6 @@
 use std::ops::Add;
 
-use crate::core::gui::windowing::{get_texture, gl_not_smooth, gl_smooth};
+use crate::core::gui::windowing::gui_draw_image;
 use crate::core::math::bezier::gui_draw_bezier_arrow;
 use crate::editor_state_machine::EditorState;
 use crate::grasp_editor_window::GraspEditorWindow;
@@ -8,7 +8,6 @@ use crate::grasp_editor_window::GraspEditorWindow;
 use crate::core::math::vec2::Vec2;
 use crate::utilities::{Label, Pos};
 use crate::GuiState;
-use imgui::sys::{ImVec2, ImVec4};
 use imgui::ImColor32;
 use mosaic::internals::MosaicIO;
 use mosaic::internals::TileFieldEmptyQuery;
@@ -31,8 +30,6 @@ impl GraspRenderer for DefaultGraspRenderer {
         for arrow in arrows {
             let p1 = self.get_position_with_pan(window, Pos(&arrow.source()).query());
             let p2 = self.get_position_with_pan(window, Pos(&arrow.target()).query());
-            let a: [f32; 2] = p1.into();
-            let b: [f32; 2] = p2.into();
 
             gui_draw_bezier_arrow(
                 &mut painter,
@@ -57,20 +54,18 @@ impl GraspRenderer for DefaultGraspRenderer {
                     painter
                         .add_circle([pos.x, pos.y], 10.0, ImColor32::from_rgb(255, 0, 0))
                         .build();
-                    unsafe {
-                        imgui::sys::igSetCursorPos(ImVec2::new(
-                            pos.x - window.rect.x - 10.0,
-                            pos.y - window.rect.y - 10.0,
-                        ));
-                        imgui::sys::igImage(
-                            get_texture("dot") as *mut _,
-                            ImVec2::new(20.0, 20.0),
-                            ImVec2::new(0.0, 0.0),
-                            ImVec2::new(1.0, 1.0),
-                            ImVec4::new(1.0, 1.0, 1.0, 1.0),
-                            ImVec4::new(0.0, 0.0, 0.0, 0.0),
-                        );
-                    }
+
+                    let image = if window.editor_data.selected.contains(&tile) {
+                        "[dot]"
+                    } else {
+                        "dot"
+                    };
+
+                    gui_draw_image(
+                        image,
+                        [20.0, 20.0],
+                        [pos.x - window.rect.x, pos.y - window.rect.y],
+                    );
                     painter.add_text([pos.x + 10.0, pos.y], ImColor32::WHITE, label);
                 }
             }

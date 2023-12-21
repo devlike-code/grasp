@@ -1,4 +1,4 @@
-use crate::core::gui::windowing::{get_texture, set_window_focus};
+use crate::core::gui::windowing::set_window_focus;
 use crate::core::math::rect2::Rect2;
 use crate::core::math::vec2::Vec2;
 use crate::editor_state_machine::EditorState;
@@ -7,7 +7,7 @@ use crate::grasp_editor_window_list::{GetWindowFocus, GraspEditorWindowList, Set
 use crate::grasp_render::GraspRenderer;
 use crate::GuiState;
 use ::mosaic::internals::{EntityId, Mosaic, MosaicCRUD, MosaicIO, Tile, Value};
-use imgui::{ImColor32, Image, TextureId};
+use imgui::ImColor32;
 use mosaic::capabilities::{ArchetypeSubject, QueueCapability};
 use mosaic::internals::collage::Collage;
 use mosaic::internals::{par, void, MosaicTypelevelCRUD, TileFieldEmptyQuery};

@@ -57,6 +57,7 @@ impl GraspEditorWindowList {
         self.current_index
     }
 
+    #[allow(dead_code)]
     pub fn get_focused(&self) -> Option<&GraspEditorWindow> {
         self.depth_sorted_by_index
             .lock()
