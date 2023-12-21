@@ -49,10 +49,11 @@ fn default_renderer_draw_object(
     );
 
     let mut cancel: bool = false;
-
+   
+                      
     if window.state == EditorState::PropertyChanging {
         if let Some(selected) = window.editor_data.selected.first() {
-            if tile.id == selected.id {
+            if tile.id == selected.id {                
                 let cx = pos.x - window.rect.x + 10.0;
                 let cy = pos.y - window.rect.y;
                 gui_set_cursor_pos(cx, cy);
@@ -61,7 +62,7 @@ fn default_renderer_draw_object(
                 s.ui.set_keyboard_focus_here();
                 s.ui.set_next_item_width(100.0);
                 if s.ui
-                    .input_text("##", text)
+                    .input_text(format!("##{}-EditorLabel", tile.id), text)
                     .auto_select_all(true)
                     .enter_returns_true(true)
                     .build()
@@ -78,24 +79,21 @@ fn default_renderer_draw_object(
                             println!("new text should save {}", tile);
                             if let Some(mut label) = tile.clone().get_component("Label") {
                                 label.set("self", t);
+                            
                                 window.trigger(EndDrag);
                             }
                         } else {
-                            window.trigger(EndDrag);
                             cancel = true;
                         }
                     } else {
-                        window.trigger(EndDrag);
                         cancel = true;
                     }
                 }
             } else {
-                window.trigger(EndDrag);
                 cancel = true;
             }
         } else {
-            window.trigger(EndDrag);
-            cancel = true;
+           cancel = true;
         }
     } else {
         cancel = true;
