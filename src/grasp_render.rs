@@ -31,16 +31,13 @@ fn default_renderer_draw_object(
     painter: &DrawListMut<'_>,
     s: &GuiState,
 ) {
-    let pos = window.get_position_with_pan(Pos(&tile).query());
+    let pos = window.get_position_with_pan(Pos(tile).query());
     painter
         .add_circle([pos.x, pos.y], 10.0, ImColor32::from_rgb(255, 0, 0))
         .build();
 
-    let image = if window.editor_data.selected.contains(&tile) {
-        "[dot]"
-    } else {
-        "dot"
-    };
+    let is_selected = window.editor_data.selected.contains(tile);
+    let image = if is_selected { "[dot]" } else { "dot" };
 
     gui_draw_image(
         image,
@@ -48,7 +45,8 @@ fn default_renderer_draw_object(
         [pos.x - window.rect.x, pos.y - window.rect.y],
     );
 
-    let mut cancel: bool = false;
+    let mut cancel: bool = true;
+    let mut trigger_end_drag = true;
 
     if window.state == EditorState::PropertyChanging {
         if let Some(selected) = window.editor_data.selected.first() {
@@ -72,33 +70,27 @@ fn default_renderer_draw_object(
                     }
 
                     if let Ok(t) = text.parse::<String>() {
-                        println!("text parsed should save");
-
                         if window.editor_data.previous_text != *text {
-                            println!("new text should save {}", tile);
                             if let Some(mut label) = tile.clone().get_component("Label") {
                                 label.set("self", t);
-                                window.trigger(EndDrag);
+                            } else {
+                                cancel = false;
+                                trigger_end_drag = false;
                             }
-                        } else {
-                            window.trigger(EndDrag);
-                            cancel = true;
                         }
-                    } else {
-                        window.trigger(EndDrag);
-                        cancel = true;
                     }
+                } else {
+                    cancel = false;
+                    trigger_end_drag = false;
                 }
-            } else {
-                window.trigger(EndDrag);
-                cancel = true;
             }
-        } else {
-            window.trigger(EndDrag);
-            cancel = true;
         }
     } else {
-        cancel = true;
+        trigger_end_drag = false;
+    }
+
+    if trigger_end_drag {
+        window.trigger(EndDrag);
     }
 
     if cancel {
