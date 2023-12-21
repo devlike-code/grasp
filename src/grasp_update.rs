@@ -17,23 +17,7 @@ impl GraspEditorWindow {
         }
 
         match &self.state {
-            EditorState::Idle => {
-                // if ui.input(|i| i.key_released(Key::Space)) {
-                //     if let Some(queue) = self
-                //         .document_mosaic
-                //         .get_all()
-                //         .include_component("NewWindowRequestQueue")
-                //         .get_targets()
-                //         .next()
-                //     {
-                //         self.document_mosaic.enqueue(
-                //             &queue,
-                //             &take_objects(all_tiles()).to_tiles(&self.document_mosaic),
-                //         );
-                //     }
-                // }
-            }
-
+            EditorState::Idle => {}
             EditorState::Move => {
                 self.update_selected_positions_by(self.editor_data.cursor_delta);
             }

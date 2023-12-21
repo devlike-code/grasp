@@ -56,8 +56,8 @@ pub fn gui_draw_bezier_arrow(
             direction: None,
         },
         BezierArrowHead {
-            length: 5.0,
-            width: 5.0,
+            length: 10.0,
+            width: 10.0,
             direction: None,
         },
     )

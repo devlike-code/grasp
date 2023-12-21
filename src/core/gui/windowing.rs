@@ -1,25 +1,21 @@
 use std::{
     collections::HashMap,
-    ffi::CString,
     fs::File,
-    io::{Cursor, Read},
+    io::Read,
     path::Path,
     sync::{Arc, Mutex},
     time::Instant,
 };
 
-use gl::{types::GLuint, TEXTURE};
-use image::{codecs::png::PngDecoder, EncodableLayout, ImageDecoder};
-use imgui::{ConfigFlags, ImString, Ui, WindowFlags};
+use imgui::{
+    sys::{ImVec2, ImVec4},
+    ConfigFlags, ImString, Ui, WindowFlags,
+};
 use lazy_static::lazy_static;
-use log::{error, info};
+use log::info;
 
 use gl::types::GLvoid;
-use sdl2::{
-    image::LoadTexture,
-    render::{Texture, TextureCreator},
-    video::{GLProfile, Window},
-};
+use sdl2::video::GLProfile;
 
 use crate::{grasp_common::read_window_size, seq::SeqWriter};
 
@@ -63,6 +59,51 @@ fn load_image(data: &Vec<u8>, width: i32, height: i32, depth: i32) -> u32 {
     }
 
     texture_id
+}
+
+pub fn gl_smooth() {
+    unsafe {
+        gl::Enable(gl::POLYGON_SMOOTH);
+        gl::Hint(gl::POLYGON_SMOOTH_HINT, gl::NICEST);
+        gl::Enable(gl::BLEND);
+        gl::BlendFunc(gl::ONE, gl::SRC_ALPHA_SATURATE);
+    }
+}
+
+pub fn gl_not_smooth() {
+    unsafe {
+        gl::Disable(gl::POLYGON_SMOOTH);
+    }
+}
+
+pub fn load_image_asset(name: &str, asset: &str) {
+    let mut asset = File::open(asset).unwrap();
+    let mut buffer: Vec<u8> = vec![];
+    asset.read_to_end(&mut buffer).unwrap();
+
+    match stb_image::image::load_from_memory(buffer.as_slice()) {
+        stb_image::image::LoadResult::ImageU8(i) => {
+            let texture = load_image(&i.data, i.width as i32, i.height as i32, i.depth as i32);
+            assert!(texture != 0);
+            TEXTURES.lock().unwrap().insert(name.to_string(), texture);
+        }
+        stb_image::image::LoadResult::Error(err) => panic!("{:?}", err),
+        stb_image::image::LoadResult::ImageF32(_) => todo!(),
+    }
+}
+
+pub fn gui_draw_image(name: &str, size: [f32; 2], pos: [f32; 2]) {
+    unsafe {
+        imgui::sys::igSetCursorPos(ImVec2::new(pos[0] - size[0] / 2.0, pos[1] - size[1] / 2.0));
+        imgui::sys::igImage(
+            get_texture(name) as *mut _,
+            ImVec2::new(size[0], size[1]),
+            ImVec2::new(0.0, 0.0),
+            ImVec2::new(1.0, 1.0),
+            ImVec4::new(1.0, 1.0, 1.0, 1.0),
+            ImVec4::new(0.0, 0.0, 0.0, 0.0),
+        );
+    }
 }
 
 pub fn run_main_forever<F: FnMut(&Ui, &mut bool)>(mut update: F) {
@@ -130,19 +171,8 @@ pub fn run_main_forever<F: FnMut(&Ui, &mut bool)>(mut update: F) {
     let mut last_frame = Instant::now();
     let mut should_quit = false;
 
-    let mut asset = File::open("assets//dot.png").unwrap();
-    let mut buffer: Vec<u8> = vec![];
-    asset.read_to_end(&mut buffer).unwrap();
-
-    match stb_image::image::load_from_memory(buffer.as_slice()) {
-        stb_image::image::LoadResult::ImageU8(i) => {
-            let texture = load_image(&i.data, i.width as i32, i.height as i32, i.depth as i32);
-            assert!(texture != 0);
-            TEXTURES.lock().unwrap().insert("dot".to_string(), texture);
-        }
-        stb_image::image::LoadResult::Error(err) => panic!("{:?}", err),
-        stb_image::image::LoadResult::ImageF32(_) => todo!(),
-    }
+    load_image_asset("dot", "assets//dot.png");
+    load_image_asset("[dot]", "assets//selected-dot.png");
 
     'running: loop {
         use sdl2::event::Event;

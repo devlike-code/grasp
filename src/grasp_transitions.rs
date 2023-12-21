@@ -55,6 +55,7 @@ impl StateMachine for GraspEditorWindow {
 
             (_, EditorStateTrigger::MouseDownOverNode) => None,
             (_, EditorStateTrigger::ClickToSelect) => Some(EditorState::Idle),
+            (EditorState::ContextMenu, EditorStateTrigger::ClickToDeselect) => None,
             (_, EditorStateTrigger::ClickToDeselect) => {
                 self.editor_data.selected.clear();
                 Some(EditorState::Idle)
@@ -73,10 +74,7 @@ impl StateMachine for GraspEditorWindow {
             }
             (_, EditorStateTrigger::DragToMove) => Some(EditorState::Move),
             (_, EditorStateTrigger::ClickToContextMenu) => Some(EditorState::ContextMenu),
-            (EditorState::ContextMenu, _) => {
-                //self.response = None;
-                self.on_transition(EditorState::Idle, trigger)
-            }
+            (EditorState::ContextMenu, _) => self.on_transition(EditorState::Idle, trigger),
             (EditorState::Idle, EditorStateTrigger::DragToSelect) => {
                 self.editor_data.rect_delta = Some(Default::default());
                 self.editor_data.rect_start_pos = Some(self.editor_data.cursor);
@@ -225,7 +223,7 @@ impl GraspEditorWindow {
         }
     }
 
-    //TO-DO! --- Decide if we need selection and implement it, instead of re-creating everything every time it's called
+    //TODO:  --- Decide if we need selection and implement it, instead of re-creating everything every time it's called
     //       --- If and when its impelmented pay atention to those not connected but stil updated because of connecting arrows
     pub fn update_quadtree(&mut self, _selection: Option<Vec<Tile>>) {
         let selected = self

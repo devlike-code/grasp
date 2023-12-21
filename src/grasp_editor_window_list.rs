@@ -57,6 +57,23 @@ impl GraspEditorWindowList {
         self.current_index
     }
 
+    #[allow(dead_code)]
+    pub fn get_focused(&self) -> Option<&GraspEditorWindow> {
+        self.depth_sorted_by_index
+            .lock()
+            .unwrap()
+            .front()
+            .and_then(|index| self.windows.get(*index))
+    }
+
+    pub fn get_focused_mut(&mut self) -> Option<&mut GraspEditorWindow> {
+        self.depth_sorted_by_index
+            .lock()
+            .unwrap()
+            .front()
+            .and_then(|index| self.windows.get_mut(*index))
+    }
+
     pub fn get_position(&mut self, focused_index: Option<usize>) -> Option<&mut GraspEditorWindow> {
         focused_index.and_then(|focused_index| {
             self.windows

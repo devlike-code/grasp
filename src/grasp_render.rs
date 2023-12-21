@@ -1,6 +1,6 @@
 use std::ops::Add;
 
-use crate::core::gui::windowing::get_texture;
+use crate::core::gui::windowing::gui_draw_image;
 use crate::core::math::bezier::gui_draw_bezier_arrow;
 use crate::editor_state_machine::EditorState;
 use crate::editor_state_machine::EditorStateTrigger::*;
@@ -11,7 +11,6 @@ use crate::core::math::vec2::Vec2;
 use crate::grasp_transitions::QuadtreeUpdateCapability;
 use crate::utilities::{Label, Pos};
 use crate::GuiState;
-use imgui::sys::{ImVec2, ImVec4};
 use imgui::{ImColor32, InputText};
 use mosaic::capabilities::ArchetypeSubject;
 use mosaic::internals::TileFieldEmptyQuery;
@@ -41,85 +40,26 @@ pub fn default_renderer_draw(window: &mut GraspEditorWindow, s: &GuiState) {
             if tile.is_object() {
                 let pos = window.get_position_with_pan(Pos(&tile).query());
 
-                painter
-                    .add_circle([pos.x, pos.y], 10.0, ImColor32::from_rgb(255, 0, 0))
-                    .build();
+                    painter
+                        .add_circle([pos.x, pos.y], 10.0, ImColor32::from_rgb(255, 0, 0))
+                        .build();
 
-                let cx = pos.x - window.rect.x - 10.0;
-                let cy = pos.y - window.rect.y - 10.0;
-                gui_set_cursor_pos(cx, cy);
-
-                unsafe {
-                    imgui::sys::igImage(
-                        get_texture("dot") as *mut _,
-                        ImVec2::new(20.0, 20.0),
-                        ImVec2::new(0.0, 0.0),
-                        ImVec2::new(1.0, 1.0),
-                        ImVec4::new(1.0, 1.0, 1.0, 1.0),
-                        ImVec4::new(0.0, 0.0, 0.0, 0.0),
-                    );
-                }
-                let mut cancel: bool = false;
-
-                if window.state == EditorState::PropertyChanging {
-                    if let Some(selected) = window.editor_data.selected.first() {
-                        if tile.id == selected.id {
-                            let cx = pos.x - window.rect.x + 10.0;
-                            let cy = pos.y - window.rect.y;
-                            gui_set_cursor_pos(cx, cy);
-                            let mut text = &mut window.editor_data.text;
-
-                            s.ui.set_keyboard_focus_here();
-                            s.ui.set_next_item_width(100.0);
-                            if s.ui
-                                .input_text("##", &mut text)
-                                .auto_select_all(true)
-                                .enter_returns_true(true)
-                                .build()
-                            {
-                                println!("enter pressed should save");
-                                if text.len() >= 32 {
-                                    *text = text[0..32].to_string();
-                                }
-
-                                if let Ok(t) = text.parse::<String>() {
-                                    println!("text parsed should save");
-
-                                    if window.editor_data.previous_text != *text {
-                                        println!("new text should save {}", tile);
-                                        if let Some(mut label) = tile.clone().get_component("Label")
-                                        {
-                                            label.set("self", t);
-                                            window.trigger(EndDrag);
-                                        }
-                                    } else {
-                                        window.trigger(EndDrag);
-                                        cancel = true;
-                                    }
-                                } else {
-                                    window.trigger(EndDrag);
-                                    cancel = true;
-                                }
-                            }
-                        } else {
-                            window.trigger(EndDrag);
-                            cancel = true;
-                        }
+                    let image = if window.editor_data.selected.contains(&tile) {
+                        "[dot]"
                     } else {
-                        window.trigger(EndDrag);
-                        cancel = true;
-                    }
-                } else {
-                    cancel = true;
-                }
+                        "dot"
+                    };
 
-                if cancel {
-                    let label = Label(&tile).query();
+                    gui_draw_image(
+                        image,
+                        [20.0, 20.0],
+                        [pos.x - window.rect.x, pos.y - window.rect.y],
+                    );
                     painter.add_text([pos.x + 10.0, pos.y], ImColor32::WHITE, label);
                 }
             }
         }
-    }
+    
 
     let arrows = window.document_mosaic.get_all().include_component("Arrow");
 
