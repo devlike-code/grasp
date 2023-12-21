@@ -66,7 +66,6 @@ fn default_renderer_draw_object(
                     .enter_returns_true(true)
                     .build()
                 {
-                    println!("enter pressed should save");
                     if text.len() >= 32 {
                         *text = text[0..32].to_string();
                     }
