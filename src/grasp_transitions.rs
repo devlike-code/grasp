@@ -74,7 +74,7 @@ impl StateMachine for GraspEditorWindow {
             }
             (_, EditorStateTrigger::DragToMove) => Some(EditorState::Move),
             (_, EditorStateTrigger::ClickToContextMenu) => Some(EditorState::ContextMenu),
-            (EditorState::ContextMenu, _) => self.on_transition(EditorState::Idle, trigger),
+            (EditorState::ContextMenu, _) => Some(EditorState::Idle),
             (EditorState::Idle, EditorStateTrigger::DragToSelect) => {
                 self.editor_data.rect_delta = Some(Default::default());
                 self.editor_data.rect_start_pos = Some(self.editor_data.cursor);

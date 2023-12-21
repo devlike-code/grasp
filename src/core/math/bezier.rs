@@ -99,17 +99,16 @@ pub fn gui_draw_bezier_with_arrows(
 
         let end_n = Vec2::new(-end_dir.y, end_dir.x);
         let half_width = end_arrow.width * 0.5;
-        // const auto tip = curve.P3 + end_dir * endArrowSize;
-        let tip = points[3] + end_dir * end_arrow.length;
+        let tip = points[3] - 1.0 * end_dir * end_arrow.length;
 
         let mut polyline: Vec<[f32; 2]> = vec![];
         let p3: Vec2 = points[3];
         if half_width > half_thickness {
-            polyline.push((p3 + end_n * half_width).into());
+            polyline.push((p3 - 2.0 * end_dir * end_arrow.length + end_n * half_width).into());
         }
         polyline.push(tip.into());
         if half_width > half_thickness {
-            polyline.push((p3 - end_n * half_width).into());
+            polyline.push((p3 - 2.0 * end_dir * end_arrow.length - end_n * half_width).into());
         }
         draw_list.add_polyline(polyline, color).filled(true).build();
     }
