@@ -123,7 +123,7 @@ impl GraspEditorWindow {
                 self.trigger(DblClickToRename);
             }
             //
-        } else if clicked_left && under_cursor.is_empty() && mouse_in_window {
+        } else if clicked_left && under_cursor.is_empty() && mouse_in_window && !is_context {
             //
             caught_events.push(hash_input("click left"));
             self.trigger(ClickToDeselect);
