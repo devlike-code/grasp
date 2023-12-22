@@ -85,6 +85,7 @@ impl GraspEditorState {
         mosaic.new_type("Arrow: unit;").unwrap();
         mosaic.new_type("Label: s32;").unwrap();
         mosaic.new_type("Position: { x: f32, y: f32 };").unwrap();
+        mosaic.new_type("Offset: { x: f32, y: f32 };").unwrap();
         mosaic.new_type("Selection: unit;").unwrap();
         mosaic.new_type("EditorState: unit;").unwrap();
         mosaic.new_type("EditorStateFocusedWindow: u64;").unwrap();

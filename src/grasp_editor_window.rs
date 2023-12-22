@@ -215,7 +215,7 @@ impl GraspEditorWindow {
         source: &Tile,
         target: &Tile,
         middle_pos: Vec2,
-        bezier_rects: Vec<Rect2>,
+        //bezier_rects: Vec<Rect2>,
     ) {
         let arr = self
             .document_mosaic
@@ -227,6 +227,11 @@ impl GraspEditorWindow {
                 ("x".into(), Value::F32(middle_pos.x)),
                 ("y".into(), Value::F32(middle_pos.y)),
             ],
+        );
+
+        arr.add_component(
+            "Offset",
+            vec![("x".into(), Value::F32(0.0)), ("y".into(), Value::F32(0.0))],
         );
         arr.add_component("Label", par("<Label>"));
 
@@ -244,16 +249,16 @@ impl GraspEditorWindow {
             }
         }
 
-        for r in bezier_rects {
-            let region = self.build_rect_area(r);
-            let mut quadtree = self.quadtree.lock().unwrap();
-            if let Some(area_id) = quadtree.insert(region, arr.id) {
-                let mut object_to_area = self.object_to_area.lock().unwrap();
-                if let Some(areas_vec) = object_to_area.get_mut(&arr.id) {
-                    areas_vec.push(area_id);
-                    //self.object_to_area.insert(arr.id, areas_vec.to_owned());
-                }
-            }
-        }
+        // for r in bezier_rects {
+        //     let region = self.build_rect_area(r);
+        //     let mut quadtree = self.quadtree.lock().unwrap();
+        //     if let Some(area_id) = quadtree.insert(region, arr.id) {
+        //         let mut object_to_area = self.object_to_area.lock().unwrap();
+        //         if let Some(areas_vec) = object_to_area.get_mut(&arr.id) {
+        //             areas_vec.push(area_id);
+        //             //self.object_to_area.insert(arr.id, areas_vec.to_owned());
+        //         }
+        //     }
+        // }
     }
 }

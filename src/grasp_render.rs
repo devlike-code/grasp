@@ -1,10 +1,13 @@
 use crate::core::gui::windowing::gui_draw_image;
 use crate::core::math::bezier::gui_draw_bezier_arrow;
+use crate::core::math::Vec2;
 use crate::editor_state_machine::EditorState;
 use crate::editor_state_machine::EditorStateTrigger::*;
 use crate::editor_state_machine::StateMachine;
 use crate::grasp_editor_window::GraspEditorWindow;
 
+use crate::grasp_transitions::query_position_recursive;
+use crate::utilities::Offset;
 use crate::utilities::{Label, Pos};
 use crate::GuiState;
 use imgui::sys::ImVec2;
@@ -27,11 +30,11 @@ fn gui_set_cursor_pos(x: f32, y: f32) {
 
 fn default_renderer_draw_object(
     tile: &Tile,
+    pos: Vec2,
     window: &mut GraspEditorWindow,
     painter: &DrawListMut<'_>,
     s: &GuiState,
 ) {
-    let pos = window.get_position_with_pan(Pos(tile).query());
     painter
         .add_circle([pos.x, pos.y], 10.0, ImColor32::from_rgb(255, 0, 0))
         .build();
@@ -106,15 +109,13 @@ pub fn default_renderer_draw(window: &mut GraspEditorWindow, s: &GuiState) {
     let arrows = window.document_mosaic.get_all().include_component("Arrow");
 
     for arrow in arrows {
-        let p1 = window.get_position_with_pan(Pos(&arrow.source()).query());
-        let p2 = window.get_position_with_pan(Pos(&arrow.target()).query());
+        let p1 = window.get_position_with_pan(query_position_recursive(&arrow.source()));
+        let p2 = window.get_position_with_pan(query_position_recursive(&arrow.target()));
+        let offset = window.get_position_with_pan(Offset(&arrow).query());
 
-        gui_draw_bezier_arrow(
-            &mut painter,
-            [p1, p1.lerp(p2, 0.5), p2],
-            2.0,
-            ImColor32::WHITE,
-        );
+        let mid = p1.lerp(p2, 0.5) + offset;
+        gui_draw_bezier_arrow(&mut painter, [p1, mid, p2], 2.0, ImColor32::WHITE);
+        default_renderer_draw_object(&arrow, mid, window, &painter, s);
     }
 
     let tiles = window
@@ -126,7 +127,8 @@ pub fn default_renderer_draw(window: &mut GraspEditorWindow, s: &GuiState) {
     if tiles.len() > 0 {
         for tile in tiles {
             if tile.is_object() {
-                default_renderer_draw_object(&tile, window, &painter, s);
+                let pos = window.get_position_with_pan(query_position_recursive(&tile));
+                default_renderer_draw_object(&tile, pos, window, &painter, s);
             }
         }
     }
@@ -135,7 +137,9 @@ pub fn default_renderer_draw(window: &mut GraspEditorWindow, s: &GuiState) {
         EditorState::Link => {
             let a: [f32; 2] = window.editor_data.link_start_pos.unwrap().into();
             let pos: [f32; 2] = if let Some(b) = window.editor_data.link_end.as_ref() {
-                window.get_position_with_pan(Pos(b).query()).into()
+                window
+                    .get_position_with_pan(query_position_recursive(b))
+                    .into()
             } else {
                 s.ui.io().mouse_pos
             };

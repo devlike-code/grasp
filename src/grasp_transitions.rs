@@ -20,7 +20,7 @@ use crate::{
     grasp_editor_window::GraspEditorWindow,
     grasp_editor_window_list::get_pos_from_tile,
     grasp_queues::QuadtreeUpdateRequestQueue,
-    utilities::Pos,
+    utilities::{Offset, Pos},
 };
 
 pub trait QuadtreeUpdateCapability {
@@ -65,11 +65,10 @@ impl StateMachine for GraspEditorWindow {
                 Some(EditorState::Pan)
             }
             (_, EditorStateTrigger::DragToLink) => {
-                if let Some(position_from_tile) =
-                    get_pos_from_tile(self.editor_data.selected.first().unwrap())
-                {
-                    self.editor_data.link_start_pos = Some(self.pos_with_pan(position_from_tile));
-                }
+                let position_from_tile =
+                    query_position_recursive(self.editor_data.selected.first().unwrap());
+                self.editor_data.link_start_pos = Some(self.pos_with_pan(position_from_tile));
+
                 Some(EditorState::Link)
             }
             (_, EditorStateTrigger::DragToMove) => Some(EditorState::Move),
@@ -99,17 +98,14 @@ impl StateMachine for GraspEditorWindow {
                     }
 
                     let mid_pos = src_pos.lerp(tgt_pos, 0.5);
-                    // Calculate the angle and radius for the new control point
-                    let _angle: f32 = 45.0; // Adjust the angle as needed
-                    let _radius: f32 = 50.0; // Adjust the radius as needed
 
-                    let bez = (1..=9)
-                        .map(|i| src_pos.lerp(tgt_pos, i as f32 / 10.0))
-                        .map(|p| {
-                            Rect2::from_two_pos(p - Vec2::new(5.0, 5.0), p + Vec2::new(5.0, 5.0))
-                        });
+                    // let bez = (1..=9)
+                    //     .map(|i| src_pos.lerp(tgt_pos, i as f32 / 10.0))
+                    //     .map(|p| {
+                    //         Rect2::from_two_pos(p - Vec2::new(5.0, 5.0), p + Vec2::new(5.0, 5.0))
+                    //     });
 
-                    self.create_new_arrow(&start, &tile, mid_pos, bez.collect_vec());
+                    self.create_new_arrow(&start, &tile, mid_pos); //, bez.collect_vec());
                 }
                 self.editor_data.selected.clear();
                 self.editor_data.link_start_pos = None;
@@ -215,7 +211,13 @@ impl GraspEditorWindow {
 
     pub fn update_selected_positions_by(&mut self, dp: Vec2) {
         for tile in &mut self.editor_data.selected {
-            let mut selected_pos_component = tile.get_component("Position").unwrap();
+            let is_tile_an_object = tile.is_object();
+            let component_name = if is_tile_an_object {
+                "Position"
+            } else {
+                "Offset"
+            };
+            let mut selected_pos_component = tile.get_component(component_name).unwrap();
             if let (Value::F32(x), Value::F32(y)) = selected_pos_component.get_by(("x", "y")) {
                 selected_pos_component.set("x", x + dp.x);
                 selected_pos_component.set("y", y + dp.y);
@@ -223,8 +225,6 @@ impl GraspEditorWindow {
         }
     }
 
-    //TODO:  --- Decide if we need selection and implement it, instead of re-creating everything every time it's called
-    //       --- If and when its impelmented pay atention to those not connected but stil updated because of connecting arrows
     pub fn update_quadtree(&mut self, _selection: Option<Vec<Tile>>) {
         let selected = self
             .document_mosaic
@@ -248,26 +248,34 @@ impl GraspEditorWindow {
                         .insert(tile.id, vec![area_id]);
                 }
             } else if tile.is_arrow() {
-                let start_pos = Pos(&tile.source()).query();
-                let end_pos = Pos(&tile.target()).query();
+                let start_pos = query_position_recursive(&tile.source());
+                let end_pos = query_position_recursive(&tile.target());
+                let mid = start_pos.lerp(end_pos, 0.5);
+                let offset = Offset(tile).query();
+                let region = self.build_circle_area(mid + offset, 12);
 
-                let bez = (1..=9)
-                    .map(|i| start_pos.lerp(end_pos, i as f32 / 10.0))
-                    .map(|p| Rect2::from_two_pos(p - Vec2::new(5.0, 5.0), p + Vec2::new(5.0, 5.0)));
-
-                for r in bez {
-                    let region = self.build_rect_area(r);
-                    let mut quadtree = self.quadtree.lock().unwrap();
-                    if let Some(area_id) = quadtree.insert(region, tile.id) {
-                        let mut object_to_area = self.object_to_area.lock().unwrap();
-                        if let Some(areas_vec) = object_to_area.get_mut(&tile.id) {
-                            areas_vec.push(area_id);
-                        } else {
-                            object_to_area.insert(tile.id, vec![area_id]);
-                        }
+                let mut quadtree = self.quadtree.lock().unwrap();
+                if let Some(area_id) = quadtree.insert(region, tile.id) {
+                    let mut object_to_area = self.object_to_area.lock().unwrap();
+                    if let Some(areas_vec) = object_to_area.get_mut(&tile.id) {
+                        areas_vec.push(area_id);
+                    } else {
+                        object_to_area.insert(tile.id, vec![area_id]);
                     }
                 }
             }
         }
+    }
+}
+
+pub fn query_position_recursive(tile: &Tile) -> Vec2 {
+    let pos = Pos(tile).query();
+    let offset = Offset(tile).query();
+    if tile.is_arrow() {
+        let src = query_position_recursive(&tile.source());
+        let tgt = query_position_recursive(&tile.target());
+        src.lerp(tgt, 0.5) + offset
+    } else {
+        pos
     }
 }

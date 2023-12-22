@@ -39,15 +39,43 @@ pub fn gui_bezier_tangent(p0: Vec2, p1: Vec2, p2: Vec2, p3: Vec2, t: f32) -> Vec
     }
 }
 
+// don't know what i'm doing wrong here: https://pomax.github.io/bezierinfo/#abc
+fn gui_bezier_control_point(p0: Vec2, pm: Vec2, p2: Vec2) -> Vec2 {
+    let c = p0.lerp(p2, 0.5);
+    let b = pm;
+
+    let d1 = (p0 - b).len();
+    let d2 = (p2 - b).len();
+
+    let t = d1 / (d1 + d2);
+    let ts = t * t;
+    let to = (1.0 - t) * (1.0 - t);
+
+    let ratio = ((ts + to - 1.0) / (ts + to)).abs();
+
+    b - (c - b) * (1.0 / ratio)
+
+    // let adjustment = Vec2::new(
+    //     (p0.x - 2.0 * pm.x + p2.x) / 4.0,
+    //     (p0.y - 2.0 * pm.y + p2.y) / 4.0,
+    // );
+
+    // Vec2::new(pm.x + adjustment.x, pm.y + adjustment.y)
+    // let m1 = (p0 + pm) * 0.5;
+    // let m2 = (pm + p2) * 0.5;
+    // (m1 + m2) * 0.5
+}
+
 pub fn gui_draw_bezier_arrow(
     draw_list: &mut DrawListMut<'_>,
     points: [Vec2; 3],
     thickness: f32,
     color: ImColor32,
 ) {
+    let ctrlp = gui_bezier_control_point(points[0], points[1], points[2]);
     gui_draw_bezier_with_arrows(
         draw_list,
-        [points[0], points[1], points[1], points[2]],
+        [points[0], ctrlp, ctrlp, points[2]],
         thickness,
         color,
         BezierArrowHead {
@@ -60,7 +88,11 @@ pub fn gui_draw_bezier_arrow(
             width: 10.0,
             direction: None,
         },
-    )
+    );
+
+    draw_list
+        .add_circle([ctrlp.x, ctrlp.y], 5.0, ImColor32::WHITE)
+        .build();
 }
 
 pub fn gui_draw_bezier_with_arrows(
