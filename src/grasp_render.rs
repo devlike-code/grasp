@@ -42,11 +42,11 @@ fn default_renderer_draw_object(
     let is_selected = window.editor_data.selected.contains(tile);
     let image = if is_selected { "[dot]" } else { "dot" };
 
-    gui_draw_image(
-        image,
-        [20.0, 20.0],
-        [pos.x - window.rect.x, pos.y - window.rect.y],
-    );
+    // gui_draw_image(
+    //     image,
+    //     [20.0, 20.0],
+    //     [pos.x - window.rect.x, pos.y - window.rect.y],
+    // );
 
     let mut cancel: bool = true;
     let mut trigger_end_drag = true;
@@ -111,7 +111,7 @@ pub fn default_renderer_draw(window: &mut GraspEditorWindow, s: &GuiState) {
     for arrow in arrows {
         let p1 = window.get_position_with_pan(query_position_recursive(&arrow.source()));
         let p2 = window.get_position_with_pan(query_position_recursive(&arrow.target()));
-        let offset = window.get_position_with_pan(Offset(&arrow).query());
+        let offset = Offset(&arrow).query();
 
         let mid = p1.lerp(p2, 0.5) + offset;
         gui_draw_bezier_arrow(&mut painter, [p1, mid, p2], 2.0, ImColor32::WHITE);

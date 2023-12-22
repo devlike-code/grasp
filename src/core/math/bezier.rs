@@ -1,5 +1,9 @@
-use imgui::{DrawListMut, ImColor32};
+use imgui::{
+    sys::{igImBezierQuadraticCalc, ImVec2},
+    DrawListMut, ImColor32,
+};
 use itertools::Itertools;
+use quadtree_rs::point;
 
 use super::Vec2;
 
@@ -39,31 +43,23 @@ pub fn gui_bezier_tangent(p0: Vec2, p1: Vec2, p2: Vec2, p3: Vec2, t: f32) -> Vec
     }
 }
 
-// don't know what i'm doing wrong here: https://pomax.github.io/bezierinfo/#abc
-fn gui_bezier_control_point(p0: Vec2, pm: Vec2, p2: Vec2) -> Vec2 {
-    let c = p0.lerp(p2, 0.5);
-    let b = pm;
+// i was certain this would fail, but... uhm no. so i'm not sure why our point isn't on the line...
+fn gui_bezier_control_point(p0: Vec2, b: Vec2, p2: Vec2) -> Vec2 {
+    let p = 2.0 * b - 0.5 * p0 - 0.5 * p2;
 
-    let d1 = (p0 - b).len();
-    let d2 = (p2 - b).len();
+    unsafe {
+        let mut v: ImVec2 = ImVec2 { x: 0.0, y: 0.0 };
+        igImBezierQuadraticCalc(
+            &mut v as *mut ImVec2,
+            [p0.x, p0.y].into(),
+            [p.x, p.y].into(),
+            [p2.x, p2.y].into(),
+            0.5,
+        );
+        assert_eq!([v.x, v.y], [b.x, b.y]);
+    }
 
-    let t = d1 / (d1 + d2);
-    let ts = t * t;
-    let to = (1.0 - t) * (1.0 - t);
-
-    let ratio = ((ts + to - 1.0) / (ts + to)).abs();
-
-    b - (c - b) * (1.0 / ratio)
-
-    // let adjustment = Vec2::new(
-    //     (p0.x - 2.0 * pm.x + p2.x) / 4.0,
-    //     (p0.y - 2.0 * pm.y + p2.y) / 4.0,
-    // );
-
-    // Vec2::new(pm.x + adjustment.x, pm.y + adjustment.y)
-    // let m1 = (p0 + pm) * 0.5;
-    // let m2 = (pm + p2) * 0.5;
-    // (m1 + m2) * 0.5
+    p
 }
 
 pub fn gui_draw_bezier_arrow(
@@ -72,6 +68,9 @@ pub fn gui_draw_bezier_arrow(
     thickness: f32,
     color: ImColor32,
 ) {
+    // let mid = points[0].lerp(points[2], 0.5);
+    // let l = (points[1] - mid) * 0.5;
+
     let ctrlp = gui_bezier_control_point(points[0], points[1], points[2]);
     gui_draw_bezier_with_arrows(
         draw_list,
@@ -89,6 +88,14 @@ pub fn gui_draw_bezier_arrow(
             direction: None,
         },
     );
+
+    draw_list
+        .add_circle([points[0].x, points[0].y], 5.0, ImColor32::WHITE)
+        .build();
+
+    draw_list
+        .add_circle([points[1].x, points[1].y], 5.0, ImColor32::WHITE)
+        .build();
 
     draw_list
         .add_circle([ctrlp.x, ctrlp.y], 5.0, ImColor32::WHITE)
