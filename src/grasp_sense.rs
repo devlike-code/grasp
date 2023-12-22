@@ -105,6 +105,9 @@ impl GraspEditorWindow {
             caught_events.push(hash_input("double click left"));
             self.trigger(DblClickToCreate);
             //
+        }else if self.state == EditorState::PropertyChanging && !is_focused{
+            self.trigger(EndDrag);
+
         } else if double_clicked_left && !under_cursor.is_empty() && is_focused {
             //
             let tile = under_cursor.fetch_tile(&self.document_mosaic);
