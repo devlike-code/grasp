@@ -43,6 +43,34 @@ pub fn gui_bezier_tangent(p0: Vec2, p1: Vec2, p2: Vec2, p3: Vec2, t: f32) -> Vec
     }
 }
 
+/*
+    For P0 and P2 as endpoints, and P1 as a control point, a point ON the bezier curve at some percent t is given by:
+
+        B(t) = (1 - t)^2 P0 + 2(1 - t)t P1 + t^2 P2.
+
+    In our case, t = 0.5, so we can simplify the above to:
+
+        B = (1 - 0.5)^2 P0 + 2(1 - 0.5) 0.5 P1 + 0.5^2 P2
+        B = 0.5^2 P0 + 0.5 P1 + 0.5^2 P2.
+
+    In practice, we have P0, P2 and B (our node point on the curve!), so we want to solve for P1:
+
+        B = 0.5^2 P0 + 0.5 P1 + 0.5^2 P2
+        B = 0.5 (0.5 P0 + P1 + 0.5 P2)
+        B = 0.5 (0.5 (P0 + P2) + P1)
+
+    Switching to 1/2 form for ease of use:
+
+        2 B = (P0 + P2) / 2 + P1
+        P1 = 2 B - (P0 + P2) / 2.
+
+    In practice, (P0 + P2) / 2 is the midpoint between the ends M, so:
+
+        P1 = 2 B - M
+
+    P1 is now the control point needed to draw the bezier curve that passes through B.
+*/
+
 // i was certain this would fail, but... uhm no. so i'm not sure why our point isn't on the line...
 fn gui_bezier_control_point(p0: Vec2, b: Vec2, p2: Vec2) -> Vec2 {
     let p = 2.0 * b - 0.5 * p0 - 0.5 * p2;
