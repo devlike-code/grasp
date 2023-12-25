@@ -49,7 +49,7 @@ pub struct GraspEditorData {
     pub cursor: Vec2,
     pub cursor_delta: Vec2,
     pub rect_delta: Option<Vec2>,
-    pub tab_offset: Vec2,
+    pub window_offset: Vec2,
     pub link_start_pos: Option<Vec2>,
     pub link_end: Option<Tile>,
     pub rect_start_pos: Option<Vec2>,

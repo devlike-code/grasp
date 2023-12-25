@@ -54,6 +54,7 @@ impl GraspEditorWindow {
         let under_cursor = self.under_cursor();
 
         let pos: Vec2 = s.ui.io().mouse_pos.into();
+        //pos = pos.sub(self.editor_data.window_offset);
 
         let is_context = self.state == EditorState::ContextMenu;
         let is_focused = GetWindowFocus(&self.document_mosaic)
@@ -177,7 +178,7 @@ impl GraspEditorWindow {
             //
         }
 
-        self.editor_data.cursor = pos.sub(self.editor_data.pan);
+        self.editor_data.cursor = pos;
 
         self.left_drag_last_frame = s.ui.is_mouse_dragging(imgui::MouseButton::Left);
         self.middle_drag_last_frame = s.ui.is_mouse_dragging(imgui::MouseButton::Middle);

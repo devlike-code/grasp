@@ -29,7 +29,8 @@ impl GraspEditorWindow {
 
             EditorState::Link => {
                 let quadtree = self.quadtree.lock().unwrap();
-                let region = self.build_circle_area(self.editor_data.cursor, 1);
+                let region = self
+                    .build_circle_area(self.editor_data.cursor - self.editor_data.window_offset - self.editor_data.pan, 1);
                 let query = quadtree.query(region).collect_vec();
                 if !query.is_empty() {
                     let tile_id = query.first().unwrap().value_ref();
@@ -40,7 +41,8 @@ impl GraspEditorWindow {
             }
 
             EditorState::Rect => {
-                if let Some(min) = self.editor_data.rect_start_pos {
+                if let Some(mut min) = self.editor_data.rect_start_pos {
+                    min = min - self.editor_data.window_offset;
                     if let Some(delta) = self.editor_data.rect_delta {
                         let end_pos = min + delta;
                         let rect = Rect2::from_two_pos(min, end_pos);

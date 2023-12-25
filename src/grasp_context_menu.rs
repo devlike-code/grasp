@@ -133,8 +133,8 @@ impl GraspEditorWindow {
 
     fn show_default_menu(&mut self, s: &GuiState) -> bool {
         if s.ui.button("Create new node") {
-            let pos = s.ui.mouse_pos_on_opening_current_popup();
-            self.create_new_object(Vec2::new(pos[0], pos[1]) - self.editor_data.pan);
+            let pos: Vec2 = s.ui.mouse_pos_on_opening_current_popup().into();
+            self.create_new_object(pos - self.editor_data.window_offset - self.editor_data.pan);
             return true;
         }
 

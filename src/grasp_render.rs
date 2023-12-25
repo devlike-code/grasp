@@ -109,8 +109,8 @@ pub fn default_renderer_draw(window: &mut GraspEditorWindow, s: &GuiState) {
     let arrows = window.document_mosaic.get_all().include_component("Arrow");
 
     for arrow in arrows {
-        let p1 = window.get_position_with_pan(query_position_recursive(&arrow.source()));
-        let p2 = window.get_position_with_pan(query_position_recursive(&arrow.target()));
+        let p1 = window.get_position_with_offset_and_pan(query_position_recursive(&arrow.source()));
+        let p2 = window.get_position_with_offset_and_pan(query_position_recursive(&arrow.target()));
         let offset = Offset(&arrow).query();
 
         let mid = p1.lerp(p2, 0.5) + offset;
@@ -127,7 +127,7 @@ pub fn default_renderer_draw(window: &mut GraspEditorWindow, s: &GuiState) {
     if tiles.len() > 0 {
         for tile in tiles {
             if tile.is_object() {
-                let pos = window.get_position_with_pan(query_position_recursive(&tile));
+                let pos = window.get_position_with_offset_and_pan(query_position_recursive(&tile));
                 default_renderer_draw_object(&tile, pos, window, &painter, s);
             }
         }
@@ -137,25 +137,26 @@ pub fn default_renderer_draw(window: &mut GraspEditorWindow, s: &GuiState) {
         EditorState::Link => {
             let a: [f32; 2] = window.editor_data.link_start_pos.unwrap().into();
             let pos: [f32; 2] = if let Some(b) = window.editor_data.link_end.as_ref() {
-                window
-                    .get_position_with_pan(query_position_recursive(b))
-                    .into()
+                (window.get_position_with_offset_and_pan(query_position_recursive(b))).into()
             } else {
                 s.ui.io().mouse_pos
             };
+            //pos = window.get_position_with_offset_and_pan(pos.into()).into();
 
             painter.add_line(a, pos, ImColor32::WHITE).build();
         }
         EditorState::Rect => {
             let a: [f32; 2] = {
                 let position = window.editor_data.rect_start_pos.unwrap();
-                window.get_position_with_pan(position).into()
+                position.into()
+                //window.get_position_with_offset_and_pan(position).into()
             };
 
             let b: [f32; 2] = {
                 let position = window.editor_data.rect_start_pos.unwrap()
                     + window.editor_data.rect_delta.unwrap();
-                window.get_position_with_pan(position).into()
+                position.into()
+                // window.get_position_with_offset_and_pan(position).into()
             };
 
             painter.add_rect_filled_multicolor(

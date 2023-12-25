@@ -44,7 +44,9 @@ impl StateMachine for GraspEditorWindow {
         println!("from {:?} trigger {:?}", from, trigger);
         match (from, trigger) {
             (_, EditorStateTrigger::DblClickToCreate) => {
-                self.create_new_object(self.editor_data.cursor);
+                self.create_new_object(
+                    self.editor_data.cursor - self.editor_data.window_offset - self.editor_data.pan,
+                );
                 self.document_mosaic.request_quadtree_update();
 
                 Some(EditorState::Idle)
@@ -67,7 +69,9 @@ impl StateMachine for GraspEditorWindow {
             (_, EditorStateTrigger::DragToLink) => {
                 let position_from_tile =
                     query_position_recursive(self.editor_data.selected.first().unwrap());
-                self.editor_data.link_start_pos = Some(self.pos_with_pan(position_from_tile));
+                self.editor_data.link_start_pos = Some(
+                    position_from_tile + self.editor_data.window_offset + self.editor_data.pan,
+                );
 
                 Some(EditorState::Link)
             }
@@ -80,7 +84,10 @@ impl StateMachine for GraspEditorWindow {
                 Some(EditorState::Rect)
             }
 
-            (EditorState::Pan, EditorStateTrigger::EndDrag) => Some(EditorState::Idle),
+            (EditorState::Pan, EditorStateTrigger::EndDrag) => {
+                self.document_mosaic.request_quadtree_update();
+                Some(EditorState::Idle)
+            }
             (EditorState::Link, EditorStateTrigger::EndDrag) => {
                 if let Some(tile) = self.editor_data.link_end.take() {
                     let start = self.editor_data.selected.first().unwrap().clone();

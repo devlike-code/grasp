@@ -48,8 +48,11 @@ impl PartialEq for GraspEditorWindow {
 }
 
 impl GraspEditorWindow {
-    pub fn get_position_with_pan(&self, position: Vec2) -> Vec2 {
-        position.add(self.editor_data.pan)
+
+    pub fn get_position_with_offset_and_pan(&self, position: Vec2) -> Vec2 {
+        position
+            .add(self.editor_data.pan)
+            .add(self.editor_data.window_offset)
     }
 
     pub fn show(&mut self, s: &GuiState, caught_events: &mut Vec<u64>) {
@@ -82,6 +85,15 @@ impl GraspEditorWindow {
                     } else {
                         self.sense(s, caught_events);
                     }
+                }
+
+                let window_offset: Vec2 = s.ui.window_pos().into();
+
+                if self.editor_data.window_offset != window_offset {
+                    self.editor_data.window_offset = window_offset;
+                    self.update_quadtree(None);
+                } else {
+                    self.editor_data.window_offset = window_offset;
                 }
 
                 if s.ui.is_window_focused()
@@ -127,10 +139,10 @@ impl GraspEditorWindow {
 
         let quadtree = self.quadtree.lock().unwrap();
         quadtree.iter().for_each(|area| {
-            let anchor_pos = self.pos_with_pan(Vec2 {
+            let anchor_pos = self.pos_add_editor_offset(Vec2 {
                 x: area.anchor().x as f32,
                 y: area.anchor().y as f32,
-            }) - self.editor_data.tab_offset;
+            });
 
             let anchor_size = Vec2::new(area.width() as f32, area.height() as f32);
             let anchor_end = anchor_pos + anchor_size;
@@ -143,12 +155,16 @@ impl GraspEditorWindow {
 }
 
 impl GraspEditorWindow {
+    pub fn pos_add_editor_pan(&self, v: Vec2) -> Vec2 {
+        v + self.editor_data.pan
+    }
+
     pub fn pos_add_editor_offset(&self, v: Vec2) -> Vec2 {
-        v + self.editor_data.tab_offset
+        v + self.editor_data.window_offset
     }
 
     pub fn build_circle_area(&self, pos: Vec2, size: i32) -> Area<i32> {
-        let pos = self.pos_add_editor_offset(pos);
+        let pos = self.pos_add_editor_pan(pos);
         AreaBuilder::default()
             .anchor((pos.x as i32 - size, pos.y as i32 - size).into())
             .dimensions((size * 2, size * 2))
@@ -157,14 +173,14 @@ impl GraspEditorWindow {
     }
 
     pub fn build_cursor_area(&self) -> Area<i32> {
-        self.build_circle_area(self.editor_data.cursor, 1)
+        self.build_circle_area(self.editor_data.cursor - self.editor_data.window_offset - self.editor_data.pan, 1)
     }
 
     pub fn build_rect_area(&self, rect: Rect2) -> Area<i32> {
         let min = rect.min();
         let max = rect.max();
-        let min = self.pos_add_editor_offset(min);
-        let max = self.pos_add_editor_offset(max);
+       // let min = self.pos_add_editor_pan(min);
+       // let max = self.pos_add_editor_pan(max);
         let _rect = Rect2::from_two_pos(min, max);
         let dim_x = (max.x - min.x) as i32;
         let dim_y = (max.y - min.y) as i32;
