@@ -1,7 +1,6 @@
 use std::{
     collections::hash_map::DefaultHasher,
     hash::{Hash, Hasher},
-    ops::Sub,
 };
 
 use imgui::Key;
@@ -42,6 +41,7 @@ impl GraspEditorWindow {
 
         self.document_mosaic.request_quadtree_update();
     }
+
     pub fn under_cursor(&self) -> Vec<usize> {
         let quadtree = self.quadtree.lock().unwrap();
 
@@ -51,8 +51,11 @@ impl GraspEditorWindow {
             .collect_vec()
     }
     pub fn sense(&mut self, s: &GuiState, caught_events: &mut Vec<u64>) {
-        fn trigget_rename(window: &mut GraspEditorWindow, tile: Tile, caught_events: &mut Vec<u64>){
-          
+        fn trigget_rename(
+            window: &mut GraspEditorWindow,
+            tile: Tile,
+            caught_events: &mut Vec<u64>,
+        ) {
             if let Some(Value::S32(label)) = tile
                 .iter()
                 .get_descriptors()
@@ -79,7 +82,6 @@ impl GraspEditorWindow {
             .and_then(|t| Some(t.component.is("Label")))
             .unwrap_or(false);
         let pos: Vec2 = s.ui.io().mouse_pos.into();
-        //pos = pos.sub(self.editor_data.window_offset);
 
         let is_context = self.state == EditorState::ContextMenu;
         let is_focused = GetWindowFocus(&self.document_mosaic)
@@ -140,11 +142,10 @@ impl GraspEditorWindow {
             //
         } else if self.state == EditorState::PropertyChanging && !is_focused {
             self.trigger(EndDrag);
-        }else if double_clicked_left && !under_cursor.is_empty() && is_focused && is_label_region{
-            let tile = under_cursor.fetch_tile(&self.document_mosaic).target();   
-            trigget_rename(self, tile, caught_events);     
-        }
-         else if double_clicked_left && !under_cursor.is_empty() && is_focused {
+        } else if double_clicked_left && !under_cursor.is_empty() && is_focused && is_label_region {
+            let tile = under_cursor.fetch_tile(&self.document_mosaic).target();
+            trigget_rename(self, tile, caught_events);
+        } else if double_clicked_left && !under_cursor.is_empty() && is_focused {
             //
             let tile = under_cursor.fetch_tile(&self.document_mosaic);
             trigget_rename(self, tile, caught_events);
@@ -179,7 +180,6 @@ impl GraspEditorWindow {
             && is_label_region
         {
             self.trigger(DragToMove);
-        
         } else if start_dragging_left && !under_cursor.is_empty() && mouse_in_window && is_focused {
             //
             let tile_under_mouse = under_cursor.fetch_tile(&self.document_mosaic);
@@ -213,13 +213,5 @@ impl GraspEditorWindow {
 
         self.left_drag_last_frame = s.ui.is_mouse_dragging(imgui::MouseButton::Left);
         self.middle_drag_last_frame = s.ui.is_mouse_dragging(imgui::MouseButton::Middle);
-
-        // TODO: do we still need this?
-
-        // areas_to_remove.into_iter().for_each(|areas_vec: Vec<u64>| {
-        //     for a in areas_vec {
-        //         self.quadtree.delete_by_handle(a);
-        //     }
-        // });
     }
 }
