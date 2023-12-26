@@ -6,7 +6,7 @@ use std::{
 use imgui::Key;
 use itertools::Itertools;
 use mosaic::{
-    internals::{MosaicIO, Tile, TileFieldEmptyQuery, Value},
+    internals::{MosaicCRUD, MosaicIO, Tile, TileFieldEmptyQuery, Value},
     iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
 };
 
@@ -34,12 +34,17 @@ pub fn hash_input(s: &str) -> u64 {
 impl GraspEditorWindow {
     pub fn delete_tiles(&self, _tiles: &[Tile]) {
         let quadtree = self.quadtree.lock().unwrap();
-        let _object_to_area = self.object_to_area.lock().unwrap();
-        let _under_cursor = quadtree.query(self.build_cursor_area()).collect_vec();
+        let mut object_to_area = self.object_to_area.lock().unwrap();
+        let under_cursor = quadtree.query(self.build_cursor_area()).collect_vec();
+        let mut areas_to_remove: Vec<u64> = vec![];
 
-        // DELETE HERE (consider recursive deletion too) -- maybe we could do two passes, one to select everything, and one to delete
-
-        self.document_mosaic.request_quadtree_update();
+        for selected in &self.editor_data.selected {
+            self.document_mosaic.delete_tile(selected.id);
+            if let Some(area_id) = object_to_area.get(&selected.id) {
+                areas_to_remove.push(*area_id);
+                object_to_area.remove(&selected.id);
+            }
+        }
     }
 
     pub fn under_cursor(&self) -> Vec<usize> {
@@ -132,6 +137,7 @@ impl GraspEditorWindow {
 
         if s.ui.is_key_down(Key::Delete) && self.state == EditorState::Idle {
             self.delete_tiles(&self.editor_data.selected);
+            self.editor_data.selected.clear();
             self.document_mosaic.request_quadtree_update();
         }
 

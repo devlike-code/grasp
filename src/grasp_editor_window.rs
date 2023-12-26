@@ -28,7 +28,7 @@ pub struct GraspEditorWindow {
     pub state: EditorState,
     pub quadtree: Mutex<Quadtree<i32, EntityId>>,
     pub document_mosaic: Arc<Mosaic>,
-    pub object_to_area: Mutex<HashMap<EntityId, Vec<u64>>>,
+    pub object_to_area: Mutex<HashMap<EntityId, u64>>,
     pub collage: Box<Collage>,
     pub ruler_visible: bool,
     pub grid_visible: bool,
@@ -187,8 +187,6 @@ impl GraspEditorWindow {
     pub fn build_rect_area(&self, rect: Rect2) -> Area<i32> {
         let min = rect.min();
         let max = rect.max();
-        // let min = self.pos_add_editor_pan(min);
-        // let max = self.pos_add_editor_pan(max);
         let _rect = Rect2::from_two_pos(min, max);
         let dim_x = (max.x - min.x) as i32;
         let dim_y = (max.y - min.y) as i32;
@@ -209,6 +207,16 @@ impl GraspEditorWindow {
 }
 
 impl GraspEditorWindow {
+    fn insert_into_quadtree(&self, region: Area<i32>, obj: Tile) {
+        if let Ok(mut quadtree) = self.quadtree.try_lock() {
+            if let Some(area_id) = quadtree.insert(region, obj.id) {
+                self.object_to_area.lock().unwrap().insert(obj.id, area_id);
+            }
+        } else {
+            panic!("Quadtree lock poisoned!");
+        }
+    }
+
     pub fn create_new_object(&self, pos: Vec2) {
         self.document_mosaic.new_type("Node: unit;").unwrap();
 
@@ -239,23 +247,11 @@ impl GraspEditorWindow {
             height: size[1],
         });
 
-        let mut quadtree = self.quadtree.lock().unwrap();
-        if let Some(area_id) = quadtree.insert(region, obj.id) {
-            self.object_to_area
-                .lock()
-                .unwrap()
-                .insert(obj.id, vec![area_id]);
-        }
-        quadtree.insert(label_region, label_tile.id);
+        self.insert_into_quadtree(region, obj);
+        self.insert_into_quadtree(label_region, label_tile);
     }
 
-    pub fn create_new_arrow(
-        &mut self,
-        source: &Tile,
-        target: &Tile,
-        middle_pos: Vec2,
-        //bezier_rects: Vec<Rect2>,
-    ) {
+    pub fn create_new_arrow(&mut self, source: &Tile, target: &Tile, middle_pos: Vec2) {
         let arr = self
             .document_mosaic
             .new_arrow(source, target, "Arrow", void());
@@ -272,7 +268,7 @@ impl GraspEditorWindow {
             "Offset",
             vec![("x".into(), Value::F32(0.0)), ("y".into(), Value::F32(0.0))],
         );
-        
+
         let label_tile = arr.add_component("Label", par("<Label>"));
         label_tile.add_component(
             "Offset",
@@ -292,30 +288,7 @@ impl GraspEditorWindow {
         });
         let region = self.build_circle_area(middle_pos, 12);
 
-        {
-            let mut quadtree = self.quadtree.lock().unwrap();
-            if let Some(area_id) = quadtree.insert(region, arr.id) {
-                let mut object_to_area = self.object_to_area.lock().unwrap();
-                if let Some(areas_vec) = object_to_area.get_mut(&arr.id) {
-                    areas_vec.push(area_id);
-                } else {
-                    object_to_area.insert(arr.id, vec![area_id]);
-                }
-            }
-            quadtree.insert(label_region, label_tile.id);
-   
-        }
-
-        // for r in bezier_rects {
-        //     let region = self.build_rect_area(r);
-        //     let mut quadtree = self.quadtree.lock().unwrap();
-        //     if let Some(area_id) = quadtree.insert(region, arr.id) {
-        //         let mut object_to_area = self.object_to_area.lock().unwrap();
-        //         if let Some(areas_vec) = object_to_area.get_mut(&arr.id) {
-        //             areas_vec.push(area_id);
-        //             //self.object_to_area.insert(arr.id, areas_vec.to_owned());
-        //         }
-        //     }
-        // }
+        self.insert_into_quadtree(region, arr);
+        self.insert_into_quadtree(label_region, label_tile);
     }
 }

@@ -13,8 +13,9 @@ use mosaic::{
 
 use crate::{
     core::{
+        gui::calc_text_size,
         math::{vec2::Vec2, Rect2},
-        queues::enqueue, gui::calc_text_size,
+        queues::enqueue,
     },
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
     grasp_editor_window::GraspEditorWindow,
@@ -221,7 +222,7 @@ impl GraspEditorWindow {
     pub fn update_selected_positions_by(&mut self, dp: Vec2) {
         for tile in &mut self.editor_data.selected {
             let is_tile_an_object = tile.is_object();
-           // let is_tile_a_descriptor = tile.is_descriptor();
+            // let is_tile_a_descriptor = tile.is_descriptor();
             let component_name = if is_tile_an_object {
                 "Position"
             } else {
@@ -248,11 +249,10 @@ impl GraspEditorWindow {
         for tile in &selected {
             let selected_pos = Pos(tile).query();
 
-            if let Some(label) = tile.get_component("Label"){
+            if let Some(label) = tile.get_component("Label") {
                 let size = calc_text_size(label.get("self").as_s32().to_string());
-      
-                if let Some(offset) = label.get_component("Offset"){
 
+                if let Some(offset) = label.get_component("Offset") {
                     let off = Offset(&offset).query();
                     let label_region = self.build_rect_area(Rect2 {
                         x: selected_pos.x + off.x,
@@ -260,22 +260,17 @@ impl GraspEditorWindow {
                         width: size[0],
                         height: size[1],
                     });
-            
+
                     let mut quadtree = self.quadtree.lock().unwrap();
                     quadtree.insert(dbg!(label_region), label.id);
-            
                 }
             }
-      
 
             if tile.is_object() {
                 let mut quadtree = self.quadtree.lock().unwrap();
                 let region = self.build_circle_area(selected_pos, 12);
                 if let Some(area_id) = quadtree.insert(region, tile.id) {
-                    self.object_to_area
-                        .lock()
-                        .unwrap()
-                        .insert(tile.id, vec![area_id]);
+                    self.object_to_area.lock().unwrap().insert(tile.id, area_id);
                 }
             } else if tile.is_arrow() {
                 let start_pos = query_position_recursive(&tile.source());
@@ -286,12 +281,7 @@ impl GraspEditorWindow {
 
                 let mut quadtree = self.quadtree.lock().unwrap();
                 if let Some(area_id) = quadtree.insert(region, tile.id) {
-                    let mut object_to_area = self.object_to_area.lock().unwrap();
-                    if let Some(areas_vec) = object_to_area.get_mut(&tile.id) {
-                        areas_vec.push(area_id);
-                    } else {
-                        object_to_area.insert(tile.id, vec![area_id]);
-                    }
+                    self.object_to_area.lock().unwrap().insert(tile.id, area_id);
                 }
             }
         }
