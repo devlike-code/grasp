@@ -1,3 +1,4 @@
+use crate::core::gui::calc_text_size;
 use crate::core::gui::windowing::set_window_focus;
 use crate::core::math::rect2::Rect2;
 use crate::core::math::vec2::Vec2;
@@ -217,9 +218,23 @@ impl GraspEditorWindow {
                 ("y".into(), Value::F32(pos.y)),
             ],
         );
-        obj.add_component("Label", par("<Label>"));
+        let label_tile = obj.add_component("Label", par("<Label>"));
+        label_tile.add_component(
+            "Offset",
+            vec![
+                ("x".into(), Value::F32(10.0)),
+                ("y".into(), Value::F32(0.0)),
+            ],
+        );
 
         let region = self.build_circle_area(pos, 12);
+        let size = calc_text_size("<Label>");
+        let label_region = self.build_rect_area(Rect2 {
+            x: pos.x,
+            y: pos.y,
+            width: size[0],
+            height: size[1],
+        });
 
         let mut quadtree = self.quadtree.lock().unwrap();
         if let Some(area_id) = quadtree.insert(region, obj.id) {
@@ -228,6 +243,7 @@ impl GraspEditorWindow {
                 .unwrap()
                 .insert(obj.id, vec![area_id]);
         }
+        quadtree.insert(dbg!(label_region), label_tile.id);
     }
 
     pub fn create_new_arrow(

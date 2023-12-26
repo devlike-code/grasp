@@ -14,7 +14,7 @@ use mosaic::{
 use crate::{
     core::{
         math::{vec2::Vec2, Rect2},
-        queues::enqueue,
+        queues::enqueue, gui::calc_text_size,
     },
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
     grasp_editor_window::GraspEditorWindow,
@@ -221,6 +221,7 @@ impl GraspEditorWindow {
     pub fn update_selected_positions_by(&mut self, dp: Vec2) {
         for tile in &mut self.editor_data.selected {
             let is_tile_an_object = tile.is_object();
+           // let is_tile_a_descriptor = tile.is_descriptor();
             let component_name = if is_tile_an_object {
                 "Position"
             } else {
@@ -246,6 +247,26 @@ impl GraspEditorWindow {
 
         for tile in &selected {
             let selected_pos = Pos(tile).query();
+
+            if let Some(label) = tile.get_component("Label"){
+                let size = calc_text_size(label.get("self").as_s32().to_string());
+      
+                if let Some(offset) = label.get_component("Offset"){
+
+                    let off = Offset(&offset).query();
+                    let label_region = self.build_rect_area(Rect2 {
+                        x: selected_pos.x + off.x,
+                        y: selected_pos.y + off.y,
+                        width: size[0],
+                        height: size[1],
+                    });
+            
+                    let mut quadtree = self.quadtree.lock().unwrap();
+                    quadtree.insert(dbg!(label_region), label.id);
+            
+                }
+            }
+      
 
             if tile.is_object() {
                 let mut quadtree = self.quadtree.lock().unwrap();

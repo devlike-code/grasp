@@ -7,7 +7,7 @@ use std::{
 use imgui::Key;
 use itertools::Itertools;
 use mosaic::{
-    internals::{Tile, TileFieldEmptyQuery, Value},
+    internals::{MosaicIO, Tile, TileFieldEmptyQuery, Value},
     iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
 };
 
@@ -51,11 +51,33 @@ impl GraspEditorWindow {
             .collect_vec()
     }
     pub fn sense(&mut self, s: &GuiState, caught_events: &mut Vec<u64>) {
+        fn trigget_rename(window: &mut GraspEditorWindow, tile: Tile, caught_events: &mut Vec<u64>){
+          
+            if let Some(Value::S32(label)) = tile
+                .iter()
+                .get_descriptors()
+                .include_component("Label")
+                .next()
+                .map(|tile| tile.get("self"))
+            {
+                window.editor_data.tile_changing = Some(tile.id);
+                window.editor_data.selected = vec![tile];
+
+                window.editor_data.text = label.to_string();
+                window.editor_data.previous_text = label.to_string();
+                caught_events.push(hash_input("double click left"));
+                window.trigger(DblClickToRename);
+            }
+        }
         if caught_events.contains(&hash_input("all")) {
             return;
         }
         let under_cursor = self.under_cursor();
-
+        let is_label_region = under_cursor
+            .first()
+            .and_then(|f| self.document_mosaic.get(*f))
+            .and_then(|t| Some(t.component.is("Label")))
+            .unwrap_or(false);
         let pos: Vec2 = s.ui.io().mouse_pos.into();
         //pos = pos.sub(self.editor_data.window_offset);
 
@@ -64,7 +86,6 @@ impl GraspEditorWindow {
             .query()
             .map(|index| index == self.window_tile.id)
             .unwrap_or(false);
-
         let mouse_in_window = self.rect.contains(pos);
         let is_resizing = {
             let size = 10.0;
@@ -119,24 +140,14 @@ impl GraspEditorWindow {
             //
         } else if self.state == EditorState::PropertyChanging && !is_focused {
             self.trigger(EndDrag);
-        } else if double_clicked_left && !under_cursor.is_empty() && is_focused {
+        }else if double_clicked_left && !under_cursor.is_empty() && is_focused && is_label_region{
+            let tile = under_cursor.fetch_tile(&self.document_mosaic).target();   
+            trigget_rename(self, tile, caught_events);     
+        }
+         else if double_clicked_left && !under_cursor.is_empty() && is_focused {
             //
             let tile = under_cursor.fetch_tile(&self.document_mosaic);
-            if let Some(Value::S32(label)) = tile
-                .iter()
-                .get_descriptors()
-                .include_component("Label")
-                .next()
-                .map(|tile| tile.get("self"))
-            {
-                self.editor_data.tile_changing = Some(tile.id);
-                self.editor_data.selected = vec![tile];
-
-                self.editor_data.text = label.to_string();
-                self.editor_data.previous_text = label.to_string();
-                caught_events.push(hash_input("double click left"));
-                self.trigger(DblClickToRename);
-            }
+            trigget_rename(self, tile, caught_events);
             //
         } else if clicked_left && under_cursor.is_empty() && mouse_in_window && !is_context {
             //
@@ -161,6 +172,14 @@ impl GraspEditorWindow {
             caught_events.push(hash_input("start drag left"));
             self.trigger(DragToLink);
             //
+        } else if start_dragging_left
+            && !under_cursor.is_empty()
+            && mouse_in_window
+            && is_focused
+            && is_label_region
+        {
+            self.trigger(DragToMove);
+        
         } else if start_dragging_left && !under_cursor.is_empty() && mouse_in_window && is_focused {
             //
             let tile_under_mouse = under_cursor.fetch_tile(&self.document_mosaic);

@@ -6,6 +6,7 @@ use crate::editor_state_machine::EditorStateTrigger::*;
 use crate::editor_state_machine::StateMachine;
 use crate::grasp_editor_window::GraspEditorWindow;
 
+use crate::grasp_transitions::QuadtreeUpdateCapability;
 use crate::grasp_transitions::query_position_recursive;
 use crate::utilities::Offset;
 use crate::utilities::{Label, Pos};
@@ -50,14 +51,17 @@ fn default_renderer_draw_object(
 
     let mut cancel: bool = true;
     let mut trigger_end_drag = true;
+    let offset = tile.get_component("Label").and_then(|l| Some(Offset(&l).query())).unwrap_or_default();                 
+     
 
     if window.state == EditorState::PropertyChanging
         && window.editor_data.tile_changing == Some(tile.id)
     {
         if let Some(selected) = window.editor_data.selected.first() {
             if tile.id == selected.id {
-                let cx = pos.x - window.rect.x + 10.0;
-                let cy = pos.y - window.rect.y;
+      
+                let cx = pos.x - window.rect.x + offset.x;
+                let cy = pos.y - window.rect.y + offset.y;
                 gui_set_cursor_pos(cx, cy);
                 let text = &mut window.editor_data.text;
 
@@ -77,6 +81,7 @@ fn default_renderer_draw_object(
                         if window.editor_data.previous_text != *text {
                             if let Some(mut label) = tile.clone().get_component("Label") {
                                 label.set("self", t);
+                                window.document_mosaic.request_quadtree_update();
                             } else {
                                 cancel = false;
                                 trigger_end_drag = false;
@@ -98,8 +103,8 @@ fn default_renderer_draw_object(
     }
 
     if cancel {
-        let label = Label(tile).query();
-        painter.add_text([pos.x + 10.0, pos.y], ImColor32::WHITE, label);
+        let label = Label(tile).query();    
+        painter.add_text([pos.x + offset.x, pos.y + offset.y], ImColor32::WHITE, label);
     }
 }
 
