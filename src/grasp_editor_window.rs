@@ -139,6 +139,9 @@ impl GraspEditorWindow {
             return;
         }
 
+        s.ui.set_cursor_pos([10.0, 30.0]);
+        s.ui.text(format!("Current state: {:?}", self.state));
+
         let quadtree = self.quadtree.lock().unwrap();
         quadtree.iter().for_each(|area| {
             let anchor_pos = self.pos_add_editor_offset(Vec2 {
