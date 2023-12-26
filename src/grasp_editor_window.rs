@@ -48,7 +48,6 @@ impl PartialEq for GraspEditorWindow {
 }
 
 impl GraspEditorWindow {
-
     pub fn get_position_with_offset_and_pan(&self, position: Vec2) -> Vec2 {
         position
             .add(self.editor_data.pan)
@@ -60,7 +59,9 @@ impl GraspEditorWindow {
 
         let w = s.ui.window(name);
 
-        w.size([700.0, 500.0], imgui::Condition::Appearing)
+        w.size_constraints([320.0, 240.0], [1024.0, 768.0])
+            .scroll_bar(false)
+            .size([700.0, 500.0], imgui::Condition::Appearing)
             .position(
                 [
                     200.0 + 50.0 * (self.window_tile.id % 5) as f32,
@@ -173,14 +174,17 @@ impl GraspEditorWindow {
     }
 
     pub fn build_cursor_area(&self) -> Area<i32> {
-        self.build_circle_area(self.editor_data.cursor - self.editor_data.window_offset - self.editor_data.pan, 1)
+        self.build_circle_area(
+            self.editor_data.cursor - self.editor_data.window_offset - self.editor_data.pan,
+            1,
+        )
     }
 
     pub fn build_rect_area(&self, rect: Rect2) -> Area<i32> {
         let min = rect.min();
         let max = rect.max();
-       // let min = self.pos_add_editor_pan(min);
-       // let max = self.pos_add_editor_pan(max);
+        // let min = self.pos_add_editor_pan(min);
+        // let max = self.pos_add_editor_pan(max);
         let _rect = Rect2::from_two_pos(min, max);
         let dim_x = (max.x - min.x) as i32;
         let dim_y = (max.y - min.y) as i32;

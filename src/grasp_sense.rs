@@ -12,7 +12,10 @@ use mosaic::{
 };
 
 use crate::{
-    core::{gui::imgui_keys::ExtraKeyEvents, math::Vec2},
+    core::{
+        gui::imgui_keys::ExtraKeyEvents,
+        math::{Rect2, Vec2},
+    },
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
     grasp_editor_window::GraspEditorWindow,
     grasp_editor_window_list::GetWindowFocus,
@@ -63,6 +66,14 @@ impl GraspEditorWindow {
             .unwrap_or(false);
 
         let mouse_in_window = self.rect.contains(pos);
+        let is_resizing = {
+            let size = 10.0;
+            let lower_left_rect = Rect2::from_pos_size(
+                self.rect.max() - [size, size].into(),
+                [2.0 * size, 2.0 * size].into(),
+            );
+            lower_left_rect.contains(pos)
+        };
 
         let clicked_left = !caught_events.contains(&hash_input("click left"))
             && s.ui.is_mouse_clicked(imgui::MouseButton::Left);
@@ -106,9 +117,8 @@ impl GraspEditorWindow {
             caught_events.push(hash_input("double click left"));
             self.trigger(DblClickToCreate);
             //
-        }else if self.state == EditorState::PropertyChanging && !is_focused{
+        } else if self.state == EditorState::PropertyChanging && !is_focused {
             self.trigger(EndDrag);
-
         } else if double_clicked_left && !under_cursor.is_empty() && is_focused {
             //
             let tile = under_cursor.fetch_tile(&self.document_mosaic);
@@ -160,6 +170,8 @@ impl GraspEditorWindow {
             caught_events.push(hash_input("start drag left"));
             self.trigger(DragToMove);
             //
+        } else if start_dragging_left && under_cursor.is_empty() && is_resizing && is_focused {
+            self.trigger(DragToWindowResize);
         } else if start_dragging_left && under_cursor.is_empty() && mouse_in_window && is_focused {
             //
             self.editor_data.selected = vec![];

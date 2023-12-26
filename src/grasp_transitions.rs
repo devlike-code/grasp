@@ -66,6 +66,7 @@ impl StateMachine for GraspEditorWindow {
                 self.editor_data.previous_pan = self.editor_data.pan;
                 Some(EditorState::Pan)
             }
+            (_, EditorStateTrigger::DragToWindowResize) => Some(EditorState::WindowResizing),
             (_, EditorStateTrigger::DragToLink) => {
                 let position_from_tile =
                     query_position_recursive(self.editor_data.selected.first().unwrap());
@@ -88,6 +89,7 @@ impl StateMachine for GraspEditorWindow {
                 self.document_mosaic.request_quadtree_update();
                 Some(EditorState::Idle)
             }
+            (EditorState::WindowResizing, EditorStateTrigger::EndDrag) => Some(EditorState::Idle),
             (EditorState::Link, EditorStateTrigger::EndDrag) => {
                 if let Some(tile) = self.editor_data.link_end.take() {
                     let start = self.editor_data.selected.first().unwrap().clone();

@@ -6,6 +6,7 @@ pub enum EditorState {
     Move,
     Link,
     Rect,
+    WindowResizing,
     PropertyChanging,
     Reposition,
     ContextMenu,
@@ -36,6 +37,7 @@ pub enum EditorStateTrigger {
     DragToSelect,
     DragToMove,
     DragToLink,
+    DragToWindowResize,
 
     EndDrag,
 
