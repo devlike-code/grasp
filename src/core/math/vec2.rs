@@ -1,9 +1,23 @@
 use std::ops::{Add, AddAssign, Mul, MulAssign, Sub, SubAssign};
 
+use imgui::sys::ImVec2;
+
 #[derive(Clone, Copy, Debug, Default, PartialEq, PartialOrd)]
 pub struct Vec2 {
     pub x: f32,
     pub y: f32,
+}
+
+impl From<ImVec2> for Vec2 {
+    fn from(value: ImVec2) -> Self {
+        Vec2::new(value.x, value.y)
+    }
+}
+
+impl From<Vec2> for ImVec2 {
+    fn from(value: Vec2) -> Self {
+        ImVec2::new(value.x, value.y)
+    }
 }
 
 impl From<[f32; 2]> for Vec2 {

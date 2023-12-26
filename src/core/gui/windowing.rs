@@ -8,7 +8,7 @@ use std::{
 };
 
 use imgui::{
-    sys::{ImVec2, ImVec4},
+    sys::{igGetWindowDrawList, igImMax, igImMin, igImRotate, igImage, ImVec2, ImVec4},
     ConfigFlags, ImString, Ui, WindowFlags,
 };
 use lazy_static::lazy_static;
@@ -17,7 +17,7 @@ use log::info;
 use gl::types::GLvoid;
 use sdl2::video::GLProfile;
 
-use crate::{grasp_common::read_window_size, seq::SeqWriter};
+use crate::{core::math::Vec2, grasp_common::read_window_size, seq::SeqWriter};
 
 pub const LOAD_TEXTURE_EVENT: u32 = 10101;
 
@@ -92,9 +92,66 @@ pub fn load_image_asset(name: &str, asset: &str) {
     }
 }
 
-pub fn gui_draw_image(name: &str, size: [f32; 2], pos: [f32; 2]) {
+fn gui_rotate_start() -> usize {
+    unsafe { igGetWindowDrawList().as_mut().unwrap().VtxBuffer.Size as usize }
+}
+
+fn gui_rotate(center: ImVec2, c: f32, s: f32) -> ImVec2 {
     unsafe {
-        imgui::sys::igSetCursorPos(ImVec2::new(pos[0] - size[0] / 2.0, pos[1] - size[1] / 2.0));
+        let mut p_out: ImVec2 = ImVec2::zero();
+        igImRotate(&mut p_out as *mut _, center, c, s);
+        p_out
+    }
+}
+
+fn gui_rotate_center(rot_id: usize) -> ImVec2 {
+    let mut l = ImVec2::new(f32::MAX, f32::MAX);
+    let mut u = ImVec2::new(-f32::MAX, -f32::MAX);
+
+    unsafe {
+        let buf = igGetWindowDrawList().as_ref().unwrap().VtxBuffer;
+        for i in rot_id..(buf.Size as usize) {
+            let p = buf.Data.add(i);
+            let pi = p.as_mut().unwrap().pos;
+            igImMin(&mut l as *mut _, l, pi);
+            igImMax(&mut u as *mut _, u, pi);
+        }
+
+        ImVec2::new((l.x + u.x) / 2.0, (l.y + u.y) / 2.0)
+    }
+}
+
+fn gui_rotate_end(rot_id: usize, rad: f32) {
+    fn get_center(rot: ImVec2, center: ImVec2) -> ImVec2 {
+        let rv2: Vec2 = rot.into();
+        let cv2: Vec2 = center.into();
+        let iv2: ImVec2 = (rv2 - cv2).into();
+
+        iv2
+    }
+
+    let center = gui_rotate_center(rot_id);
+    let s = rad.sin();
+    let c = rad.cos();
+
+    let center = get_center(gui_rotate(center, c, s), center);
+
+    unsafe {
+        let buf = igGetWindowDrawList().as_ref().unwrap().VtxBuffer;
+        for i in rot_id..(buf.Size as usize) {
+            let p = buf.Data.add(i);
+            let pi = p.as_mut().unwrap().pos;
+            p.as_mut().unwrap().pos = get_center(gui_rotate(pi, c, s), center);
+        }
+    }
+}
+
+pub fn gui_draw_image(name: &str, size: [f32; 2], pos: [f32; 2], rot: f32) {
+    unsafe {
+        let local_pos = ImVec2::new(pos[0] - size[0] / 2.0, pos[1] - size[1] / 2.0);
+        imgui::sys::igSetCursorPos(local_pos);
+
+        let rot_id = gui_rotate_start();
         imgui::sys::igImage(
             get_texture(name) as *mut _,
             ImVec2::new(size[0], size[1]),
@@ -103,6 +160,7 @@ pub fn gui_draw_image(name: &str, size: [f32; 2], pos: [f32; 2]) {
             ImVec4::new(1.0, 1.0, 1.0, 1.0),
             ImVec4::new(0.0, 0.0, 0.0, 0.0),
         );
+        gui_rotate_end(rot_id, rot); //* 0.017453292);
     }
 }
 
@@ -173,6 +231,8 @@ pub fn run_main_forever<F: FnMut(&Ui, &mut bool)>(mut update: F) {
 
     load_image_asset("dot", "assets//dot.png");
     load_image_asset("[dot]", "assets//selected-dot.png");
+    load_image_asset("arrow", "assets//arrow.png");
+    load_image_asset("[arrow]", "assets//selected-arrow.png");
 
     'running: loop {
         use sdl2::event::Event;

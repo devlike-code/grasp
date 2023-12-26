@@ -1,3 +1,5 @@
+use std::f32::consts;
+
 use crate::core::gui::windowing::gui_draw_image;
 use crate::core::math::bezier::gui_draw_bezier_arrow;
 use crate::core::math::Vec2;
@@ -6,14 +8,16 @@ use crate::editor_state_machine::EditorStateTrigger::*;
 use crate::editor_state_machine::StateMachine;
 use crate::grasp_editor_window::GraspEditorWindow;
 
-use crate::grasp_transitions::QuadtreeUpdateCapability;
 use crate::grasp_transitions::query_position_recursive;
+use crate::grasp_transitions::QuadtreeUpdateCapability;
+use crate::utilities::Label;
 use crate::utilities::Offset;
-use crate::utilities::{Label, Pos};
+use crate::utilities::Pos;
 use crate::GuiState;
 use imgui::sys::ImVec2;
 use imgui::DrawListMut;
 use imgui::ImColor32;
+use itertools::Itertools;
 use mosaic::capabilities::ArchetypeSubject;
 use mosaic::internals::Tile;
 use mosaic::internals::TileFieldEmptyQuery;
@@ -47,19 +51,21 @@ fn default_renderer_draw_object(
         image,
         [20.0, 20.0],
         [pos.x - window.rect.x, pos.y - window.rect.y],
+        0.0,
     );
 
     let mut cancel: bool = true;
     let mut trigger_end_drag = true;
-    let offset = tile.get_component("Label").and_then(|l| Some(Offset(&l).query())).unwrap_or_default();                 
-     
+    let offset = tile
+        .get_component("Label")
+        .map(|l| Offset(&l).query())
+        .unwrap_or_default();
 
     if window.state == EditorState::PropertyChanging
         && window.editor_data.tile_changing == Some(tile.id)
     {
         if let Some(selected) = window.editor_data.selected.first() {
             if tile.id == selected.id {
-      
                 let cx = pos.x - window.rect.x + offset.x;
                 let cy = pos.y - window.rect.y + offset.y;
                 gui_set_cursor_pos(cx, cy);
@@ -103,24 +109,135 @@ fn default_renderer_draw_object(
     }
 
     if cancel {
-        let label = Label(tile).query();    
-        painter.add_text([pos.x + offset.x, pos.y + offset.y], ImColor32::WHITE, label);
+        let label = Label(tile).query();
+        painter.add_text(
+            [pos.x + offset.x, pos.y + offset.y],
+            ImColor32::WHITE,
+            label,
+        );
+    }
+}
+
+fn angle_between_points(p1: Vec2, p2: Vec2) -> f32 {
+    let dx = p1.x - p2.x;
+    let dy = p1.y - p2.y;
+    let mut angle = dy.atan2(dx);
+    if angle < 0.0 {
+        angle += 2.0 * consts::PI;
+    }
+
+    angle + consts::PI
+}
+
+fn default_renderer_draw_arrow(
+    tile: &Tile,
+    pos: Vec2,
+    window: &mut GraspEditorWindow,
+    painter: &DrawListMut<'_>,
+    s: &GuiState,
+) {
+    let is_selected = window.editor_data.selected.contains(tile);
+    let image = if is_selected { "[arrow]" } else { "arrow" };
+
+    let p = query_position_recursive(&tile.source());
+    let q = query_position_recursive(&tile.target());
+    let angle = angle_between_points(p, q);
+    gui_draw_image(
+        image,
+        [20.0, 20.0],
+        [pos.x - window.rect.x, pos.y - window.rect.y],
+        angle,
+    );
+
+    let mut cancel: bool = true;
+    let mut trigger_end_drag = true;
+    let offset = tile
+        .get_component("Label")
+        .map(|l| Offset(&l).query())
+        .unwrap_or_default();
+
+    if window.state == EditorState::PropertyChanging
+        && window.editor_data.tile_changing == Some(tile.id)
+    {
+        if let Some(selected) = window.editor_data.selected.first() {
+            if tile.id == selected.id {
+                let cx = pos.x - window.rect.x + offset.x;
+                let cy = pos.y - window.rect.y + offset.y;
+                gui_set_cursor_pos(cx, cy);
+                let text = &mut window.editor_data.text;
+
+                s.ui.set_keyboard_focus_here();
+                s.ui.set_next_item_width(100.0);
+                if s.ui
+                    .input_text("##", text)
+                    .auto_select_all(true)
+                    .enter_returns_true(true)
+                    .build()
+                {
+                    if text.len() >= 32 {
+                        *text = text[0..32].to_string();
+                    }
+
+                    if let Ok(t) = text.parse::<String>() {
+                        if window.editor_data.previous_text != *text {
+                            if let Some(mut label) = tile.clone().get_component("Label") {
+                                label.set("self", t);
+                                window.document_mosaic.request_quadtree_update();
+                            } else {
+                                cancel = false;
+                                trigger_end_drag = false;
+                            }
+                        }
+                    }
+                } else {
+                    cancel = false;
+                    trigger_end_drag = false;
+                }
+            }
+        }
+    } else {
+        trigger_end_drag = false;
+    }
+
+    if trigger_end_drag {
+        window.trigger(EndDrag);
+    }
+
+    if cancel {
+        let label = Label(tile).query();
+        painter.add_text(
+            [pos.x + offset.x, pos.y + offset.y],
+            ImColor32::WHITE,
+            label,
+        );
     }
 }
 
 pub fn default_renderer_draw(window: &mut GraspEditorWindow, s: &GuiState) {
     let mut painter = s.ui.get_window_draw_list();
 
-    let arrows = window.document_mosaic.get_all().include_component("Arrow");
+    let arrows = window
+        .document_mosaic
+        .get_all()
+        .include_component("Arrow")
+        .collect_vec();
 
-    for arrow in arrows {
+    for arrow in &arrows {
         let p1 = window.get_position_with_offset_and_pan(query_position_recursive(&arrow.source()));
         let p2 = window.get_position_with_offset_and_pan(query_position_recursive(&arrow.target()));
-        let offset = Offset(&arrow).query();
+        let offset = Offset(arrow).query();
 
         let mid = p1.lerp(p2, 0.5) + offset;
         gui_draw_bezier_arrow(&mut painter, [p1, mid, p2], 2.0, 32, ImColor32::WHITE);
-        default_renderer_draw_object(&arrow, mid, window, &painter, s);
+    }
+
+    for arrow in &arrows {
+        let p1 = window.get_position_with_offset_and_pan(query_position_recursive(&arrow.source()));
+        let p2 = window.get_position_with_offset_and_pan(query_position_recursive(&arrow.target()));
+        let offset = Offset(arrow).query();
+
+        let mid = p1.lerp(p2, 0.5) + offset;
+        default_renderer_draw_arrow(arrow, mid, window, &painter, s);
     }
 
     let tiles = window
