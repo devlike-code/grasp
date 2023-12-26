@@ -243,7 +243,7 @@ impl GraspEditorWindow {
                 .unwrap()
                 .insert(obj.id, vec![area_id]);
         }
-        quadtree.insert(dbg!(label_region), label_tile.id);
+        quadtree.insert(label_region, label_tile.id);
     }
 
     pub fn create_new_arrow(
@@ -269,8 +269,24 @@ impl GraspEditorWindow {
             "Offset",
             vec![("x".into(), Value::F32(0.0)), ("y".into(), Value::F32(0.0))],
         );
-        arr.add_component("Label", par("<Label>"));
+        
+        let label_tile = arr.add_component("Label", par("<Label>"));
+        label_tile.add_component(
+            "Offset",
+            vec![
+                ("x".into(), Value::F32(10.0)),
+                ("y".into(), Value::F32(0.0)),
+            ],
+        );
 
+        let region = self.build_circle_area(middle_pos, 12);
+        let size = calc_text_size("<Label>");
+        let label_region = self.build_rect_area(Rect2 {
+            x: middle_pos.x,
+            y: middle_pos.y,
+            width: size[0],
+            height: size[1],
+        });
         let region = self.build_circle_area(middle_pos, 12);
 
         {
@@ -283,6 +299,8 @@ impl GraspEditorWindow {
                     object_to_area.insert(arr.id, vec![area_id]);
                 }
             }
+            quadtree.insert(label_region, label_tile.id);
+   
         }
 
         // for r in bezier_rects {
