@@ -221,13 +221,12 @@ impl GraspEditorWindow {
 
     pub fn update_selected_positions_by(&mut self, dp: Vec2) {
         for tile in &mut self.editor_data.selected {
-            let is_tile_an_object = tile.is_object();
-            // let is_tile_a_descriptor = tile.is_descriptor();
-            let component_name = if is_tile_an_object {
+            let component_name = if tile.is_object() {
                 "Position"
             } else {
                 "Offset"
             };
+
             let mut selected_pos_component = tile.get_component(component_name).unwrap();
             if let (Value::F32(x), Value::F32(y)) = selected_pos_component.get_by(("x", "y")) {
                 selected_pos_component.set("x", x + dp.x);
@@ -237,6 +236,15 @@ impl GraspEditorWindow {
     }
 
     pub fn update_quadtree(&mut self, _selection: Option<Vec<Tile>>) {
+        fn find_arrow_pos(arrow: &Tile) -> Vec2 {
+            let start_pos = query_position_recursive(&arrow.source());
+            let end_pos = query_position_recursive(&arrow.target());
+            let mid = start_pos.lerp(end_pos, 0.5);
+            //Arrow offset
+            let offset = Offset(arrow).query();
+            mid + offset
+        }
+
         let selected = self
             .document_mosaic
             .get_all()
@@ -247,7 +255,11 @@ impl GraspEditorWindow {
         self.quadtree.lock().unwrap().reset();
 
         for tile in &selected {
-            let selected_pos = Pos(tile).query();
+            let mut selected_pos = Pos(tile).query();
+
+            if tile.is_arrow() {
+                selected_pos = find_arrow_pos(&tile);
+            }
 
             if let Some(label) = tile.get_component("Label") {
                 let size = calc_text_size(label.get("self").as_s32().to_string());
@@ -262,7 +274,7 @@ impl GraspEditorWindow {
                     });
 
                     let mut quadtree = self.quadtree.lock().unwrap();
-                    quadtree.insert(dbg!(label_region), label.id);
+                    quadtree.insert(label_region, label.id);
                 }
             }
 
@@ -273,12 +285,7 @@ impl GraspEditorWindow {
                     self.object_to_area.lock().unwrap().insert(tile.id, area_id);
                 }
             } else if tile.is_arrow() {
-                let start_pos = query_position_recursive(&tile.source());
-                let end_pos = query_position_recursive(&tile.target());
-                let mid = start_pos.lerp(end_pos, 0.5);
-                let offset = Offset(tile).query();
-                let region = self.build_circle_area(mid + offset, 12);
-
+                let region = self.build_circle_area(selected_pos, 12);
                 let mut quadtree = self.quadtree.lock().unwrap();
                 if let Some(area_id) = quadtree.insert(region, tile.id) {
                     self.object_to_area.lock().unwrap().insert(tile.id, area_id);

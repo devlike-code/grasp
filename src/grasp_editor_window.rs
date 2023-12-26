@@ -286,8 +286,7 @@ impl GraspEditorWindow {
             width: size[0],
             height: size[1],
         });
-        let region = self.build_circle_area(middle_pos, 12);
-
+   
         self.insert_into_quadtree(region, arr);
         self.insert_into_quadtree(label_region, label_tile);
     }
