@@ -58,6 +58,11 @@ impl StateMachine for GraspEditorWindow {
 
             (_, EditorStateTrigger::MouseDownOverNode) => None,
             (_, EditorStateTrigger::ClickToSelect) => Some(EditorState::Idle),
+            (_, EditorStateTrigger::ExitContextMenu) => {
+                self.editor_data.selected.clear();
+                Some(EditorState::Idle)
+            }
+
             (EditorState::ContextMenu, EditorStateTrigger::ClickToDeselect) => None,
             (_, EditorStateTrigger::ClickToDeselect) => {
                 self.editor_data.selected.clear();
@@ -266,7 +271,7 @@ impl GraspEditorWindow {
 
                 if let Some(offset) = label.get_component("Offset") {
                     let off = Offset(&offset).query();
-                    let label_region = self.build_rect_area(Rect2 {
+                    let label_region = self.build_label_area(Rect2 {
                         x: selected_pos.x + off.x,
                         y: selected_pos.y + off.y,
                         width: size[0],

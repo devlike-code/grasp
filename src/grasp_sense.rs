@@ -35,7 +35,7 @@ impl GraspEditorWindow {
     pub fn delete_tiles(&self, _tiles: &[Tile]) {
         let quadtree = self.quadtree.lock().unwrap();
         let mut object_to_area = self.object_to_area.lock().unwrap();
-        let under_cursor = quadtree.query(self.build_cursor_area()).collect_vec();
+        let _under_cursor = quadtree.query(self.build_cursor_area()).collect_vec();
         let mut areas_to_remove: Vec<u64> = vec![];
 
         for selected in &self.editor_data.selected {

@@ -183,10 +183,7 @@ impl GraspEditorWindow {
             1,
         )
     }
-
-    pub fn build_rect_area(&self, rect: Rect2) -> Area<i32> {
-        let min = rect.min();
-        let max = rect.max();
+    fn intenrnal_build_rect_area(min: Vec2, max: Vec2) -> Area<i32> {
         let _rect = Rect2::from_two_pos(min, max);
         let dim_x = (max.x - min.x) as i32;
         let dim_y = (max.y - min.y) as i32;
@@ -199,6 +196,16 @@ impl GraspEditorWindow {
             ))
             .build()
             .unwrap()
+    }
+    pub fn build_label_area(&self, rect: Rect2) -> Area<i32> {
+        let min = self.pos_add_editor_pan(rect.min());
+        let max = self.pos_add_editor_pan(rect.max());
+        Self::intenrnal_build_rect_area(min, max)
+    }
+    pub fn build_rect_area(&self, rect: Rect2) -> Area<i32> {
+        let min = rect.min();
+        let max = rect.max();
+        Self::intenrnal_build_rect_area(min, max)
     }
 
     pub fn pos_with_pan(&self, v: Vec2) -> Vec2 {
@@ -240,7 +247,7 @@ impl GraspEditorWindow {
 
         let region = self.build_circle_area(pos, 12);
         let size = calc_text_size("<Label>");
-        let label_region = self.build_rect_area(Rect2 {
+        let label_region = self.build_label_area(Rect2 {
             x: pos.x,
             y: pos.y,
             width: size[0],
@@ -280,13 +287,13 @@ impl GraspEditorWindow {
 
         let region = self.build_circle_area(middle_pos, 12);
         let size = calc_text_size("<Label>");
-        let label_region = self.build_rect_area(Rect2 {
+        let label_region = self.build_label_area(Rect2 {
             x: middle_pos.x,
             y: middle_pos.y,
             width: size[0],
             height: size[1],
         });
-   
+
         self.insert_into_quadtree(region, arr);
         self.insert_into_quadtree(label_region, label_tile);
     }
