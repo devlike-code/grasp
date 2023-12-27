@@ -17,7 +17,7 @@ use crate::{
     },
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
     grasp_editor_window::GraspEditorWindow,
-    grasp_editor_window_list::GetWindowFocus,
+    grasp_editor_window_list::*,
     grasp_transitions::QuadtreeUpdateCapability,
     utilities::QuadTreeFetch,
     GuiState,
@@ -95,7 +95,7 @@ impl GraspEditorWindow {
             .unwrap_or(false);
         let mouse_in_window = self.rect.contains(pos);
         let is_resizing = {
-            let size = 10.0;
+            let size = 12.0;
             let lower_left_rect = Rect2::from_pos_size(
                 self.rect.max() - [size, size].into(),
                 [2.0 * size, 2.0 * size].into(),
@@ -105,6 +105,12 @@ impl GraspEditorWindow {
 
         let clicked_left = !caught_events.contains(&hash_input("click left"))
             && s.ui.is_mouse_clicked(imgui::MouseButton::Left);
+
+        let clicked_middle = !caught_events.contains(&hash_input("click middle"))
+            && s.ui.is_mouse_clicked(imgui::MouseButton::Middle);
+
+        let clicked_right = !caught_events.contains(&hash_input("click right"))
+            && s.ui.is_mouse_clicked(imgui::MouseButton::Right);
 
         let double_clicked_left = !caught_events.contains(&hash_input("double click left"))
             && s.ui.is_mouse_double_clicked(imgui::MouseButton::Left);
@@ -141,7 +147,7 @@ impl GraspEditorWindow {
             self.document_mosaic.request_quadtree_update();
         }
 
-        if double_clicked_left && under_cursor.is_empty() && mouse_in_window {
+        if double_clicked_left && under_cursor.is_empty() && mouse_in_window && is_focused {
             //
             caught_events.push(hash_input("double click left"));
             self.trigger(DblClickToCreate);
@@ -149,17 +155,41 @@ impl GraspEditorWindow {
         } else if self.state == EditorState::PropertyChanging && !is_focused {
             self.trigger(EndDrag);
         } else if double_clicked_left && !under_cursor.is_empty() && is_focused && is_label_region {
+            //
             let tile = under_cursor.fetch_tile(&self.document_mosaic).target();
             trigget_rename(self, tile, caught_events);
+            //
         } else if double_clicked_left && !under_cursor.is_empty() && is_focused {
             //
             let tile = under_cursor.fetch_tile(&self.document_mosaic);
             trigget_rename(self, tile, caught_events);
             //
-        } else if clicked_left && under_cursor.is_empty() && mouse_in_window && !is_context {
+        } else if clicked_left && under_cursor.is_empty() && mouse_in_window
+        //&& !is_context
+        {
             //
             caught_events.push(hash_input("click left"));
             self.trigger(ClickToDeselect);
+            //
+        } else if clicked_middle && under_cursor.is_empty() && mouse_in_window {
+            //
+            //println!("CLICK MIDDLE");
+            if !is_focused {
+                self.set_focus();
+            }
+            caught_events.push(hash_input("click middle"));
+            self.trigger(ClickToDeselect);
+        } else if clicked_right && under_cursor.is_empty() && mouse_in_window {
+            //
+            //println!("CLICK RIGHT");
+            if !is_focused {
+                self.set_focus();
+            }
+            caught_events.push(hash_input("click right"));
+
+           
+                self.trigger(EndDrag);
+          
             //
         } else if clicked_left && !under_cursor.is_empty() && mouse_in_window {
             //
@@ -172,6 +202,7 @@ impl GraspEditorWindow {
             && (s.ui.is_modkey_down(Key::LeftAlt) || s.ui.is_modkey_down(Key::RightAlt))
             && mouse_in_window
             && is_focused
+        //
         {
             //
             let tile_under_mouse = under_cursor.fetch_tile(&self.document_mosaic);
@@ -185,18 +216,24 @@ impl GraspEditorWindow {
             && is_focused
             && is_label_region
         {
+            //
             self.trigger(DragToMove);
+            //
         } else if start_dragging_left && !under_cursor.is_empty() && mouse_in_window && is_focused {
             //
             let tile_under_mouse = under_cursor.fetch_tile(&self.document_mosaic);
+
             if !self.editor_data.selected.contains(&tile_under_mouse) {
                 self.editor_data.selected = vec![tile_under_mouse];
             }
+
             caught_events.push(hash_input("start drag left"));
             self.trigger(DragToMove);
             //
         } else if start_dragging_left && under_cursor.is_empty() && is_resizing && is_focused {
+            //
             self.trigger(DragToWindowResize);
+            //
         } else if start_dragging_left && under_cursor.is_empty() && mouse_in_window && is_focused {
             //
             self.editor_data.selected = vec![];
@@ -204,9 +241,13 @@ impl GraspEditorWindow {
             caught_events.push(hash_input("start drag left"));
             self.trigger(DragToSelect);
             //
-        } else if start_dragging_middle && mouse_in_window && is_focused {
-            //
+        } else if start_dragging_middle && mouse_in_window {
+            if !is_focused {
+                self.set_focus();
+            }
+
             caught_events.push(hash_input("start drag middle"));
+
             self.trigger(DragToPan);
             //
         } else if end_dragging_middle || end_dragging_left {

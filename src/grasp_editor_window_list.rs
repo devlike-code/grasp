@@ -87,7 +87,7 @@ impl GraspEditorWindowList {
 
         let depth_sorted = {
             let vec_deque = self.depth_sorted_by_index.lock().unwrap().clone();
-            vec_deque.iter().rev().cloned().collect_vec()
+            vec_deque.iter().cloned().collect_vec()
         };
 
         for window_id in depth_sorted {

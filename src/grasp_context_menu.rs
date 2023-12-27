@@ -26,13 +26,13 @@ impl GraspEditorWindow {
             {
                 if let Some(c) = s.ui.begin_popup("context-menu") {
                     if self.editor_data.selected.is_empty() {
-                        println!("DEFAULT MENU IN WINDOW {}", self.window_list_index);
+                       // println!("DEFAULT MENU IN WINDOW {}", self.window_list_index);
                         if self.show_default_menu(s) {
                             self.trigger(EditorStateTrigger::ExitContextMenu);
                             s.ui.close_current_popup();
                         }
                     } else {
-                        println!("SELECTION MENU IN WINDOW {}", self.window_list_index);
+                      //  println!("SELECTION MENU IN WINDOW {}", self.window_list_index);
                         if self.show_selection_menu(s) {
                             self.trigger(EditorStateTrigger::ExitContextMenu);
                             s.ui.close_current_popup();
@@ -41,7 +41,7 @@ impl GraspEditorWindow {
 
                     c.end();
                 }
-
+                //TO-DO - Change to be triggered from sense?
                 if s.ui.is_mouse_clicked(imgui::MouseButton::Right) {
                     self.trigger(EditorStateTrigger::ClickToContextMenu);
                     s.ui.open_popup("context-menu");
@@ -135,6 +135,7 @@ impl GraspEditorWindow {
         if s.ui.button("Create new node") {
             let pos: Vec2 = s.ui.mouse_pos_on_opening_current_popup().into();
             self.create_new_object(pos - self.editor_data.window_offset - self.editor_data.pan);
+           
             return true;
         }
 

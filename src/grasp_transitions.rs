@@ -48,22 +48,22 @@ impl StateMachine for GraspEditorWindow {
                 self.create_new_object(
                     self.editor_data.cursor - self.editor_data.window_offset - self.editor_data.pan,
                 );
+                //all windows need to update their quadtrees
                 self.document_mosaic.request_quadtree_update();
-
                 Some(EditorState::Idle)
             }
-
             (_, EditorStateTrigger::DblClickToRename) => Some(EditorState::PropertyChanging),
             (_, EditorStateTrigger::ClickToReposition) => Some(EditorState::Reposition),
-
             (_, EditorStateTrigger::MouseDownOverNode) => None,
             (_, EditorStateTrigger::ClickToSelect) => Some(EditorState::Idle),
             (_, EditorStateTrigger::ExitContextMenu) => {
-                self.editor_data.selected.clear();
+                //self.editor_data.selected.clear();
                 Some(EditorState::Idle)
             }
-
-            (EditorState::ContextMenu, EditorStateTrigger::ClickToDeselect) => None,
+            (EditorState::ContextMenu, EditorStateTrigger::ClickToDeselect) => {
+                //SPECIAL case because this happens before context menu and selection shouldn't be cleared if we have SELECTION MENU active
+                Some(EditorState::Idle)
+            }
             (_, EditorStateTrigger::ClickToDeselect) => {
                 self.editor_data.selected.clear();
                 Some(EditorState::Idle)
@@ -90,7 +90,6 @@ impl StateMachine for GraspEditorWindow {
                 self.editor_data.rect_start_pos = Some(self.editor_data.cursor);
                 Some(EditorState::Rect)
             }
-
             (EditorState::Pan, EditorStateTrigger::EndDrag) => {
                 self.document_mosaic.request_quadtree_update();
                 Some(EditorState::Idle)
@@ -122,9 +121,11 @@ impl StateMachine for GraspEditorWindow {
 
                     self.create_new_arrow(&start, &tile, mid_pos); //, bez.collect_vec());
                 }
-                self.editor_data.selected.clear();
+                // self.editor_data.selected.clear();
                 self.editor_data.link_start_pos = None;
                 self.editor_data.link_end = None;
+                
+                // all windows need to update their quadtrees
                 self.document_mosaic.request_quadtree_update();
                 Some(EditorState::Idle)
             }
@@ -138,7 +139,6 @@ impl StateMachine for GraspEditorWindow {
                 self.editor_data.rect_delta = None;
                 Some(EditorState::Idle)
             }
-
             (EditorState::PropertyChanging, _) => {
                 self.editor_data.tile_changing = None;
                 self.editor_data.field_changing = None;
@@ -146,7 +146,6 @@ impl StateMachine for GraspEditorWindow {
                 self.editor_data.text.clear();
                 Some(EditorState::Idle)
             }
-
             (EditorState::Reposition, _) => {
                 if let Some(tile_id) = self.editor_data.repositioning {
                     if self.document_mosaic.is_tile_valid(&tile_id) {

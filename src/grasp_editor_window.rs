@@ -2,7 +2,7 @@ use crate::core::gui::calc_text_size;
 use crate::core::gui::windowing::set_window_focus;
 use crate::core::math::rect2::Rect2;
 use crate::core::math::vec2::Vec2;
-use crate::editor_state_machine::EditorState;
+use crate::editor_state_machine::{EditorState, StateMachine};
 use crate::grasp_common::GraspEditorData;
 use crate::grasp_editor_window_list::{GetWindowFocus, GraspEditorWindowList, SetWindowFocus};
 use crate::grasp_render::GraspRenderer;
@@ -55,6 +55,14 @@ impl GraspEditorWindow {
             .add(self.editor_data.window_offset)
     }
 
+    pub fn set_focus(&self) {
+        //SET focus in mosaic
+        SetWindowFocus(&self.document_mosaic, self.window_tile.id).query();
+        // set editor window focus through window list
+        if let Some(window_list) = self.window_list.upgrade() {
+            window_list.focus(&self.name);
+        }
+    }
     pub fn show(&mut self, s: &GuiState, caught_events: &mut Vec<u64>) {
         let name = self.name.clone();
 
@@ -103,11 +111,14 @@ impl GraspEditorWindow {
                         .query()
                         .is_some_and(|m| m != self.window_tile.id)
                 {
-                    println!("Window should refocus");
-                    SetWindowFocus(&self.document_mosaic, self.window_tile.id).query();
-                    if let Some(window_list) = self.window_list.upgrade() {
-                        window_list.focus(&self.name);
-                    }
+                    self.set_focus();
+                }
+
+                if GetWindowFocus(&self.document_mosaic)
+                    .query()
+                    .is_some_and(|m| m != self.window_tile.id)
+                {
+                    self.state = EditorState::Idle;
                 }
 
                 if let Some(request) = self.document_mosaic.dequeue(&self.window_tile) {
@@ -224,7 +235,7 @@ impl GraspEditorWindow {
         }
     }
 
-    pub fn create_new_object(&self, pos: Vec2) {
+    pub fn create_new_object(&mut self, pos: Vec2) {
         self.document_mosaic.new_type("Node: unit;").unwrap();
 
         let obj = self.document_mosaic.new_object("Node", void());
@@ -254,8 +265,10 @@ impl GraspEditorWindow {
             height: size[1],
         });
 
-        self.insert_into_quadtree(region, obj);
+        self.insert_into_quadtree(region, obj.clone());
         self.insert_into_quadtree(label_region, label_tile);
+        self.editor_data.selected = vec![obj];
+  
     }
 
     pub fn create_new_arrow(&mut self, source: &Tile, target: &Tile, middle_pos: Vec2) {
@@ -294,7 +307,9 @@ impl GraspEditorWindow {
             height: size[1],
         });
 
-        self.insert_into_quadtree(region, arr);
+        self.insert_into_quadtree(region, arr.clone());
         self.insert_into_quadtree(label_region, label_tile);
+
+        self.editor_data.selected = vec![arr];
     }
 }
