@@ -17,7 +17,7 @@ use log::info;
 use gl::types::GLvoid;
 use sdl2::video::GLProfile;
 
-use crate::{core::math::Vec2, grasp_common::read_window_size, seq::SeqWriter};
+use crate::{core::math::Vec2, seq::SeqWriter};
 
 pub const LOAD_TEXTURE_EVENT: u32 = 10101;
 

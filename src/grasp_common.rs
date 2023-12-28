@@ -3,7 +3,7 @@ use mosaic::internals::{EntityId, Tile};
 
 use crate::core::math::vec2::Vec2;
 
-#[allow(clippy::field_reassign_with_default)]
+#[allow(clippy::field_reassign_with_default, dead_code)]
 pub fn read_window_size() -> Result<(), (f32, f32)> {
     if Ini::load_from_file("config.ini").is_err() {
         let mut conf = Ini::new();

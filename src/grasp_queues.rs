@@ -7,7 +7,6 @@ use mosaic::{
         tile_getters::TileGetters,
     },
 };
-use notify_rust::Notification;
 use std::vec::IntoIter;
 
 use crate::{
@@ -47,14 +46,13 @@ impl GraspEditorState {
     fn process_toast_queue(&mut self) {
         while let Some(request) = queues::dequeue(ToastRequestQueue, &self.document_mosaic) {
             let toast_message = request.get("self").as_s32();
-            println!("TOAST RECEIVED! {}", toast_message);
 
-            Notification::new()
-                .summary("Grasp")
-                .body(toast_message.to_string().as_str())
-                //.icon("")
-                .show()
-                .ok();
+            println!("TOAST: {:?}", toast_message);
+            // let _ = Notification::new()
+            //     .summary("Grasp")
+            //     .body(toast_message.to_string().as_str())
+            //     .timeout(2000)
+            //     .show();
 
             request.iter().delete();
         }
