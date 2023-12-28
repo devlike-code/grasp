@@ -20,33 +20,33 @@ use crate::{
 };
 
 impl GraspEditorWindow {
+    pub fn context_popup(&mut self, s: &GuiState) {
+        s.ui.popup("context-menu", || {
+            println!("POPUP OPENED!");
+            if self.editor_data.selected.is_empty() {
+                // println!("DEFAULT MENU IN WINDOW {}", self.window_list_index);
+                if self.show_default_menu(s) {
+                    self.trigger(EditorStateTrigger::ExitContextMenu);
+                    s.ui.close_current_popup();
+                }
+            } else {
+                //  println!("SELECTION MENU IN WINDOW {}", self.window_list_index);
+                if self.show_selection_menu(s) {
+                    self.trigger(EditorStateTrigger::ExitContextMenu);
+                    s.ui.close_current_popup();
+                }
+            }
+        });
+    }
+
     pub(crate) fn update_context_menu(&mut self, s: &GuiState) {
         if let Some(window_list) = self.window_list.upgrade() {
             if window_list.get_focused() == Some(self)
                 && self.rect.contains(s.ui.io().mouse_pos.into())
+                && s.ui.is_mouse_clicked(imgui::MouseButton::Right)
             {
-                if let Some(c) = s.ui.begin_popup("context-menu") {
-                    if self.editor_data.selected.is_empty() {
-                        // println!("DEFAULT MENU IN WINDOW {}", self.window_list_index);
-                        if self.show_default_menu(s) {
-                            self.trigger(EditorStateTrigger::ExitContextMenu);
-                            s.ui.close_current_popup();
-                        }
-                    } else {
-                        //  println!("SELECTION MENU IN WINDOW {}", self.window_list_index);
-                        if self.show_selection_menu(s) {
-                            self.trigger(EditorStateTrigger::ExitContextMenu);
-                            s.ui.close_current_popup();
-                        }
-                    }
-
-                    c.end();
-                }
-                //TO-DO - Change to be triggered from sense?
-                if s.ui.is_mouse_clicked(imgui::MouseButton::Right) {
-                    self.trigger(EditorStateTrigger::ClickToContextMenu);
-                    s.ui.open_popup("context-menu");
-                }
+                self.trigger(EditorStateTrigger::ClickToContextMenu);
+                s.ui.open_popup("context-menu");
             }
         }
     }
@@ -60,9 +60,7 @@ impl GraspEditorWindow {
             .next()
             .unwrap();
 
-        // Begin a submenu within the popup
-        if s.ui.begin_menu("Add Component").is_some() {
-            // Add items to the submenu
+        if let Some(token) = s.ui.begin_menu("Add Component") {
             let all_properties = self
                 .document_mosaic
                 .component_registry
@@ -82,6 +80,7 @@ impl GraspEditorWindow {
                     return true;
                 }
             }
+            token.end();
         }
 
         if s.ui.button("Select") {
@@ -137,7 +136,6 @@ impl GraspEditorWindow {
                 .get_targets()
                 .next()
             {
-                // check issue with the vec<&Tile>
                 let c1 = targets_from(arrows_from(tiles(self.editor_data.selected.clone())));
                 let c2 = tiles(self.editor_data.selected.clone());
                 let c3 = arrows_from(tiles(self.editor_data.selected.clone()));

@@ -51,6 +51,7 @@ fn default_renderer_draw_object(
         [20.0, 20.0],
         [pos.x - window.rect.x, pos.y - window.rect.y],
         0.0,
+        1.0,
     );
 
     let mut cancel: bool = true;
@@ -146,6 +147,7 @@ fn default_renderer_draw_arrow(
         [20.0, 20.0],
         [pos.x - window.rect.x, pos.y - window.rect.y],
         angle,
+        1.0,
     );
 
     let mut cancel: bool = true;

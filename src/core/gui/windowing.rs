@@ -146,7 +146,7 @@ fn gui_rotate_end(rot_id: usize, rad: f32) {
     }
 }
 
-pub fn gui_draw_image(name: &str, size: [f32; 2], pos: [f32; 2], rot: f32) {
+pub fn gui_draw_image(name: &str, size: [f32; 2], pos: [f32; 2], rot: f32, opacity: f32) {
     unsafe {
         let local_pos = ImVec2::new(pos[0] - size[0] / 2.0, pos[1] - size[1] / 2.0);
         imgui::sys::igSetCursorPos(local_pos);
@@ -157,10 +157,10 @@ pub fn gui_draw_image(name: &str, size: [f32; 2], pos: [f32; 2], rot: f32) {
             ImVec2::new(size[0], size[1]),
             ImVec2::new(0.0, 0.0),
             ImVec2::new(1.0, 1.0),
-            ImVec4::new(1.0, 1.0, 1.0, 1.0),
+            ImVec4::new(1.0, 1.0, 1.0, opacity),
             ImVec4::new(0.0, 0.0, 0.0, 0.0),
         );
-        gui_rotate_end(rot_id, rot); //* 0.017453292);
+        gui_rotate_end(rot_id, rot);
     }
 }
 

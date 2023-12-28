@@ -59,7 +59,6 @@ fn gui_bezier_get_point(p0: Vec2, p1: Vec2, p2: Vec2, t: f32) -> Vec2 {
     Vec2::new(v.x, v.y)
 }
 
-// i was certain this would fail, but... uhm no. so i'm not sure why our point isn't on the line...
 fn gui_bezier_control_point(p0: Vec2, b: Vec2, p2: Vec2) -> Vec2 {
     let p = 2.0 * b - 0.5 * p0 - 0.5 * p2;
     assert_eq!(b, gui_bezier_get_point(p0, p, p2, 0.5));
@@ -111,18 +110,8 @@ pub fn gui_draw_bezier_with_end_arrow(
         [20.0, 20.0],
         [tip.x - window_pos.x, tip.y - window_pos.y],
         angle,
+        1.0,
     );
-
-    // let mut polyline: Vec<[f32; 2]> = vec![];
-    // let p3: Vec2 = points[2];
-    // if half_width > half_thickness {
-    //     polyline.push((p3 - 2.0 * end_dir * end_arrow.length + end_n * half_width).into());
-    // }
-    // polyline.push(tip.into());
-    // if half_width > half_thickness {
-    //     polyline.push((p3 - 2.0 * end_dir * end_arrow.length - end_n * half_width).into());
-    // }
-    // draw_list.add_polyline(polyline, color).filled(true).build();
 
     draw_list
         .add_polyline(ps, ImColor32::WHITE)

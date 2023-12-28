@@ -189,7 +189,16 @@ impl GraspEditorWindow {
             self.trigger(EndDrag);
 
             //
-        } else if clicked_left && !under_cursor.is_empty() && mouse_in_window {
+        } else if clicked_left
+            && !under_cursor.is_empty()
+            && mouse_in_window
+            && !self.editor_data.selected.contains(
+                &self
+                    .document_mosaic
+                    .get(*under_cursor.first().unwrap())
+                    .unwrap(),
+            )
+        {
             //
             caught_events.push(hash_input("click left"));
             self.editor_data.selected = under_cursor.fetch_tiles(&self.document_mosaic);

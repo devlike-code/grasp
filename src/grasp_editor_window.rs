@@ -141,6 +141,7 @@ impl GraspEditorWindow {
                 (self.renderer)(self, s);
                 self.draw_debug(s);
                 self.update_context_menu(s);
+                self.context_popup(s);
             });
         self.update(s);
     }
