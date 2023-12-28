@@ -61,24 +61,29 @@ impl GraspEditorWindow {
             .unwrap();
 
         // Begin a submenu within the popup
-        if let Some(token) = s.ui.begin_menu("Add Component") {
+        if s.ui.begin_menu("Add Component").is_some() {
             // Add items to the submenu
             let all_properties = self
                 .document_mosaic
-                .component_registry.component_type_map
-                
+                .component_registry
+                .component_type_map
                 .lock()
-                .unwrap().keys()
-                .map(|k| k.to_string()).collect_vec();
+                .unwrap()
+                .keys()
+                .map(|k| k.to_string())
+                .collect_vec();
+
             for p in all_properties {
                 if s.ui.menu_item(p.clone()) {
                     for s in &self.editor_data.selected {
                         s.add_component(dbg!(&p.as_str()), void());
                     }
+
+                    return true;
                 }
             }
-            token.end();
         }
+
         if s.ui.button("Select") {
             let selection_tile = self.document_mosaic.make_selection();
             self.document_mosaic

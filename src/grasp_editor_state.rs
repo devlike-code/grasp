@@ -8,7 +8,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use imgui::{Condition, ImString, StyleColor, TreeNodeFlags};
+use imgui::{Condition, ImString, MouseButton, StyleColor, TreeNodeFlags};
 use itertools::Itertools;
 use mosaic::{
     capabilities::QueueTile,
@@ -68,6 +68,8 @@ pub struct GraspEditorState {
     pub(crate) refresh_quadtree_queue: QueueTile,
     pub(crate) toast_request_queue: QueueTile,
     show_tabview: bool,
+    locked_components: Vec<S32>,
+    queued_component_delete: Option<usize>,
 }
 
 impl GraspEditorState {
@@ -144,6 +146,13 @@ impl GraspEditorState {
             toast_request_queue,
             window_list: GraspEditorWindowList::default(),
             show_tabview: false,
+            queued_component_delete: None,
+            locked_components: vec![
+                "Node".into(),
+                "Arrow".into(),
+                "Position".into(),
+                "Offset".into(),
+            ],
         }
     }
 
@@ -293,6 +302,7 @@ impl GraspEditorState {
                     ) {
                         header_color.end();
                         s.ui.indent();
+
                         for (part, tiles) in &o
                             .get_full_archetype()
                             .into_iter()
@@ -308,16 +318,27 @@ impl GraspEditorState {
                                     self.component_renderers.get(&part.as_str().into())
                                 {
                                     if s.ui.collapsing_header(
-                                        format!("{} [ID: {}]", part.to_uppercase(), tile.id),
+                                        format!("{} [ID: {}]", part, tile.id),
                                         TreeNodeFlags::DEFAULT_OPEN,
                                     ) {
                                         subheader_color.end();
                                         renderer(s, focused_window, tile.clone());
                                     }
                                 } else if s.ui.collapsing_header(
-                                    format!("{} [ID: {}]", part.to_uppercase(), tile.id),
+                                    format!("{} [ID: {}]", part, tile.id),
                                     TreeNodeFlags::DEFAULT_OPEN,
                                 ) {
+                                    let is_locked =
+                                        self.locked_components.contains(&tile.component);
+                                    let is_header_covered = s.ui.is_item_hovered();
+                                    let is_header_clicked =
+                                        s.ui.is_item_clicked_with_button(MouseButton::Right);
+
+                                    if !is_locked && is_header_covered && is_header_clicked {
+                                        self.queued_component_delete = Some(tile.id);
+                                        s.ui.open_popup(ImString::new("Component Menu"));
+                                    }
+
                                     subheader_color.end();
                                     draw_default_property_renderer(s, focused_window, tile.clone());
                                 }
@@ -330,6 +351,16 @@ impl GraspEditorState {
                     s.ui.spacing();
                     s.ui.separator();
                 }
+
+                s.ui.popup(ImString::new("Component Menu"), || {
+                    if s.ui.menu_item(ImString::new("Delete")) {
+                        if let Some(tile) = self.queued_component_delete {
+                            println!("DELETING TILE {}", tile);
+                            self.document_mosaic.delete_tile(tile);
+                            self.queued_component_delete = None;
+                        }
+                    }
+                });
             }
             w.end();
         }
