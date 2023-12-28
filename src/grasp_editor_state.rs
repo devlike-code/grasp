@@ -3,6 +3,7 @@ use std::{
     env,
     fmt::Display,
     fs,
+    path::PathBuf,
     rc::Weak,
     str::FromStr,
     sync::{Arc, Mutex},
@@ -16,16 +17,19 @@ use mosaic::{
         all_tiles, par, void, Collage, Datatype, FromByteArray, Mosaic, MosaicCRUD, MosaicIO,
         MosaicTypelevelCRUD, Tile, TileFieldEmptyQuery, TileFieldSetter, ToByteArray, Value, S32,
     },
+    iterators::tile_getters::TileGetters,
 };
 use quadtree_rs::Quadtree;
 
 use crate::{
-    core::{gui::docking::GuiViewport, math::Rect2},
+    core::{gui::docking::GuiViewport, math::Rect2, queues},
     editor_state_machine::EditorState,
     grasp_editor_window::GraspEditorWindow,
     grasp_editor_window_list::{GetWindowFocus, GraspEditorWindowList},
+    grasp_queues::ToastRequestQueue,
     grasp_render,
     grasp_transitions::QuadtreeUpdateCapability,
+    utilities::Label,
     GuiState,
 };
 use mosaic::capabilities::ArchetypeSubject;
@@ -33,43 +37,68 @@ use mosaic::capabilities::QueueCapability;
 
 type ComponentRenderer = Box<dyn Fn(&GuiState, &mut GraspEditorWindow, Tile)>;
 
-// pub trait ToastCapability {
-//     fn send_toast(&self, text: &str);
-// }
+pub trait ToastCapability {
+    fn send_toast(&self, text: &str);
+}
 
-// impl ToastCapability for Arc<Mosaic> {
-//     fn send_toast(&self, text: &str) {
-//         if text.len() >= 32 {
-//             println!(
-//                 "ERROR: Toast message must be shorter than 32 bytes, in:\n{}",
-//                 text
-//             );
-//         } else {
-//             let queue = self
-//                 .get_all()
-//                 .include_component("ToastRequestQueue")
-//                 .get_targets()
-//                 .next()
-//                 .unwrap();
-//             let request = self.new_object("ToastRequest", par(text));
-//             self.enqueue(&queue, &request);
-//             println!("ToastRequest enqueued");
-//         }
-//     }
-// }
+impl ToastCapability for Arc<Mosaic> {
+    fn send_toast(&self, text: &str) {
+        if text.len() >= 32 {
+            println!(
+                "ERROR: Toast message must be shorter than 32 bytes, in:\n{}",
+                text
+            );
+        } else {
+            queues::enqueue(
+                ToastRequestQueue,
+                self.new_object("ToastRequest", par(text)),
+            );
+            println!("ToastRequest enqueued");
+        }
+    }
+}
 
 #[allow(dead_code)]
 pub struct GraspEditorState {
-    pub(crate) document_mosaic: Arc<Mosaic>,
-    pub(crate) component_renderers: HashMap<S32, ComponentRenderer>,
-    pub(crate) window_list: GraspEditorWindowList,
-    pub(crate) editor_state_tile: Tile,
-    pub(crate) new_tab_request_queue: QueueTile,
-    pub(crate) refresh_quadtree_queue: QueueTile,
-    pub(crate) toast_request_queue: QueueTile,
+    pub document_mosaic: Arc<Mosaic>,
+    pub component_renderers: HashMap<S32, ComponentRenderer>,
+    pub window_list: GraspEditorWindowList,
+    pub editor_state_tile: Tile,
+    pub new_tab_request_queue: QueueTile,
+    pub refresh_quadtree_queue: QueueTile,
+    pub toast_request_queue: QueueTile,
+    pub loaded_categories: Vec<ComponentCategory>,
     show_tabview: bool,
     locked_components: Vec<S32>,
     queued_component_delete: Option<usize>,
+}
+
+#[derive(Default, Debug, Clone)]
+pub struct ComponentEntry {
+    pub name: String,
+    pub display: String,
+    pub hidden: bool,
+}
+
+#[derive(Default, Debug, Clone)]
+pub struct ComponentCategory {
+    pub name: String,
+    pub components: Vec<ComponentEntry>,
+    pub hidden: bool,
+}
+
+pub struct DisplayName<'a>(pub &'a Tile);
+impl<'a> TileFieldEmptyQuery for DisplayName<'a> {
+    type Output = Option<String>;
+    fn query(&self) -> Self::Output {
+        if let Some(pos_component) = self.0.get_component("DisplayName") {
+            if let Value::S32(s) = pos_component.get("self") {
+                return Some(s.to_string());
+            }
+        }
+
+        None
+    }
 }
 
 impl GraspEditorState {
@@ -82,33 +111,111 @@ impl GraspEditorState {
         .unwrap();
     }
 
-    pub fn prepare_mosaic(mosaic: Arc<Mosaic>) -> Arc<Mosaic> {
-        mosaic.new_type("Node: unit;").unwrap();
-        mosaic.new_type("Arrow: unit;").unwrap();
-        mosaic.new_type("Label: s32;").unwrap();
-        mosaic.new_type("Position: { x: f32, y: f32 };").unwrap();
-        mosaic.new_type("Offset: { x: f32, y: f32 };").unwrap();
-        mosaic.new_type("Selection: unit;").unwrap();
-        mosaic.new_type("EditorState: unit;").unwrap();
-        mosaic.new_type("EditorStateFocusedWindow: u64;").unwrap();
-        mosaic.new_type("EditorWindowQueue: unit;").unwrap();
-        mosaic.new_type("ToWindow: unit;").unwrap();
-        mosaic.new_type("NewWindowRequestQueue: unit;").unwrap();
-        mosaic
-            .new_type("QuadtreeUpdateRequestQueue: unit;")
-            .unwrap();
-        mosaic.new_type("FocusWindowRequest: unit;").unwrap();
-        mosaic.new_type("QuadtreeUpdateRequest: unit;").unwrap();
-        mosaic.new_type("ToastRequestQueue: unit;").unwrap();
-        mosaic.new_type("ToastRequest: s32;").unwrap();
-        println!("Mosaic ready for use in Grasp!");
+    fn load_mosaic_components_from_file(
+        mosaic: &Arc<Mosaic>,
+        file: PathBuf,
+    ) -> Vec<ComponentCategory> {
+        let mut component_categories = vec![];
+        let editor_mosaic = Mosaic::new();
+        editor_mosaic.new_type("Node: unit;").unwrap();
+        editor_mosaic.new_type("Arrow: unit;").unwrap();
+        editor_mosaic.new_type("Label: s32;").unwrap();
 
-        mosaic
+        editor_mosaic.new_type("Hidden: unit;").unwrap();
+        editor_mosaic.new_type("DisplayName: s32;").unwrap();
+
+        editor_mosaic.load(&fs::read(file).unwrap()).unwrap();
+
+        let categories = editor_mosaic.get_all().filter(|t| {
+            t.is_object() && t.iter().get_arrows_into().len() == 0 && t.match_archetype(&["Label"])
+        });
+
+        categories.for_each(|menu| {
+            let mut category = ComponentCategory {
+                name: Label(&menu).query(),
+                ..Default::default()
+            };
+
+            if menu.match_archetype(&["Hidden"]) {
+                category.hidden = true;
+            }
+
+            let items = menu.iter().get_arrows_from().get_targets();
+
+            for item in items {
+                let component_name = Label(&item).query();
+                let mut component_entry = ComponentEntry {
+                    name: component_name.clone(),
+                    display: component_name.clone(),
+                    hidden: false,
+                };
+
+                if item.match_archetype(&["Hidden"]) {
+                    component_entry.hidden = true;
+                }
+
+                if let Some(display) = DisplayName(&item).query() {
+                    component_entry.display = display;
+                }
+
+                category.components.push(component_entry);
+
+                let mut fields = vec![];
+
+                let mut current_field = item
+                    .iter()
+                    .get_arrows_from()
+                    .find(|t| t.iter().get_arrows_into().len() == 0);
+
+                while current_field.is_some() {
+                    let field = current_field.as_ref().unwrap();
+                    let field_name = Label(field).query();
+                    let field_datatype = Label(&field.target()).query();
+                    fields.push((field_name, field_datatype));
+                    current_field = field.iter().get_arrows_from().get_targets().next();
+                }
+
+                let formatted = if fields.is_empty() {
+                    format!("{}: unit;", component_name)
+                } else if fields.len() == 1 && fields.first().as_ref().unwrap().0.as_str() == "self"
+                    || fields.first().as_ref().unwrap().0.as_str().is_empty()
+                {
+                    let (_, field_datatype) = fields.first().unwrap();
+                    format!("{}: {};", component_name, field_datatype)
+                } else {
+                    let field_struct = fields
+                        .iter()
+                        .map(|(a, b)| format!("{}: {}", a, b))
+                        .join(", ");
+                    format!("{}: {{ {} }};", component_name, field_struct)
+                };
+
+                mosaic.new_type(&formatted).unwrap();
+            }
+            component_categories.push(category);
+        });
+
+        component_categories
+    }
+
+    pub fn prepare_mosaic(mosaic: Arc<Mosaic>) -> (Arc<Mosaic>, Vec<ComponentCategory>) {
+        let components: Vec<ComponentCategory> = fs::read_dir("env\\components")
+            .unwrap()
+            .flat_map(|file_entry| {
+                if let Ok(file) = file_entry {
+                    Self::load_mosaic_components_from_file(&mosaic, file.path())
+                } else {
+                    vec![]
+                }
+            })
+            .collect_vec();
+
+        (mosaic, components)
     }
 
     pub fn new() -> Self {
         let document_mosaic = Mosaic::new();
-        Self::prepare_mosaic(Arc::clone(&document_mosaic));
+        let (_, components) = Self::prepare_mosaic(Arc::clone(&document_mosaic));
 
         let editor_state_tile = document_mosaic.new_object("EditorState", void());
         document_mosaic.new_extension(&editor_state_tile, "EditorStateFocusedWindow", par(0u64));
@@ -121,21 +228,6 @@ impl GraspEditorState {
 
         let toast_request_queue = document_mosaic.make_queue();
         toast_request_queue.add_component("ToastRequestQueue", void());
-
-        //let dock_state = DockState::new(vec![]);
-
-        // add here default renderers
-
-        // state
-        //     .component_renderers
-        //     .insert("Label".into(), Box::new(Self::draw_label_property));
-
-        // state
-        //     .component_renderers
-        //     .insert("Position".into(), Box::new(Self::draw_position_property));
-
-        //        let tab = state.new_tab(all_tiles());
-        //        state.dock_state.main_surface_mut().push_to_first_leaf(tab);
 
         Self {
             document_mosaic,
@@ -153,6 +245,7 @@ impl GraspEditorState {
                 "Position".into(),
                 "Offset".into(),
             ],
+            loaded_categories: components,
         }
     }
 
@@ -162,8 +255,12 @@ impl GraspEditorState {
         window_tile.add_component("EditorWindowQueue", void());
 
         //connecting all new windows with editor state tile
-        self.document_mosaic
-            .new_arrow(&self.editor_state_tile, &window_tile, "ToWindow", void());
+        self.document_mosaic.new_arrow(
+            &self.editor_state_tile,
+            &window_tile,
+            "DirectWindowRequest",
+            void(),
+        );
 
         let new_index = self.window_list.increment();
         let id = self.window_list.current_index as usize - 1;
@@ -188,7 +285,7 @@ impl GraspEditorState {
                 width: 0.0,
                 height: 0.0,
             },
-            window_list: unsafe { Weak::from_raw(&self.window_list) },
+            grasp_editor_state: unsafe { Weak::from_raw(self) },
             window_list_index: id,
         };
 
@@ -401,7 +498,7 @@ impl GraspEditorState {
                     .save_file()
                 {
                     fs::write(file, document).unwrap();
-                    // self.document_mosaic.send_toast("Document saved");
+                    self.document_mosaic.send_toast("Document saved");
                 }
             }
 

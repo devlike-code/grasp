@@ -22,7 +22,6 @@ use crate::{
 impl GraspEditorWindow {
     pub fn context_popup(&mut self, s: &GuiState) {
         s.ui.popup("context-menu", || {
-            println!("POPUP OPENED!");
             if self.editor_data.selected.is_empty() {
                 // println!("DEFAULT MENU IN WINDOW {}", self.window_list_index);
                 if self.show_default_menu(s) {
@@ -40,14 +39,13 @@ impl GraspEditorWindow {
     }
 
     pub(crate) fn update_context_menu(&mut self, s: &GuiState) {
-        if let Some(window_list) = self.window_list.upgrade() {
-            if window_list.get_focused() == Some(self)
-                && self.rect.contains(s.ui.io().mouse_pos.into())
-                && s.ui.is_mouse_clicked(imgui::MouseButton::Right)
-            {
-                self.trigger(EditorStateTrigger::ClickToContextMenu);
-                s.ui.open_popup("context-menu");
-            }
+        let window_list = &self.grasp_editor_state.upgrade().unwrap().window_list;
+        if window_list.get_focused() == Some(self)
+            && self.rect.contains(s.ui.io().mouse_pos.into())
+            && s.ui.is_mouse_clicked(imgui::MouseButton::Right)
+        {
+            self.trigger(EditorStateTrigger::ClickToContextMenu);
+            s.ui.open_popup("context-menu");
         }
     }
 
@@ -61,27 +59,35 @@ impl GraspEditorWindow {
             .unwrap();
 
         if let Some(token) = s.ui.begin_menu("Add Component") {
-            let all_properties = self
-                .document_mosaic
-                .component_registry
-                .component_type_map
-                .lock()
+            let categories = self
+                .grasp_editor_state
+                .upgrade()
                 .unwrap()
-                .keys()
-                .map(|k| k.to_string())
-                .collect_vec();
+                .loaded_categories
+                .clone();
 
-            for p in all_properties {
-                if s.ui.menu_item(p.clone()) {
-                    for s in &self.editor_data.selected {
-                        s.add_component(dbg!(&p.as_str()), void());
+            for category in &categories {
+                if !category.hidden {
+                    if let Some(token) = s.ui.begin_menu(category.name.clone()) {
+                        for item in &category.components {
+                            if !item.hidden && s.ui.menu_item(item.display.clone()) {
+                                for s in &self.editor_data.selected {
+                                    s.add_component(&item.display, void());
+                                }
+
+                                return true;
+                            }
+                        }
+
+                        token.end();
                     }
-
-                    return true;
                 }
             }
+
             token.end();
         }
+
+        s.ui.separator();
 
         if s.ui.button("Select") {
             let selection_tile = self.document_mosaic.make_selection();

@@ -4,7 +4,8 @@ use crate::core::math::rect2::Rect2;
 use crate::core::math::vec2::Vec2;
 use crate::editor_state_machine::EditorState;
 use crate::grasp_common::GraspEditorData;
-use crate::grasp_editor_window_list::{GetWindowFocus, GraspEditorWindowList, SetWindowFocus};
+use crate::grasp_editor_state::GraspEditorState;
+use crate::grasp_editor_window_list::{GetWindowFocus, SetWindowFocus};
 use crate::grasp_render::GraspRenderer;
 use crate::GuiState;
 use ::mosaic::internals::{EntityId, Mosaic, MosaicCRUD, MosaicIO, Tile, Value};
@@ -38,7 +39,7 @@ pub struct GraspEditorWindow {
     pub middle_drag_last_frame: bool,
     pub title_bar_drag: bool,
     pub rect: Rect2,
-    pub window_list: Weak<GraspEditorWindowList>,
+    pub grasp_editor_state: Weak<GraspEditorState>,
     pub window_list_index: usize,
 }
 
@@ -56,13 +57,14 @@ impl GraspEditorWindow {
     }
 
     pub fn set_focus(&self) {
-        //SET focus in mosaic
         SetWindowFocus(&self.document_mosaic, self.window_tile.id).query();
-        // set editor window focus through window list
-        if let Some(window_list) = self.window_list.upgrade() {
-            window_list.focus(&self.name);
-        }
+        self.grasp_editor_state
+            .upgrade()
+            .unwrap()
+            .window_list
+            .focus(&self.name);
     }
+
     pub fn show(&mut self, s: &GuiState, caught_events: &mut Vec<u64>) {
         let name = self.name.clone();
 
@@ -122,7 +124,6 @@ impl GraspEditorWindow {
                 }
 
                 if let Some(request) = self.document_mosaic.dequeue(&self.window_tile) {
-                    // todo
                     match request.component.to_string().as_str() {
                         "QuadtreeUpdateRequest" => {
                             println!("UPDATING QUAD TREE {} FROM QUEUE", self.name);

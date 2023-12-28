@@ -179,30 +179,15 @@ pub fn run_main_forever<F: FnMut(&Ui, &mut bool)>(mut update: F) {
         .init();
 
     let app_name = "GRASP";
-    let window = if let Err((w, h)) = read_window_size() {
-        info!("Loading with width {} and height {}", w, h);
-        video
-            .window(app_name, w as u32, h as u32)
-            .position_centered()
-            .fullscreen_desktop()
-            .resizable()
-            .opengl()
-            .allow_highdpi()
-            .build()
-            .unwrap()
-    } else {
-        let rect = video.display_bounds(0).unwrap();
-
-        video
-            .window(app_name, rect.width() as u32, rect.height() as u32)
-            .fullscreen_desktop()
-            .set_window_flags(WindowFlags::empty().bits())
-            .resizable()
-            .opengl()
-            .allow_highdpi()
-            .build()
-            .unwrap()
-    };
+    let window = video
+        .window(app_name, 100, 100)
+        .set_window_flags(WindowFlags::empty().bits())
+        .maximized()
+        .resizable()
+        .opengl()
+        .allow_highdpi()
+        .build()
+        .unwrap();
 
     let _gl_context = window
         .gl_create_context()

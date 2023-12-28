@@ -63,6 +63,10 @@ impl StateMachine for GraspEditorWindow {
                 //SPECIAL case because this happens before context menu and selection shouldn't be cleared if we have SELECTION MENU active
                 Some(EditorState::Idle)
             }
+            (EditorState::Pan, EditorStateTrigger::ClickToDeselect) => {
+                self.document_mosaic.request_quadtree_update();
+                Some(EditorState::Idle)
+            }
             (_, EditorStateTrigger::ClickToDeselect) => {
                 self.editor_data.selected.clear();
                 Some(EditorState::Idle)

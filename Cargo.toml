@@ -24,7 +24,7 @@ lazy_static = "1.4.0"
 stb_image = "0.3.0"
 gl = "0.14.0"
 sdl2 = { version = "0.36.0", features = [ "image" ] }
-
+notify-rust = "4"
 imgui = { version = "0.11.0", features = [ "docking" ] }
 imgui-sdl2 = "0.15.3"
 imgui-opengl-renderer = "0.12.1"
