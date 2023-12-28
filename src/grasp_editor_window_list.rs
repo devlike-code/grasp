@@ -1,15 +1,14 @@
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
 
-use crate::core::math::vec2::Vec2;
 use crate::grasp_editor_window::GraspEditorWindow;
 use crate::GuiState;
-use ::mosaic::internals::{MosaicIO, Tile, Value};
+use ::mosaic::internals::MosaicIO;
 use itertools::Itertools;
 use log::error;
-use mosaic::capabilities::{ArchetypeSubject, QueueCapability};
+use mosaic::capabilities::QueueCapability;
 
-use mosaic::internals::{void, Mosaic, TileFieldEmptyQuery, TileFieldQuery, TileFieldSetter};
+use mosaic::internals::{void, Mosaic, TileFieldEmptyQuery, TileFieldSetter};
 use mosaic::iterators::component_selectors::ComponentSelectors;
 
 // ================= Window focus helpers for getting and setting value quickly ======================
@@ -113,17 +112,5 @@ impl GraspEditorWindowList {
         } else {
             error!("CANNOT FIND WINDOW NAME {}", name);
         }
-    }
-}
-
-pub fn get_pos_from_tile(tile: &Tile) -> Option<Vec2> {
-    if let Some(tile_pos_component) = tile.get_component("Position") {
-        if let (Value::F32(x), Value::F32(y)) = tile_pos_component.get_by(("x", "y")) {
-            Some(Vec2::new(x, y))
-        } else {
-            None
-        }
-    } else {
-        None
     }
 }

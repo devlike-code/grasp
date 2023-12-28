@@ -1,7 +1,11 @@
+use std::f32::consts;
+
 use imgui::{
     sys::{igImBezierQuadraticCalc, ImVec2},
     DrawListMut, ImColor32,
 };
+
+use crate::{core::gui::windowing::gui_draw_image, grasp_render::angle_between_points};
 
 use super::Vec2;
 
@@ -68,35 +72,26 @@ pub fn gui_draw_bezier_arrow(
     points: [Vec2; 3],
     thickness: f32,
     quality: u32,
-    color: ImColor32,
+    window_pos: Vec2,
+    offset: f32,
 ) {
-    gui_draw_bezier_with_arrows(
+    gui_draw_bezier_with_end_arrow(
         draw_list,
         [points[0], points[1], points[2]],
         quality,
         thickness,
-        color,
-        BezierArrowHead {
-            length: 0.0,
-            width: 0.0,
-            direction: None,
-        },
-        BezierArrowHead {
-            length: 10.0,
-            width: 10.0,
-            direction: None,
-        },
+        window_pos,
+        offset,
     );
 }
 
-pub fn gui_draw_bezier_with_arrows(
+pub fn gui_draw_bezier_with_end_arrow(
     draw_list: &mut DrawListMut<'_>,
     points: [Vec2; 3],
     quality: u32,
     thickness: f32,
-    color: ImColor32,
-    start_arrow: BezierArrowHead,
-    end_arrow: BezierArrowHead,
+    window_pos: Vec2,
+    offset: f32,
 ) {
     let ctrlp = gui_bezier_control_point(points[0], points[1], points[2]);
 
@@ -107,45 +102,27 @@ pub fn gui_draw_bezier_with_arrows(
         ps.push([p.x, p.y]);
     }
 
-    let half_thickness = thickness * 0.5;
+    let end_dir = gui_bezier_tangent(points[0], ctrlp, ctrlp, points[2], 1.0).normalized();
+    let angle = angle_between_points(end_dir, Vec2::ZERO) - consts::PI * 0.5;
+    let tip = points[2] - end_dir * offset;
 
-    if start_arrow.length > 0.0 {
-        let start_dir = gui_bezier_tangent(points[0], ctrlp, ctrlp, points[2], 0.0).normalized();
+    gui_draw_image(
+        "arrowhead",
+        [20.0, 20.0],
+        [tip.x - window_pos.x, tip.y - window_pos.y],
+        angle,
+    );
 
-        let start_n = Vec2::new(-start_dir.y, start_dir.x);
-        let half_width = start_arrow.width * 0.5;
-        let tip = points[0] - start_dir * start_arrow.length;
-
-        let mut polyline: Vec<[f32; 2]> = vec![];
-        let p0: Vec2 = points[0];
-        if half_width > half_thickness {
-            polyline.push((p0 - start_n * half_width).into());
-        }
-        polyline.push(tip.into());
-        if half_width > half_thickness {
-            polyline.push((p0 + start_n * half_width).into());
-        }
-        draw_list.add_polyline(polyline, color).filled(true).build();
-    }
-
-    if end_arrow.length > 0.0 {
-        let end_dir = gui_bezier_tangent(points[0], ctrlp, ctrlp, points[2], 1.0).normalized();
-
-        let end_n = Vec2::new(-end_dir.y, end_dir.x);
-        let half_width = end_arrow.width * 0.5;
-        let tip = points[2] - 1.0 * end_dir * end_arrow.length;
-
-        let mut polyline: Vec<[f32; 2]> = vec![];
-        let p3: Vec2 = points[2];
-        if half_width > half_thickness {
-            polyline.push((p3 - 2.0 * end_dir * end_arrow.length + end_n * half_width).into());
-        }
-        polyline.push(tip.into());
-        if half_width > half_thickness {
-            polyline.push((p3 - 2.0 * end_dir * end_arrow.length - end_n * half_width).into());
-        }
-        draw_list.add_polyline(polyline, color).filled(true).build();
-    }
+    // let mut polyline: Vec<[f32; 2]> = vec![];
+    // let p3: Vec2 = points[2];
+    // if half_width > half_thickness {
+    //     polyline.push((p3 - 2.0 * end_dir * end_arrow.length + end_n * half_width).into());
+    // }
+    // polyline.push(tip.into());
+    // if half_width > half_thickness {
+    //     polyline.push((p3 - 2.0 * end_dir * end_arrow.length - end_n * half_width).into());
+    // }
+    // draw_list.add_polyline(polyline, color).filled(true).build();
 
     draw_list
         .add_polyline(ps, ImColor32::WHITE)

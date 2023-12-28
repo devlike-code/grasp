@@ -8,7 +8,7 @@ use std::{
 };
 
 use imgui::{
-    sys::{igGetWindowDrawList, igImMax, igImMin, igImRotate, igImage, ImVec2, ImVec4},
+    sys::{igGetWindowDrawList, igImMax, igImMin, igImRotate, ImVec2, ImVec4},
     ConfigFlags, ImString, Ui, WindowFlags,
 };
 use lazy_static::lazy_static;
@@ -233,6 +233,7 @@ pub fn run_main_forever<F: FnMut(&Ui, &mut bool)>(mut update: F) {
     load_image_asset("[dot]", "assets//selected-dot.png");
     load_image_asset("arrow", "assets//arrow.png");
     load_image_asset("[arrow]", "assets//selected-arrow.png");
+    load_image_asset("arrowhead", "assets//arrowhead.png");
 
     'running: loop {
         use sdl2::event::Event;

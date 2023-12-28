@@ -84,11 +84,10 @@ impl GraspEditorWindow {
         let is_label_region = under_cursor
             .first()
             .and_then(|f| self.document_mosaic.get(*f))
-            .and_then(|t| Some(t.component.is("Label")))
+            .map(|t| t.component.is("Label"))
             .unwrap_or(false);
         let pos: Vec2 = s.ui.io().mouse_pos.into();
 
-        let is_context = self.state == EditorState::ContextMenu;
         let is_focused = GetWindowFocus(&self.document_mosaic)
             .query()
             .map(|index| index == self.window_tile.id)
@@ -187,9 +186,8 @@ impl GraspEditorWindow {
             }
             caught_events.push(hash_input("click right"));
 
-           
-                self.trigger(EndDrag);
-          
+            self.trigger(EndDrag);
+
             //
         } else if clicked_left && !under_cursor.is_empty() && mouse_in_window {
             //

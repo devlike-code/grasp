@@ -48,7 +48,7 @@ impl GraspEditorWindow {
 
             EditorState::Rect => {
                 if let Some(mut min) = self.editor_data.rect_start_pos {
-                    min = min - self.editor_data.window_offset;
+                    min -= self.editor_data.window_offset;
                     if let Some(delta) = self.editor_data.rect_delta {
                         let end_pos = min + delta;
                         let rect = Rect2::from_two_pos(min, end_pos);

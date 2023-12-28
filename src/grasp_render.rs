@@ -12,7 +12,6 @@ use crate::grasp_transitions::query_position_recursive;
 use crate::grasp_transitions::QuadtreeUpdateCapability;
 use crate::utilities::Label;
 use crate::utilities::Offset;
-use crate::utilities::Pos;
 use crate::GuiState;
 use imgui::sys::ImVec2;
 use imgui::DrawListMut;
@@ -118,7 +117,7 @@ fn default_renderer_draw_object(
     }
 }
 
-fn angle_between_points(p1: Vec2, p2: Vec2) -> f32 {
+pub fn angle_between_points(p1: Vec2, p2: Vec2) -> f32 {
     let dx = p1.x - p2.x;
     let dy = p1.y - p2.y;
     let mut angle = dy.atan2(dx);
@@ -223,12 +222,22 @@ pub fn default_renderer_draw(window: &mut GraspEditorWindow, s: &GuiState) {
         .collect_vec();
 
     for arrow in &arrows {
+        let target = arrow.target();
         let p1 = window.get_position_with_offset_and_pan(query_position_recursive(&arrow.source()));
-        let p2 = window.get_position_with_offset_and_pan(query_position_recursive(&arrow.target()));
+        let p2 = window.get_position_with_offset_and_pan(query_position_recursive(&target));
+
         let offset = Offset(arrow).query();
+        let arrow_end_offset = if target.is_object() { 15.0f32 } else { 11.0f32 };
 
         let mid = p1.lerp(p2, 0.5) + offset;
-        gui_draw_bezier_arrow(&mut painter, [p1, mid, p2], 2.0, 32, ImColor32::WHITE);
+        gui_draw_bezier_arrow(
+            &mut painter,
+            [p1, mid, p2],
+            2.0,
+            32,
+            window.rect.min(),
+            arrow_end_offset,
+        );
     }
 
     for arrow in &arrows {

@@ -19,7 +19,6 @@ use crate::{
     },
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
     grasp_editor_window::GraspEditorWindow,
-    grasp_editor_window_list::get_pos_from_tile,
     grasp_queues::QuadtreeUpdateRequestQueue,
     utilities::{Offset, Pos},
 };
@@ -124,7 +123,7 @@ impl StateMachine for GraspEditorWindow {
                 // self.editor_data.selected.clear();
                 self.editor_data.link_start_pos = None;
                 self.editor_data.link_end = None;
-                
+
                 // all windows need to update their quadtrees
                 self.document_mosaic.request_quadtree_update();
                 Some(EditorState::Idle)
@@ -262,7 +261,7 @@ impl GraspEditorWindow {
             let mut selected_pos = Pos(tile).query();
 
             if tile.is_arrow() {
-                selected_pos = find_arrow_pos(&tile);
+                selected_pos = find_arrow_pos(tile);
             }
 
             if let Some(label) = tile.get_component("Label") {

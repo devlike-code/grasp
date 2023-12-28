@@ -2,7 +2,7 @@ use crate::core::gui::calc_text_size;
 use crate::core::gui::windowing::set_window_focus;
 use crate::core::math::rect2::Rect2;
 use crate::core::math::vec2::Vec2;
-use crate::editor_state_machine::{EditorState, StateMachine};
+use crate::editor_state_machine::EditorState;
 use crate::grasp_common::GraspEditorData;
 use crate::grasp_editor_window_list::{GetWindowFocus, GraspEditorWindowList, SetWindowFocus};
 use crate::grasp_render::GraspRenderer;
@@ -194,7 +194,8 @@ impl GraspEditorWindow {
             1,
         )
     }
-    fn intenrnal_build_rect_area(min: Vec2, max: Vec2) -> Area<i32> {
+
+    fn internal_build_rect_area(min: Vec2, max: Vec2) -> Area<i32> {
         let _rect = Rect2::from_two_pos(min, max);
         let dim_x = (max.x - min.x) as i32;
         let dim_y = (max.y - min.y) as i32;
@@ -208,19 +209,17 @@ impl GraspEditorWindow {
             .build()
             .unwrap()
     }
+
     pub fn build_label_area(&self, rect: Rect2) -> Area<i32> {
         let min = self.pos_add_editor_pan(rect.min());
         let max = self.pos_add_editor_pan(rect.max());
-        Self::intenrnal_build_rect_area(min, max)
+        Self::internal_build_rect_area(min, max)
     }
+
     pub fn build_rect_area(&self, rect: Rect2) -> Area<i32> {
         let min = rect.min();
         let max = rect.max();
-        Self::intenrnal_build_rect_area(min, max)
-    }
-
-    pub fn pos_with_pan(&self, v: Vec2) -> Vec2 {
-        v + self.editor_data.pan
+        Self::internal_build_rect_area(min, max)
     }
 }
 
@@ -247,7 +246,7 @@ impl GraspEditorWindow {
                 ("y".into(), Value::F32(pos.y)),
             ],
         );
-        let label_tile = obj.add_component("Label", par("<Label>"));
+        let label_tile = obj.add_component("Label", par(""));
         label_tile.add_component(
             "Offset",
             vec![
@@ -257,7 +256,7 @@ impl GraspEditorWindow {
         );
 
         let region = self.build_circle_area(pos, 12);
-        let size = calc_text_size("<Label>");
+        let size = calc_text_size("");
         let label_region = self.build_label_area(Rect2 {
             x: pos.x,
             y: pos.y,
@@ -268,7 +267,6 @@ impl GraspEditorWindow {
         self.insert_into_quadtree(region, obj.clone());
         self.insert_into_quadtree(label_region, label_tile);
         self.editor_data.selected = vec![obj];
-  
     }
 
     pub fn create_new_arrow(&mut self, source: &Tile, target: &Tile, middle_pos: Vec2) {
@@ -289,7 +287,7 @@ impl GraspEditorWindow {
             vec![("x".into(), Value::F32(0.0)), ("y".into(), Value::F32(0.0))],
         );
 
-        let label_tile = arr.add_component("Label", par("<Label>"));
+        let label_tile = arr.add_component("Label", par(""));
         label_tile.add_component(
             "Offset",
             vec![
@@ -299,7 +297,7 @@ impl GraspEditorWindow {
         );
 
         let region = self.build_circle_area(middle_pos, 12);
-        let size = calc_text_size("<Label>");
+        let size = calc_text_size("");
         let label_region = self.build_label_area(Rect2 {
             x: middle_pos.x,
             y: middle_pos.y,
