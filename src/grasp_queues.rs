@@ -44,7 +44,7 @@ impl GraspEditorState {
     }
 
     fn process_toast_queue(&mut self) {
-        while let Some(request) = queues::dequeue(ToastRequestQueue, &self.document_mosaic) {
+        while let Some(request) = queues::dequeue(ToastRequestQueue, &self.editor_mosaic) {
             let toast_message = request.get("self").as_s32();
 
             println!("TOAST: {:?}", toast_message);
@@ -59,7 +59,7 @@ impl GraspEditorState {
     }
 
     fn process_new_window_queue(&mut self) {
-        while let Some(request) = queues::dequeue(NewWindowRequestQueue, &self.document_mosaic) {
+        while let Some(request) = queues::dequeue(NewWindowRequestQueue, &self.editor_mosaic) {
             if let Some(collage) = request.to_collage() {
                 self.new_window(collage);
                 request.iter().delete();
@@ -68,12 +68,12 @@ impl GraspEditorState {
     }
 
     fn process_quadtree_queue(&mut self) {
-        while let Some(request) = dequeue(QuadtreeUpdateRequestQueue, &self.document_mosaic) {
+        while let Some(request) = dequeue(QuadtreeUpdateRequestQueue, &self.editor_mosaic) {
             let all_window_queues = self.iter_all_windows();
             for window_queue in all_window_queues {
                 queues::enqueue_direct(
                     window_queue,
-                    self.document_mosaic
+                    self.editor_mosaic
                         .new_object("QuadtreeUpdateRequest", void()),
                 )
             }

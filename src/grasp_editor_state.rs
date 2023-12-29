@@ -60,7 +60,7 @@ impl ToastCapability for Arc<Mosaic> {
 
 #[allow(dead_code)]
 pub struct GraspEditorState {
-    pub document_mosaic: Arc<Mosaic>,
+    pub editor_mosaic: Arc<Mosaic>,
     pub component_renderers: HashMap<S32, ComponentRenderer>,
     pub window_list: GraspEditorWindowList,
     pub editor_state_tile: Tile,
@@ -103,7 +103,7 @@ impl<'a> TileFieldEmptyQuery for DisplayName<'a> {
 
 impl GraspEditorState {
     pub fn snapshot(&self) {
-        let content = self.document_mosaic.dot();
+        let content = self.editor_mosaic.dot();
         open::that(format!(
             "https://dreampuf.github.io/GraphvizOnline/#{}",
             urlencoding::encode(content.as_str())
@@ -116,17 +116,17 @@ impl GraspEditorState {
         file: PathBuf,
     ) -> Vec<ComponentCategory> {
         let mut component_categories = vec![];
-        let editor_mosaic = Mosaic::new();
-        editor_mosaic.new_type("Node: unit;").unwrap();
-        editor_mosaic.new_type("Arrow: unit;").unwrap();
-        editor_mosaic.new_type("Label: s32;").unwrap();
+        let loader_mosaic = Mosaic::new();
+        loader_mosaic.new_type("Node: unit;").unwrap();
+        loader_mosaic.new_type("Arrow: unit;").unwrap();
+        loader_mosaic.new_type("Label: s32;").unwrap();
 
-        editor_mosaic.new_type("Hidden: unit;").unwrap();
-        editor_mosaic.new_type("DisplayName: s32;").unwrap();
+        loader_mosaic.new_type("Hidden: unit;").unwrap();
+        loader_mosaic.new_type("DisplayName: s32;").unwrap();
 
-        editor_mosaic.load(&fs::read(file).unwrap()).unwrap();
+        loader_mosaic.load(&fs::read(file).unwrap()).unwrap();
 
-        let categories = editor_mosaic.get_all().filter(|t| {
+        let categories = loader_mosaic.get_all().filter(|t| {
             t.is_object() && t.iter().get_arrows_into().len() == 0 && t.match_archetype(&["Label"])
         });
 
@@ -230,7 +230,7 @@ impl GraspEditorState {
         toast_request_queue.add_component("ToastRequestQueue", void());
 
         Self {
-            document_mosaic,
+            editor_mosaic: document_mosaic,
             component_renderers: HashMap::new(),
             editor_state_tile,
             new_tab_request_queue: new_window_request_queue,
@@ -251,11 +251,11 @@ impl GraspEditorState {
 
     pub fn new_window(&mut self, collage: Box<Collage>) {
         //new window tile that is at the same time "Queue" component
-        let window_tile = self.document_mosaic.make_queue();
+        let window_tile = self.editor_mosaic.make_queue();
         window_tile.add_component("EditorWindowQueue", void());
 
         //connecting all new windows with editor state tile
-        self.document_mosaic.new_arrow(
+        self.editor_mosaic.new_arrow(
             &self.editor_state_tile,
             &window_tile,
             "DirectWindowRequest",
@@ -268,7 +268,7 @@ impl GraspEditorState {
             name: format!("Untitled {}", new_index),
             window_tile,
             quadtree: Mutex::new(Quadtree::new_with_anchor((-1000, -1000).into(), 16)),
-            document_mosaic: Arc::clone(&self.document_mosaic),
+            document_mosaic: Arc::clone(&self.editor_mosaic),
             collage,
             object_to_area: Default::default(),
             editor_data: Default::default(),
@@ -330,7 +330,7 @@ impl GraspEditorState {
                     self.new_window(all_tiles());
                 }
 
-                if let Some(focused_index) = GetWindowFocus(&self.document_mosaic).query() {
+                if let Some(focused_index) = GetWindowFocus(&self.editor_mosaic).query() {
                     let mut i = self.get_window_by_index(focused_index);
 
                     let items = self
@@ -382,7 +382,7 @@ impl GraspEditorState {
                 .size([300.0, viewport.size().y - 18.0], Condition::FirstUseEver)
                 .begin()
         {
-            let focused_index = GetWindowFocus(&self.document_mosaic).query();
+            let focused_index = GetWindowFocus(&self.editor_mosaic).query();
 
             if let Some(focused_window) = self.window_list.get_position(focused_index) {
                 let mut selected = focused_window.editor_data.selected.clone();
@@ -453,7 +453,7 @@ impl GraspEditorState {
                     if s.ui.menu_item(ImString::new("Delete")) {
                         if let Some(tile) = self.queued_component_delete {
                             println!("DELETING TILE {}", tile);
-                            self.document_mosaic.delete_tile(tile);
+                            self.editor_mosaic.delete_tile(tile);
                             self.queued_component_delete = None;
                         }
                     }
@@ -483,22 +483,22 @@ impl GraspEditorState {
                     .set_directory(env::current_dir().unwrap())
                     .pick_file()
                 {
-                    self.document_mosaic.clear();
-                    Self::prepare_mosaic(Arc::clone(&self.document_mosaic));
-                    self.document_mosaic.load(&fs::read(file).unwrap()).unwrap();
-                    self.document_mosaic.request_quadtree_update();
+                    self.editor_mosaic.clear();
+                    Self::prepare_mosaic(Arc::clone(&self.editor_mosaic));
+                    self.editor_mosaic.load(&fs::read(file).unwrap()).unwrap();
+                    self.editor_mosaic.request_quadtree_update();
                 }
             }
 
             if s.menu_item("Save") {
-                let document = self.document_mosaic.save();
+                let document = self.editor_mosaic.save();
                 if let Some(file) = rfd::FileDialog::new()
                     .add_filter("Mosaic", &["mos"])
                     .set_directory(env::current_dir().unwrap())
                     .save_file()
                 {
                     fs::write(file, document).unwrap();
-                    self.document_mosaic.send_toast("Document saved");
+                    self.editor_mosaic.send_toast("Document saved");
                 }
             }
 
