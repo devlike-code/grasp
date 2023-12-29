@@ -63,25 +63,3 @@ pub struct GraspEditorData {
     pub previous_x_pos: String,
     pub previous_y_pos: String,
 }
-
-// pub trait UiKeyDownExtract {
-//     // Keyboard
-//     fn alt_down(&self) -> bool;
-//     fn delete_down(&self) -> bool;
-
-//     //Mouse
-//     fn mouse_secondary_down(&self) -> bool;
-// }
-
-// impl UiKeyDownExtract for Ui {
-//     fn alt_down(&self) -> bool {
-//         self.input(|input_state| input_state.modifiers.alt)
-//     }
-//     fn delete_down(&self) -> bool {
-//         self.input(|input_state| input_state.keys_down.get(&egui::Key::Delete).is_some())
-//     }
-
-//     fn mouse_secondary_down(&self) -> bool {
-//         self.input(|input| input.pointer.secondary_down())
-//     }
-// }
