@@ -2,7 +2,7 @@ use std::{
     collections::HashMap,
     env,
     fmt::Display,
-    fs, panic,
+    fs,
     path::PathBuf,
     str::FromStr,
     sync::Weak,
@@ -12,7 +12,7 @@ use std::{
 use imgui::{Condition, ImString, MouseButton, StyleColor, TreeNodeFlags};
 use itertools::Itertools;
 use mosaic::{
-    capabilities::{CollageCapability, QueueTile},
+    capabilities::QueueTile,
     internals::{
         all_tiles, par, void, Collage, Datatype, FromByteArray, Mosaic, MosaicCRUD, MosaicIO,
         MosaicTypelevelCRUD, Tile, TileFieldEmptyQuery, TileFieldSetter, ToByteArray, Value, S32,
@@ -102,16 +102,19 @@ impl<'a> TileFieldEmptyQuery for DisplayName<'a> {
 }
 
 impl GraspEditorState {
-    pub fn snapshot_all(&self) {
-        self.snapshot(&self.editor_mosaic);
+    pub fn snapshot_all(&self, name: &str) {
+        self.snapshot(format!("{}_EDITOR", name).as_str(), &self.editor_mosaic);
 
         for window in &self.window_list.windows {
-            self.snapshot(&window.document_mosaic);
+            self.snapshot(
+                format!("{}_WINDOW_{}", name, window.window_tile.id).as_str(),
+                &window.document_mosaic,
+            );
         }
     }
 
-    pub fn snapshot(&self, mosaic: &Arc<Mosaic>) {
-        let content = mosaic.dot();
+    pub fn snapshot(&self, name: &str, mosaic: &Arc<Mosaic>) {
+        let content = mosaic.dot(name);
         open::that(format!(
             "https://dreampuf.github.io/GraphvizOnline/#{}",
             urlencoding::encode(content.as_str())

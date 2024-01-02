@@ -36,10 +36,16 @@ pub fn hash_input(s: &str) -> u64 {
 
 impl GraspEditorWindow {
     pub fn delete_tiles(&self, _tiles: &[Tile]) {
+        if self.editor_data.selected.is_empty() {
+            return;
+        }
+
         let quadtree = self.quadtree.lock().unwrap();
         let mut object_to_area = self.object_to_area.lock().unwrap();
         let _under_cursor = quadtree.query(self.build_cursor_area()).collect_vec();
         let mut areas_to_remove: Vec<u64> = vec![];
+
+        let selected_tiles = self.editor_data.selected.iter().map(|t| t.id).join("_");
 
         for selected in &self.editor_data.selected {
             self.document_mosaic.delete_tile(selected.id);
@@ -154,7 +160,7 @@ impl GraspEditorWindow {
             self.editor_data.rect_delta = Some(Vec2::ZERO);
         }
 
-        if s.ui.is_key_down(Key::Delete) && self.state == EditorState::Idle {
+        if s.ui.is_key_down(Key::Delete) && self.state == EditorState::Idle && is_focused {
             self.delete_tiles(&self.editor_data.selected);
             self.editor_data.selected.clear();
             self.request_quadtree_update();
