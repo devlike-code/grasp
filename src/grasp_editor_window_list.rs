@@ -1,10 +1,9 @@
 use std::collections::VecDeque;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use crate::grasp_editor_window::GraspEditorWindow;
 use crate::GuiState;
 use ::mosaic::internals::MosaicIO;
-use itertools::Itertools;
 use log::error;
 use mosaic::capabilities::QueueCapability;
 
@@ -46,8 +45,7 @@ impl<'a> TileFieldEmptyQuery for SetWindowFocus<'a> {
 #[derive(Default)]
 pub struct GraspEditorWindowList {
     pub current_index: u32,
-    pub windows: Vec<GraspEditorWindow>,
-    pub depth_sorted_by_index: Mutex<VecDeque<usize>>,
+    pub windows: VecDeque<GraspEditorWindow>,
 }
 
 impl GraspEditorWindowList {
@@ -58,19 +56,11 @@ impl GraspEditorWindowList {
 
     #[allow(dead_code)]
     pub fn get_focused(&self) -> Option<&GraspEditorWindow> {
-        self.depth_sorted_by_index
-            .lock()
-            .unwrap()
-            .front()
-            .and_then(|index| self.windows.get(*index))
+        self.windows.front()
     }
 
     pub fn get_focused_mut(&mut self) -> Option<&mut GraspEditorWindow> {
-        self.depth_sorted_by_index
-            .lock()
-            .unwrap()
-            .front()
-            .and_then(|index| self.windows.get_mut(*index))
+        self.windows.front_mut()
     }
 
     pub fn get_position(&mut self, focused_index: Option<usize>) -> Option<&mut GraspEditorWindow> {
@@ -84,17 +74,8 @@ impl GraspEditorWindowList {
     pub fn show(&mut self, s: &GuiState) {
         let mut caught_events = vec![];
 
-        let depth_sorted = {
-            let vec_deque = self.depth_sorted_by_index.lock().unwrap().clone();
-            vec_deque.iter().cloned().collect_vec()
-        };
-
-        println!("DS {:?}", depth_sorted);
-
-        for window_id in depth_sorted {
-            if let Some(window) = self.windows.get_mut(window_id) {
-                window.show(s, &mut caught_events);
-            }
+        for window in &mut self.windows {
+            window.show(s, &mut caught_events);
         }
 
         caught_events.clear();
@@ -103,15 +84,9 @@ impl GraspEditorWindowList {
     pub fn focus(&self, name: &str) {
         if let Some(index) = self.windows.iter().position(|w| w.name.as_str() == name) {
             let window = self.windows.get(index).unwrap();
-            let mosaic = &window.grasp_editor_state.upgrade().unwrap().editor_mosaic;
+            let mosaic = &window.get_editor_mosaic();
             let request = mosaic.new_object("FocusWindowRequest", void());
             mosaic.enqueue(&window.window_tile, &request);
-
-            let mut depth = self.depth_sorted_by_index.lock().unwrap();
-            if let Some(pos) = depth.iter().position(|p| *p == window.window_list_index) {
-                depth.remove(pos);
-                depth.push_front(window.window_list_index);
-            }
         } else {
             error!("CANNOT FIND WINDOW NAME {}", name);
         }

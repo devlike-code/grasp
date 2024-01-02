@@ -1,7 +1,5 @@
 use itertools::Itertools;
-use mosaic::{
-    capabilities::QueueCapability, internals::MosaicIO, iterators::tile_deletion::TileDeletion,
-};
+use mosaic::internals::MosaicIO;
 
 use crate::core::math::rect2::Rect2;
 use crate::editor_state_machine::EditorState;

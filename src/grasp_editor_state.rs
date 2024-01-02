@@ -111,24 +111,9 @@ impl GraspEditorState {
             .iter()
             .position(|w| w.window_tile == window_tile)
         {
-            let mut depth_sort = self.window_list.depth_sorted_by_index.lock().unwrap();
-
-            *depth_sort = depth_sort
-                .iter()
-                .filter_map(|t| {
-                    if *t > pos {
-                        Some(*t - 1)
-                    } else if *t == pos {
-                        None
-                    } else {
-                        Some(*t)
-                    }
-                })
-                .collect::<_>();
             self.window_list.windows.remove(pos);
             self.editor_mosaic.delete_tile(window_tile);
 
-            println!("DEPTH SORTED {:?}", depth_sort);
             println!(
                 "WINDOW LIST {:?}",
                 self.window_list
@@ -352,12 +337,7 @@ impl GraspEditorState {
             window_list_index: id,
         };
 
-        self.window_list.windows.push(window);
-        self.window_list
-            .depth_sorted_by_index
-            .lock()
-            .unwrap()
-            .push_front(id);
+        self.window_list.windows.push_front(window);
 
         id
     }

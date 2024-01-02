@@ -59,7 +59,6 @@ impl GraspEditorWindow {
     pub fn set_focus(&self) {
         let editor_state = self.grasp_editor_state.upgrade().unwrap();
         SetWindowFocus(&editor_state.editor_mosaic, self.window_tile.id).query();
-        editor_state.window_list.focus(&self.name);
     }
 
     pub fn show(&mut self, s: &GuiState, caught_events: &mut Vec<u64>) {

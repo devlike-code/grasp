@@ -43,8 +43,6 @@ impl GraspEditorWindow {
         let _under_cursor = quadtree.query(self.build_cursor_area()).collect_vec();
         let mut areas_to_remove: Vec<u64> = vec![];
 
-        let selected_tiles = self.editor_data.selected.iter().map(|t| t.id).join("_");
-
         for selected in &self.editor_data.selected {
             self.document_mosaic.delete_tile(selected.id);
             if let Some(area_id) = object_to_area.get(&selected.id) {
