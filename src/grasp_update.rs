@@ -11,11 +11,6 @@ use crate::GuiState;
 
 impl GraspEditorWindow {
     pub fn update(&mut self, s: &GuiState) {
-        while let Some(request) = self.document_mosaic.dequeue(&self.window_tile) {
-            self.update_quadtree(None);
-            request.iter().delete();
-        }
-
         match &self.state {
             EditorState::Idle => {}
             EditorState::Move => {

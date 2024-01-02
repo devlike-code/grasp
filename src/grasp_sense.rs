@@ -1,7 +1,6 @@
 use std::{
     collections::hash_map::DefaultHasher,
     hash::{Hash, Hasher},
-    rc::Rc,
     sync::Arc,
 };
 
@@ -21,7 +20,6 @@ use crate::{
     grasp_editor_state::GraspEditorState,
     grasp_editor_window::GraspEditorWindow,
     grasp_editor_window_list::*,
-    grasp_transitions::QuadtreeUpdateCapability,
     utilities::QuadTreeFetch,
     GuiState,
 };

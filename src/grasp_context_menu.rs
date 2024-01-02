@@ -12,9 +12,10 @@ use mosaic::{
 };
 
 use crate::{
-    core::math::Vec2,
+    core::{math::Vec2, queues},
     editor_state_machine::{EditorStateTrigger, StateMachine},
     grasp_editor_window::GraspEditorWindow,
+    grasp_queues::CloseWindowRequestQueue,
     grasp_transitions::QuadtreeUpdateCapability,
     GuiState,
 };
@@ -158,6 +159,9 @@ impl GraspEditorWindow {
     }
 
     fn show_default_menu(&mut self, s: &GuiState) -> bool {
+        let editor_state = self.get_editor_state();
+        let editor_mosaic = &editor_state.editor_mosaic;
+
         if s.ui.button("Create new node") {
             let pos: Vec2 = s.ui.mouse_pos_on_opening_current_popup().into();
             self.create_new_object(pos - self.editor_data.window_offset - self.editor_data.pan);
@@ -170,6 +174,11 @@ impl GraspEditorWindow {
             return true;
         }
 
+        if s.ui.button("Close Window") {
+            let request = editor_mosaic.new_object("CloseWindowRequest", void());
+            queues::enqueue(CloseWindowRequestQueue, request);
+            return true;
+        }
         false
     }
 }

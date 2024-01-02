@@ -102,6 +102,43 @@ impl<'a> TileFieldEmptyQuery for DisplayName<'a> {
 }
 
 impl GraspEditorState {
+    #[allow(clippy::comparison_chain)]
+    pub fn close_window(&mut self, window_tile: Tile) {
+        if let Some(pos) = self
+            .window_list
+            .windows
+            .iter()
+            .position(|w| w.window_tile == window_tile)
+        {
+            let mut depth_sort = self.window_list.depth_sorted_by_index.lock().unwrap();
+            println!("DEPTH SORTED {:?}", depth_sort);
+
+            *depth_sort = depth_sort
+                .iter()
+                .filter_map(|t| {
+                    if *t > pos {
+                        Some(*t - 1)
+                    } else if *t == pos {
+                        None
+                    } else {
+                        Some(*t)
+                    }
+                })
+                .collect::<_>();
+
+            println!(
+                "WINDOW LIST {:?}",
+                self.window_list
+                    .windows
+                    .iter()
+                    .map(|t| t.name.to_owned())
+                    .collect_vec()
+            );
+            self.window_list.windows.remove(pos);
+            self.editor_mosaic.delete_tile(window_tile);
+        }
+    }
+
     pub fn snapshot_all(&self, name: &str) {
         self.snapshot(format!("{}_EDITOR", name).as_str(), &self.editor_mosaic);
 
@@ -239,6 +276,9 @@ impl GraspEditorState {
         let refresh_quadtree_queue = editor_mosaic.make_queue();
         refresh_quadtree_queue.add_component("QuadtreeUpdateRequestQueue", void());
 
+        let close_window_request_queue = editor_mosaic.make_queue();
+        close_window_request_queue.add_component("CloseWindowRequestQueue", void());
+
         let toast_request_queue = editor_mosaic.make_queue();
         toast_request_queue.add_component("ToastRequestQueue", void());
 
@@ -264,7 +304,7 @@ impl GraspEditorState {
         new_editor_state
     }
 
-    pub fn new_window(&mut self, collage: Box<Collage>) {
+    pub fn new_window(&mut self, collage: Box<Collage>) -> usize {
         //new window tile that is at the same time "Queue" component
         let window_tile = self.editor_mosaic.make_queue();
         window_tile.add_component("EditorWindowQueue", void());
@@ -314,6 +354,8 @@ impl GraspEditorState {
             .lock()
             .unwrap()
             .push_front(id);
+
+        id
     }
 
     pub fn show(&mut self, s: &GuiState) {
@@ -371,21 +413,21 @@ impl GraspEditorState {
 
                     color.end();
 
-                    let items = self
-                        .window_list
-                        .depth_sorted_by_index
-                        .lock()
-                        .unwrap()
-                        .iter()
-                        .map(|w| self.window_list.windows.get(*w).unwrap().name.as_str())
-                        .collect_vec();
+                    // let items = self
+                    //     .window_list
+                    //     .depth_sorted_by_index
+                    //     .lock()
+                    //     .unwrap()
+                    //     .iter()
+                    //     .map(|w| self.window_list.windows.get(*w).unwrap().name.as_str())
+                    //     .collect_vec();
 
-                    s.ui.separator();
-                    s.ui.set_next_item_width(-1.0);
-                    let color =
-                        s.ui.push_style_color(StyleColor::FrameBg, [0.1, 0.1, 0.15, 1.0]);
-                    s.ui.list_box("##depth-index", &mut 0, items.as_slice(), 20);
-                    color.end();
+                    // s.ui.separator();
+                    // s.ui.set_next_item_width(-1.0);
+                    // let color =
+                    //     s.ui.push_style_color(StyleColor::FrameBg, [0.1, 0.1, 0.15, 1.0]);
+                    // s.ui.list_box("##depth-index", &mut 0, items.as_slice(), 20);
+                    // color.end();
                 }
             }
 
@@ -502,22 +544,27 @@ impl GraspEditorState {
                     .set_directory(env::current_dir().unwrap())
                     .pick_file()
                 {
-                    self.editor_mosaic.clear();
-                    Self::prepare_mosaic(Arc::clone(&self.editor_mosaic));
-                    self.editor_mosaic.load(&fs::read(file).unwrap()).unwrap();
+                    let window_id = self.new_window(all_tiles());
+                    let window = self.window_list.windows.get(window_id).unwrap();
+                    let window_mosaic = &window.document_mosaic;
+
+                    Self::prepare_mosaic(Arc::clone(window_mosaic));
+                    window_mosaic.load(&fs::read(file).unwrap()).unwrap();
                     self.editor_mosaic.request_quadtree_update();
                 }
             }
 
             if s.menu_item("Save") {
-                let document = self.editor_mosaic.save();
-                if let Some(file) = rfd::FileDialog::new()
-                    .add_filter("Mosaic", &["mos"])
-                    .set_directory(env::current_dir().unwrap())
-                    .save_file()
-                {
-                    fs::write(file, document).unwrap();
-                    self.editor_mosaic.send_toast("Document saved");
+                if let Some(focused_window) = self.window_list.get_focused() {
+                    let document = focused_window.document_mosaic.save();
+                    if let Some(file) = rfd::FileDialog::new()
+                        .add_filter("Mosaic", &["mos"])
+                        .set_directory(env::current_dir().unwrap())
+                        .save_file()
+                    {
+                        fs::write(file, document).unwrap();
+                        self.editor_mosaic.send_toast("Document saved");
+                    }
                 }
             }
 

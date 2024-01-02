@@ -21,6 +21,9 @@ pub struct ToastRequestQueue;
 pub struct NewWindowRequestQueue;
 
 #[derive(GraspQueue)]
+pub struct CloseWindowRequestQueue;
+
+#[derive(GraspQueue)]
 pub struct QuadtreeUpdateRequestQueue;
 
 #[derive(GraspQueue)]
@@ -41,6 +44,7 @@ impl GraspEditorState {
         self.process_toast_queue();
         self.process_new_window_queue();
         self.process_quadtree_queue();
+        self.process_close_window_queue();
     }
 
     fn process_toast_queue(&mut self) {
@@ -67,6 +71,13 @@ impl GraspEditorState {
         }
     }
 
+    fn process_close_window_queue(&mut self) {
+        while let Some(request) = queues::dequeue(CloseWindowRequestQueue, &self.editor_mosaic) {
+            self.close_window(self.window_list.get_focused().unwrap().window_tile.clone());
+            request.iter().delete();
+            self.snapshot_all("POST_CLOSE");
+        }
+    }
     fn process_quadtree_queue(&mut self) {
         while let Some(request) = dequeue(QuadtreeUpdateRequestQueue, &self.editor_mosaic) {
             let all_window_queues = self.iter_all_windows();
