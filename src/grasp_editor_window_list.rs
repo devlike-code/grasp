@@ -89,9 +89,12 @@ impl GraspEditorWindowList {
             vec_deque.iter().cloned().collect_vec()
         };
 
+        println!("DS {:?}", depth_sorted);
+
         for window_id in depth_sorted {
-            let window = self.windows.get_mut(window_id).unwrap();
-            window.show(s, &mut caught_events);
+            if let Some(window) = self.windows.get_mut(window_id) {
+                window.show(s, &mut caught_events);
+            }
         }
 
         caught_events.clear();

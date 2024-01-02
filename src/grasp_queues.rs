@@ -75,7 +75,6 @@ impl GraspEditorState {
         while let Some(request) = queues::dequeue(CloseWindowRequestQueue, &self.editor_mosaic) {
             self.close_window(self.window_list.get_focused().unwrap().window_tile.clone());
             request.iter().delete();
-            self.snapshot_all("POST_CLOSE");
         }
     }
     fn process_quadtree_queue(&mut self) {

@@ -7,6 +7,7 @@ use std::{
     str::FromStr,
     sync::Weak,
     sync::{Arc, Mutex},
+    thread,
 };
 
 use imgui::{Condition, ImString, MouseButton, StyleColor, TreeNodeFlags};
@@ -111,7 +112,6 @@ impl GraspEditorState {
             .position(|w| w.window_tile == window_tile)
         {
             let mut depth_sort = self.window_list.depth_sorted_by_index.lock().unwrap();
-            println!("DEPTH SORTED {:?}", depth_sort);
 
             *depth_sort = depth_sort
                 .iter()
@@ -125,7 +125,10 @@ impl GraspEditorState {
                     }
                 })
                 .collect::<_>();
+            self.window_list.windows.remove(pos);
+            self.editor_mosaic.delete_tile(window_tile);
 
+            println!("DEPTH SORTED {:?}", depth_sort);
             println!(
                 "WINDOW LIST {:?}",
                 self.window_list
@@ -134,8 +137,6 @@ impl GraspEditorState {
                     .map(|t| t.name.to_owned())
                     .collect_vec()
             );
-            self.window_list.windows.remove(pos);
-            self.editor_mosaic.delete_tile(window_tile);
         }
     }
 
@@ -151,19 +152,22 @@ impl GraspEditorState {
     }
 
     pub fn snapshot(&self, name: &str, mosaic: &Arc<Mosaic>) {
-        let content = mosaic.dot(name);
-        open::that(format!(
-            "https://dreampuf.github.io/GraphvizOnline/#{}",
-            urlencoding::encode(content.as_str())
-        ))
-        .unwrap();
+        let name = name.to_string();
+        let mosaic = Arc::clone(mosaic);
+        thread::spawn(move || {
+            let content = mosaic.dot(name.as_str());
+            open::that(format!(
+                "https://dreampuf.github.io/GraphvizOnline/#{}",
+                urlencoding::encode(content.as_str())
+            ))
+            .unwrap();
+        });
     }
 
     fn load_mosaic_components_from_file(
         mosaic: &Arc<Mosaic>,
         file: PathBuf,
     ) -> Vec<ComponentCategory> {
-        println!("\nCURRENTLY LOADING {:?}\n", file);
         let mut component_categories = vec![];
         let loader_mosaic = Mosaic::new();
         loader_mosaic.new_type("Node: unit;").unwrap();
@@ -318,7 +322,7 @@ impl GraspEditorState {
         );
 
         let new_index = self.window_list.increment();
-        let id = self.window_list.current_index as usize - 1;
+        let id = self.window_list.windows.len();
 
         let document_mosaic = Mosaic::new();
         Self::prepare_mosaic(Arc::clone(&document_mosaic));
