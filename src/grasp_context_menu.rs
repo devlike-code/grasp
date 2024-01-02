@@ -72,7 +72,7 @@ impl GraspEditorWindow {
                         for item in &category.components {
                             if !item.hidden && s.ui.menu_item(item.display.clone()) {
                                 for s in &self.editor_data.selected {
-                                    s.add_component(&item.display, void());
+                                    s.add_component(&item.name, void());
                                 }
 
                                 return true;
