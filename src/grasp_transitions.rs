@@ -36,6 +36,12 @@ impl QuadtreeUpdateCapability for Arc<Mosaic> {
     }
 }
 
+impl GraspEditorWindow {
+    pub fn request_quadtree_update(&self) {
+        self.get_editor_mosaic().request_quadtree_update();
+    }
+}
+
 impl StateMachine for GraspEditorWindow {
     type Trigger = EditorStateTrigger;
     type State = EditorState;
@@ -48,11 +54,10 @@ impl StateMachine for GraspEditorWindow {
                     self.editor_data.cursor - self.editor_data.window_offset - self.editor_data.pan,
                 );
                 //all windows need to update their quadtrees
-                self.document_mosaic.request_quadtree_update();
+                self.request_quadtree_update();
                 Some(EditorState::Idle)
             }
             (_, EditorStateTrigger::DblClickToRename) => Some(EditorState::PropertyChanging),
-            (_, EditorStateTrigger::ClickToReposition) => Some(EditorState::Reposition),
             (_, EditorStateTrigger::MouseDownOverNode) => None,
             (_, EditorStateTrigger::ClickToSelect) => Some(EditorState::Idle),
             (_, EditorStateTrigger::ExitContextMenu) => {
@@ -64,7 +69,7 @@ impl StateMachine for GraspEditorWindow {
                 Some(EditorState::Idle)
             }
             (EditorState::Pan, EditorStateTrigger::ClickToDeselect) => {
-                self.document_mosaic.request_quadtree_update();
+                self.request_quadtree_update();
                 Some(EditorState::Idle)
             }
             (_, EditorStateTrigger::ClickToDeselect) => {
@@ -94,7 +99,7 @@ impl StateMachine for GraspEditorWindow {
                 Some(EditorState::Rect)
             }
             (EditorState::Pan, EditorStateTrigger::EndDrag) => {
-                self.document_mosaic.request_quadtree_update();
+                self.request_quadtree_update();
                 Some(EditorState::Idle)
             }
             (EditorState::WindowResizing, EditorStateTrigger::EndDrag) => Some(EditorState::Idle),
@@ -129,12 +134,12 @@ impl StateMachine for GraspEditorWindow {
                 self.editor_data.link_end = None;
 
                 // all windows need to update their quadtrees
-                self.document_mosaic.request_quadtree_update();
+                self.request_quadtree_update();
                 Some(EditorState::Idle)
             }
             (EditorState::Move, EditorStateTrigger::EndDrag) => {
                 self.update_selected_positions_by(self.editor_data.cursor_delta);
-                self.document_mosaic.request_quadtree_update();
+                self.request_quadtree_update();
                 Some(EditorState::Idle)
             }
             (EditorState::Rect, EditorStateTrigger::EndDrag) => {
@@ -145,34 +150,6 @@ impl StateMachine for GraspEditorWindow {
             (EditorState::PropertyChanging, _) => {
                 self.editor_data.tile_changing = None;
                 self.editor_data.field_changing = None;
-                self.editor_data.previous_text.clear();
-                self.editor_data.text.clear();
-                Some(EditorState::Idle)
-            }
-            (EditorState::Reposition, _) => {
-                if let Some(tile_id) = self.editor_data.repositioning {
-                    if self.document_mosaic.is_tile_valid(&tile_id) {
-                        if let Some(mut pos) = self
-                            .document_mosaic
-                            .get(tile_id)
-                            .unwrap()
-                            .get_component("Position")
-                        {
-                            pos.set(
-                                "x",
-                                self.editor_data.x_pos.parse::<f32>().unwrap_or_default(),
-                            );
-                            pos.set(
-                                "y",
-                                self.editor_data.y_pos.parse::<f32>().unwrap_or_default(),
-                            );
-
-                            self.update_quadtree(Some(vec![pos]));
-                        }
-                    }
-                }
-
-                self.editor_data.tile_changing = None;
                 self.editor_data.previous_text.clear();
                 self.editor_data.text.clear();
                 Some(EditorState::Idle)

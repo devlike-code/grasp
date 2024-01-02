@@ -100,7 +100,7 @@ impl GraspEditorWindowList {
     pub fn focus(&self, name: &str) {
         if let Some(index) = self.windows.iter().position(|w| w.name.as_str() == name) {
             let window = self.windows.get(index).unwrap();
-            let mosaic = &window.document_mosaic;
+            let mosaic = &window.grasp_editor_state.upgrade().unwrap().editor_mosaic;
             let request = mosaic.new_object("FocusWindowRequest", void());
             mosaic.enqueue(&window.window_tile, &request);
 

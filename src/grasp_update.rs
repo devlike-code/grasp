@@ -72,7 +72,6 @@ impl GraspEditorWindow {
             EditorState::PropertyChanging => {}
             EditorState::WindowResizing => {}
 
-            EditorState::Reposition => {}
             EditorState::ContextMenu => {}
         }
     }

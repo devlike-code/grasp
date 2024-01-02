@@ -20,7 +20,7 @@ use quadtree_rs::{
 };
 use std::collections::HashMap;
 use std::ops::Add;
-use std::rc::Weak;
+use std::sync::Weak;
 use std::sync::{Arc, Mutex};
 
 pub struct GraspEditorWindow {
@@ -57,12 +57,9 @@ impl GraspEditorWindow {
     }
 
     pub fn set_focus(&self) {
-        SetWindowFocus(&self.document_mosaic, self.window_tile.id).query();
-        self.grasp_editor_state
-            .upgrade()
-            .unwrap()
-            .window_list
-            .focus(&self.name);
+        let editor_state = self.grasp_editor_state.upgrade().unwrap();
+        SetWindowFocus(&editor_state.editor_mosaic, self.window_tile.id).query();
+        editor_state.window_list.focus(&self.name);
     }
 
     pub fn show(&mut self, s: &GuiState, caught_events: &mut Vec<u64>) {
@@ -81,6 +78,9 @@ impl GraspEditorWindow {
                 imgui::Condition::Appearing,
             )
             .build(|| {
+                let editor_state = self.grasp_editor_state.upgrade().unwrap();
+                let editor_mosaic = &editor_state.editor_mosaic;
+
                 self.rect =
                     Rect2::from_pos_size(s.ui.window_pos().into(), s.ui.window_size().into());
 
@@ -109,21 +109,21 @@ impl GraspEditorWindow {
                 }
 
                 if s.ui.is_window_focused()
-                    && GetWindowFocus(&self.document_mosaic)
+                    && GetWindowFocus(editor_mosaic)
                         .query()
                         .is_some_and(|m| m != self.window_tile.id)
                 {
                     self.set_focus();
                 }
 
-                if GetWindowFocus(&self.document_mosaic)
+                if GetWindowFocus(editor_mosaic)
                     .query()
                     .is_some_and(|m| m != self.window_tile.id)
                 {
                     self.state = EditorState::Idle;
                 }
 
-                if let Some(request) = self.document_mosaic.dequeue(&self.window_tile) {
+                if let Some(request) = editor_mosaic.dequeue(&self.window_tile) {
                     match request.component.to_string().as_str() {
                         "QuadtreeUpdateRequest" => {
                             println!("UPDATING QUAD TREE {} FROM QUEUE", self.name);

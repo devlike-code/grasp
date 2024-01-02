@@ -1,12 +1,14 @@
 use std::{
     collections::hash_map::DefaultHasher,
     hash::{Hash, Hasher},
+    rc::Rc,
+    sync::Arc,
 };
 
 use imgui::Key;
 use itertools::Itertools;
 use mosaic::{
-    internals::{MosaicCRUD, MosaicIO, Tile, TileFieldEmptyQuery, Value},
+    internals::{Mosaic, MosaicCRUD, MosaicIO, Tile, TileFieldEmptyQuery, Value},
     iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
 };
 
@@ -16,6 +18,7 @@ use crate::{
         math::{Rect2, Vec2},
     },
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
+    grasp_editor_state::GraspEditorState,
     grasp_editor_window::GraspEditorWindow,
     grasp_editor_window_list::*,
     grasp_transitions::QuadtreeUpdateCapability,
@@ -55,8 +58,17 @@ impl GraspEditorWindow {
             .map(|e| *e.value_ref())
             .collect_vec()
     }
+
+    pub fn get_editor_state(&self) -> Arc<GraspEditorState> {
+        self.grasp_editor_state.upgrade().unwrap()
+    }
+
+    pub fn get_editor_mosaic(&self) -> Arc<Mosaic> {
+        Arc::clone(&self.grasp_editor_state.upgrade().unwrap().editor_mosaic)
+    }
+
     pub fn sense(&mut self, s: &GuiState, caught_events: &mut Vec<u64>) {
-        fn trigget_rename(
+        fn trigger_rename(
             window: &mut GraspEditorWindow,
             tile: Tile,
             caught_events: &mut Vec<u64>,
@@ -77,9 +89,11 @@ impl GraspEditorWindow {
                 window.trigger(DblClickToRename);
             }
         }
+
         if caught_events.contains(&hash_input("all")) {
             return;
         }
+
         let under_cursor = self.under_cursor();
         let is_label_region = under_cursor
             .first()
@@ -88,7 +102,7 @@ impl GraspEditorWindow {
             .unwrap_or(false);
         let pos: Vec2 = s.ui.io().mouse_pos.into();
 
-        let is_focused = GetWindowFocus(&self.document_mosaic)
+        let is_focused = GetWindowFocus(&self.get_editor_mosaic())
             .query()
             .map(|index| index == self.window_tile.id)
             .unwrap_or(false);
@@ -143,7 +157,7 @@ impl GraspEditorWindow {
         if s.ui.is_key_down(Key::Delete) && self.state == EditorState::Idle {
             self.delete_tiles(&self.editor_data.selected);
             self.editor_data.selected.clear();
-            self.document_mosaic.request_quadtree_update();
+            self.request_quadtree_update();
         }
 
         if double_clicked_left && under_cursor.is_empty() && mouse_in_window && is_focused {
@@ -156,12 +170,12 @@ impl GraspEditorWindow {
         } else if double_clicked_left && !under_cursor.is_empty() && is_focused && is_label_region {
             //
             let tile = under_cursor.fetch_tile(&self.document_mosaic).target();
-            trigget_rename(self, tile, caught_events);
+            trigger_rename(self, tile, caught_events);
             //
         } else if double_clicked_left && !under_cursor.is_empty() && is_focused {
             //
             let tile = under_cursor.fetch_tile(&self.document_mosaic);
-            trigget_rename(self, tile, caught_events);
+            trigger_rename(self, tile, caught_events);
             //
         } else if clicked_left && under_cursor.is_empty() && mouse_in_window
         //&& !is_context

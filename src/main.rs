@@ -52,7 +52,7 @@ fn main() {
 
     run_main_forever(|ui, quit| {
         if ui.is_fkey_down(Key::F12) {
-            grasp_editor_state.snapshot();
+            grasp_editor_state.snapshot_all();
         }
 
         grasp_editor_state.process_requests();

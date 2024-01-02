@@ -2,17 +2,17 @@ use std::{
     collections::HashMap,
     env,
     fmt::Display,
-    fs,
+    fs, panic,
     path::PathBuf,
-    rc::Weak,
     str::FromStr,
+    sync::Weak,
     sync::{Arc, Mutex},
 };
 
 use imgui::{Condition, ImString, MouseButton, StyleColor, TreeNodeFlags};
 use itertools::Itertools;
 use mosaic::{
-    capabilities::QueueTile,
+    capabilities::{CollageCapability, QueueTile},
     internals::{
         all_tiles, par, void, Collage, Datatype, FromByteArray, Mosaic, MosaicCRUD, MosaicIO,
         MosaicTypelevelCRUD, Tile, TileFieldEmptyQuery, TileFieldSetter, ToByteArray, Value, S32,
@@ -35,7 +35,7 @@ use crate::{
 use mosaic::capabilities::ArchetypeSubject;
 use mosaic::capabilities::QueueCapability;
 
-type ComponentRenderer = Box<dyn Fn(&GuiState, &mut GraspEditorWindow, Tile)>;
+type ComponentRenderer = Box<dyn Fn(&GuiState, &mut GraspEditorWindow, Tile) + Send + Sync>;
 
 pub trait ToastCapability {
     fn send_toast(&self, text: &str);
@@ -61,7 +61,7 @@ impl ToastCapability for Arc<Mosaic> {
 #[allow(dead_code)]
 pub struct GraspEditorState {
     pub editor_mosaic: Arc<Mosaic>,
-    pub component_renderers: HashMap<S32, ComponentRenderer>,
+    component_renderers: HashMap<S32, ComponentRenderer>,
     pub window_list: GraspEditorWindowList,
     pub editor_state_tile: Tile,
     pub new_tab_request_queue: QueueTile,
@@ -102,8 +102,16 @@ impl<'a> TileFieldEmptyQuery for DisplayName<'a> {
 }
 
 impl GraspEditorState {
-    pub fn snapshot(&self) {
-        let content = self.editor_mosaic.dot();
+    pub fn snapshot_all(&self) {
+        self.snapshot(&self.editor_mosaic);
+
+        for window in &self.window_list.windows {
+            self.snapshot(&window.document_mosaic);
+        }
+    }
+
+    pub fn snapshot(&self, mosaic: &Arc<Mosaic>) {
+        let content = mosaic.dot();
         open::that(format!(
             "https://dreampuf.github.io/GraphvizOnline/#{}",
             urlencoding::encode(content.as_str())
@@ -115,6 +123,7 @@ impl GraspEditorState {
         mosaic: &Arc<Mosaic>,
         file: PathBuf,
     ) -> Vec<ComponentCategory> {
+        println!("\nCURRENTLY LOADING {:?}\n", file);
         let mut component_categories = vec![];
         let loader_mosaic = Mosaic::new();
         loader_mosaic.new_type("Node: unit;").unwrap();
@@ -199,6 +208,7 @@ impl GraspEditorState {
     }
 
     pub fn prepare_mosaic(mosaic: Arc<Mosaic>) -> (Arc<Mosaic>, Vec<ComponentCategory>) {
+        println!("Preparing mosaic {:?}", mosaic);
         let components: Vec<ComponentCategory> = fs::read_dir("env\\components")
             .unwrap()
             .flat_map(|file_entry| {
@@ -214,23 +224,23 @@ impl GraspEditorState {
     }
 
     pub fn new() -> Self {
-        let document_mosaic = Mosaic::new();
-        let (_, components) = Self::prepare_mosaic(Arc::clone(&document_mosaic));
+        let editor_mosaic = Mosaic::new();
+        let (_, components) = Self::prepare_mosaic(Arc::clone(&editor_mosaic));
 
-        let editor_state_tile = document_mosaic.new_object("EditorState", void());
-        document_mosaic.new_extension(&editor_state_tile, "EditorStateFocusedWindow", par(0u64));
+        let editor_state_tile = editor_mosaic.new_object("EditorState", void());
+        editor_mosaic.new_extension(&editor_state_tile, "EditorStateFocusedWindow", par(0u64));
 
-        let new_window_request_queue = document_mosaic.make_queue();
+        let new_window_request_queue = editor_mosaic.make_queue();
         new_window_request_queue.add_component("NewWindowRequestQueue", void());
 
-        let refresh_quadtree_queue = document_mosaic.make_queue();
+        let refresh_quadtree_queue = editor_mosaic.make_queue();
         refresh_quadtree_queue.add_component("QuadtreeUpdateRequestQueue", void());
 
-        let toast_request_queue = document_mosaic.make_queue();
+        let toast_request_queue = editor_mosaic.make_queue();
         toast_request_queue.add_component("ToastRequestQueue", void());
 
-        Self {
-            editor_mosaic: document_mosaic,
+        let new_editor_state = Self {
+            editor_mosaic,
             component_renderers: HashMap::new(),
             editor_state_tile,
             new_tab_request_queue: new_window_request_queue,
@@ -246,7 +256,9 @@ impl GraspEditorState {
                 "Offset".into(),
             ],
             loaded_categories: components,
-        }
+        };
+
+        new_editor_state
     }
 
     pub fn new_window(&mut self, collage: Box<Collage>) {
@@ -264,11 +276,15 @@ impl GraspEditorState {
 
         let new_index = self.window_list.increment();
         let id = self.window_list.current_index as usize - 1;
+
+        let document_mosaic = Mosaic::new();
+        Self::prepare_mosaic(Arc::clone(&document_mosaic));
+
         let window = GraspEditorWindow {
             name: format!("Untitled {}", new_index),
             window_tile,
             quadtree: Mutex::new(Quadtree::new_with_anchor((-1000, -1000).into(), 16)),
-            document_mosaic: Arc::clone(&self.editor_mosaic),
+            document_mosaic,
             collage,
             object_to_area: Default::default(),
             editor_data: Default::default(),
@@ -699,8 +715,8 @@ fn draw_property_value<T: Display + FromStr + ToByteArray>(
     if let Ok(t) = text.parse::<T>() {
         if previous_text != text {
             tile.clone().set(name, t);
-            //todo discuss better solution for this, can we have something like tile changed queue?
-            tile.mosaic.request_quadtree_update();
+
+            window.request_quadtree_update();
         }
     }
 }

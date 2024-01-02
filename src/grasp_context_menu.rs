@@ -39,7 +39,7 @@ impl GraspEditorWindow {
     }
 
     pub(crate) fn update_context_menu(&mut self, s: &GuiState) {
-        let window_list = &self.grasp_editor_state.upgrade().unwrap().window_list;
+        let window_list = &self.get_editor_state().window_list;
         if window_list.get_focused() == Some(self)
             && self.rect.contains(s.ui.io().mouse_pos.into())
             && s.ui.is_mouse_clicked(imgui::MouseButton::Right)
@@ -50,21 +50,18 @@ impl GraspEditorWindow {
     }
 
     fn show_selection_menu(&mut self, s: &GuiState) -> bool {
-        let queue = self
-            .document_mosaic
-            .get_all()
-            .include_component("NewWindowRequestQueue")
-            .get_targets()
-            .next()
-            .unwrap();
+        let editor_state = self.get_editor_state();
+        let editor_mosaic = &editor_state.editor_mosaic;
+
+        // let queue = editor_mosaic
+        //     .get_all()
+        //     .include_component("NewWindowRequestQueue")
+        //     .get_targets()
+        //     .next()
+        //     .unwrap();
 
         if let Some(token) = s.ui.begin_menu("Add Component") {
-            let categories = self
-                .grasp_editor_state
-                .upgrade()
-                .unwrap()
-                .loaded_categories
-                .clone();
+            let categories = editor_state.loaded_categories.clone();
 
             for category in &categories {
                 if !category.hidden {
@@ -89,73 +86,73 @@ impl GraspEditorWindow {
 
         s.ui.separator();
 
-        if s.ui.button("Select") {
-            let selection_tile = self.document_mosaic.make_selection();
-            self.document_mosaic
-                .fill_selection(&selection_tile, &self.editor_data.selected.clone());
+        // if s.ui.button("Select") {
+        //     let selection_tile = self.document_mosaic.make_selection();
+        //     self.document_mosaic
+        //         .fill_selection(&selection_tile, &self.editor_data.selected.clone());
 
-            let c1 = targets_from(take_components(
-                &["Group"],
-                arrows_from(descriptors_from(tiles(vec![selection_tile.clone()]))),
-            ));
+        //     let c1 = targets_from(take_components(
+        //         &["Group"],
+        //         arrows_from(descriptors_from(tiles(vec![selection_tile.clone()]))),
+        //     ));
 
-            let c2 = arrows_from(targets_from(take_components(
-                &["Group"],
-                arrows_from(descriptors_from(tiles(vec![selection_tile.clone()]))),
-            )));
+        //     let c2 = arrows_from(targets_from(take_components(
+        //         &["Group"],
+        //         arrows_from(descriptors_from(tiles(vec![selection_tile.clone()]))),
+        //     )));
 
-            let c = gather(vec![c1, c2]);
-            let tile = c.to_tiles(&self.document_mosaic);
-            tile.add_component("Label", par("Selection"));
+        //     let c = gather(vec![c1, c2]);
+        //     let tile = c.to_tiles(&self.document_mosaic);
+        //     tile.add_component("Label", par("Selection"));
 
-            self.document_mosaic.enqueue(&queue, &tile);
-            self.document_mosaic.request_quadtree_update();
+        //     self.document_mosaic.enqueue(&queue, &tile);
+        //     self.document_mosaic.request_quadtree_update();
 
-            return true;
-        }
+        //     return true;
+        // }
 
-        if s.ui.button("Group - todo") {
-            let selection_tile = self.document_mosaic.make_selection();
-            if let Some(group) = self
-                .document_mosaic
-                .get_component(&selection_tile, "GroupOwner")
-            {
-                let name = group.get("self").as_s32().to_string();
-                let members = self
-                    .document_mosaic
-                    .get_group_members(&name, &selection_tile);
-                let c = tiles(members.collect_vec());
-                let tile = c.to_tiles(&self.document_mosaic);
-                tile.add_component("Label", par(format!("Group: {}", name).as_str()));
+        // if s.ui.button("Group - todo") {
+        //     let selection_tile = self.document_mosaic.make_selection();
+        //     if let Some(group) = self
+        //         .document_mosaic
+        //         .get_component(&selection_tile, "GroupOwner")
+        //     {
+        //         let name = group.get("self").as_s32().to_string();
+        //         let members = self
+        //             .document_mosaic
+        //             .get_group_members(&name, &selection_tile);
+        //         let c = tiles(members.collect_vec());
+        //         let tile = c.to_tiles(&self.document_mosaic);
+        //         tile.add_component("Label", par(format!("Group: {}", name).as_str()));
 
-                self.document_mosaic.enqueue(&queue, &tile);
-                self.document_mosaic.request_quadtree_update();
-            }
-            return true;
-        }
+        //         self.document_mosaic.enqueue(&queue, &tile);
+        //         self.document_mosaic.request_quadtree_update();
+        //     }
+        //     return true;
+        // }
 
-        if s.ui.button("First Neigbours") {
-            if let Some(queue) = self
-                .document_mosaic
-                .get_all()
-                .include_component("NewWindowRequestQueue")
-                .get_targets()
-                .next()
-            {
-                let c1 = targets_from(arrows_from(tiles(self.editor_data.selected.clone())));
-                let c2 = tiles(self.editor_data.selected.clone());
-                let c3 = arrows_from(tiles(self.editor_data.selected.clone()));
+        // if s.ui.button("First Neigbours") {
+        //     if let Some(queue) = self
+        //         .document_mosaic
+        //         .get_all()
+        //         .include_component("NewWindowRequestQueue")
+        //         .get_targets()
+        //         .next()
+        //     {
+        //         let c1 = targets_from(arrows_from(tiles(self.editor_data.selected.clone())));
+        //         let c2 = tiles(self.editor_data.selected.clone());
+        //         let c3 = arrows_from(tiles(self.editor_data.selected.clone()));
 
-                let c = gather(vec![c1, c2, c3]);
-                let tile = c.to_tiles(&self.document_mosaic);
-                tile.add_component("Label", par("First Neighbour"));
+        //         let c = gather(vec![c1, c2, c3]);
+        //         let tile = c.to_tiles(&self.document_mosaic);
+        //         tile.add_component("Label", par("First Neighbour"));
 
-                self.document_mosaic.enqueue(&queue, &tile);
-                self.document_mosaic.request_quadtree_update();
-            }
+        //         self.document_mosaic.enqueue(&queue, &tile);
+        //         self.document_mosaic.request_quadtree_update();
+        //     }
 
-            return true;
-        }
+        //     return true;
+        // }
 
         false
     }

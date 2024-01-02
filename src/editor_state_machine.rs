@@ -8,7 +8,6 @@ pub enum EditorState {
     Rect,
     WindowResizing,
     PropertyChanging,
-    Reposition,
     ContextMenu,
 }
 
