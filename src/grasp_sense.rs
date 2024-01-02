@@ -7,7 +7,7 @@ use std::{
 use imgui::Key;
 use itertools::Itertools;
 use mosaic::{
-    internals::{Mosaic, MosaicCRUD, MosaicIO, Tile, TileFieldEmptyQuery, Value},
+    internals::{Mosaic, MosaicCRUD, MosaicIO, Tile, Value},
     iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
 };
 
@@ -19,7 +19,6 @@ use crate::{
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
     grasp_editor_state::GraspEditorState,
     grasp_editor_window::GraspEditorWindow,
-    grasp_editor_window_list::*,
     utilities::QuadTreeFetch,
     GuiState,
 };
@@ -104,9 +103,12 @@ impl GraspEditorWindow {
             .unwrap_or(false);
         let pos: Vec2 = s.ui.io().mouse_pos.into();
 
-        let is_focused = GetWindowFocus(&self.get_editor_mosaic())
-            .query()
-            .map(|index| index == self.window_tile.id)
+        let is_focused = self
+            .get_editor_state()
+            .window_list
+            .windows
+            .front()
+            .map(|window| window == self)
             .unwrap_or(false);
         let mouse_in_window = self.rect.contains(pos);
         let is_resizing = {

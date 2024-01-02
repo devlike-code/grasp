@@ -1,7 +1,7 @@
 use grasp_proc_macros::GraspQueue;
 use mosaic::{
     capabilities::CollageImportCapability,
-    internals::{void, MosaicIO, Tile, TileFieldEmptyQuery},
+    internals::{void, MosaicIO, Tile},
     iterators::{
         component_selectors::ComponentSelectors, tile_deletion::TileDeletion,
         tile_getters::TileGetters,
@@ -12,7 +12,6 @@ use std::vec::IntoIter;
 use crate::{
     core::queues::{self, dequeue, GraspQueue},
     grasp_editor_state::GraspEditorState,
-    grasp_editor_window_list::SetWindowFocus,
 };
 
 #[derive(GraspQueue)]
@@ -78,7 +77,6 @@ impl GraspEditorState {
                 .position(|w| w.name == data.to_string())
             {
                 let window = self.window_list.windows.remove(pos).unwrap();
-                SetWindowFocus(&self.editor_mosaic, window.window_tile.id).query();
                 self.window_list.windows.push_front(window);
             }
         }
@@ -86,8 +84,9 @@ impl GraspEditorState {
 
     fn process_new_window_queue(&mut self) {
         while let Some(request) = queues::dequeue(NewWindowRequestQueue, &self.editor_mosaic) {
-            if let Some(collage) = request.to_collage() {
-                self.new_window(collage);
+            // TODO: reconnect collage, but with reconstruction into other mosaic
+            if let Some(_collage) = request.to_collage() {
+                self.new_window(None);
                 request.iter().delete();
             }
         }

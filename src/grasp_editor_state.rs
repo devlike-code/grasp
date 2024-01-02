@@ -15,8 +15,8 @@ use itertools::Itertools;
 use mosaic::{
     capabilities::QueueTile,
     internals::{
-        all_tiles, par, void, Collage, Datatype, FromByteArray, Mosaic, MosaicCRUD, MosaicIO,
-        MosaicTypelevelCRUD, Tile, TileFieldEmptyQuery, TileFieldSetter, ToByteArray, Value, S32,
+        par, void, Datatype, FromByteArray, Mosaic, MosaicCRUD, MosaicIO, MosaicTypelevelCRUD,
+        Tile, TileFieldEmptyQuery, TileFieldSetter, ToByteArray, Value, S32,
     },
     iterators::tile_getters::TileGetters,
 };
@@ -26,7 +26,7 @@ use crate::{
     core::{gui::docking::GuiViewport, math::Rect2, queues},
     editor_state_machine::EditorState,
     grasp_editor_window::GraspEditorWindow,
-    grasp_editor_window_list::{GetWindowFocus, GraspEditorWindowList},
+    grasp_editor_window_list::GraspEditorWindowList,
     grasp_queues::ToastRequestQueue,
     grasp_render,
     grasp_transitions::QuadtreeUpdateCapability,
@@ -111,17 +111,23 @@ impl GraspEditorState {
             .iter()
             .position(|w| w.window_tile == window_tile)
         {
+            let window = self.window_list.windows.get(pos).unwrap();
+            println!("Deleting {:?}", window.name);
+
+            let p = self
+                .window_list
+                .named_windows
+                .iter()
+                .position(|n| n == &window.name)
+                .unwrap();
+            self.window_list.named_windows.remove(p);
+
             self.window_list.windows.remove(pos);
             self.editor_mosaic.delete_tile(window_tile);
 
-            println!(
-                "WINDOW LIST {:?}",
-                self.window_list
-                    .windows
-                    .iter()
-                    .map(|t| t.name.to_owned())
-                    .collect_vec()
-            );
+            if let Some(first) = self.window_list.named_windows.first() {
+                self.window_list.request_focus(first);
+            }
         }
     }
 
@@ -237,11 +243,11 @@ impl GraspEditorState {
     }
 
     pub fn prepare_mosaic(mosaic: Arc<Mosaic>) -> (Arc<Mosaic>, Vec<ComponentCategory>) {
-        println!("Preparing mosaic {:?}", mosaic);
         let components: Vec<ComponentCategory> = fs::read_dir("env\\components")
             .unwrap()
             .flat_map(|file_entry| {
                 if let Ok(file) = file_entry {
+                    println!("Loading {:?}", file);
                     Self::load_mosaic_components_from_file(&mosaic, file.path())
                 } else {
                     vec![]
@@ -296,7 +302,7 @@ impl GraspEditorState {
         new_editor_state
     }
 
-    pub fn new_window(&mut self, collage: Box<Collage>) -> usize {
+    pub fn new_window(&mut self, name: Option<String>) {
         //new window tile that is at the same time "Queue" component
         let window_tile = self.editor_mosaic.make_queue();
         window_tile.add_component("EditorWindowQueue", void());
@@ -315,12 +321,14 @@ impl GraspEditorState {
         let document_mosaic = Mosaic::new();
         Self::prepare_mosaic(Arc::clone(&document_mosaic));
 
+        let filename = name.unwrap_or(format!("Untitled {}", new_index));
+        let name = format!("[{}] {}", id, filename);
+
         let window = GraspEditorWindow {
-            name: format!("Untitled {}", new_index),
+            name: name.clone(),
             window_tile,
             quadtree: Mutex::new(Quadtree::new_with_anchor((-1000, -1000).into(), 16)),
             document_mosaic,
-            collage,
             object_to_area: Default::default(),
             editor_data: Default::default(),
             state: EditorState::Idle,
@@ -340,9 +348,8 @@ impl GraspEditorState {
             window_list_index: id,
         };
 
+        self.window_list.named_windows.push(name);
         self.window_list.windows.push_front(window);
-
-        id
     }
 
     pub fn show(&mut self, s: &GuiState) {
@@ -350,14 +357,6 @@ impl GraspEditorState {
         self.show_right_sidebar(s);
         self.show_menu_bar(s);
         self.window_list.show(s);
-    }
-
-    fn get_window_by_index(&self, focused_index: usize) -> i32 {
-        self.window_list
-            .windows
-            .iter()
-            .position(|w| w.window_tile.id == focused_index)
-            .unwrap_or_default() as i32
     }
 
     fn show_left_sidebar(&mut self, s: &GuiState) {
@@ -375,47 +374,35 @@ impl GraspEditorState {
                 .collapsing_header("Windows", TreeNodeFlags::DEFAULT_OPEN)
             {
                 if s.ui.button("[+] New Window") {
-                    self.new_window(all_tiles());
+                    self.new_window(None);
                 }
 
-                if let Some(focused_index) = GetWindowFocus(&self.editor_mosaic).query() {
-                    let mut i = self.get_window_by_index(focused_index);
+                let items = self
+                    .window_list
+                    .named_windows
+                    .iter()
+                    .map(|w| w.as_str())
+                    .collect_vec();
 
-                    let items = self
-                        .window_list
-                        .windows
+                let mut i = if let Some(selected_window) = self.window_list.windows.front() {
+                    self.window_list
+                        .named_windows
                         .iter()
-                        .map(|w| w.name.as_str())
-                        .collect_vec();
+                        .position(|n| n == &selected_window.name)
+                        .unwrap() as i32
+                } else {
+                    -1i32
+                };
+                s.ui.set_next_item_width(-1.0);
+                let color =
+                    s.ui.push_style_color(StyleColor::FrameBg, [0.1, 0.1, 0.15, 1.0]);
 
-                    s.ui.set_next_item_width(-1.0);
-                    let color =
-                        s.ui.push_style_color(StyleColor::FrameBg, [0.1, 0.1, 0.15, 1.0]);
-
-                    if s.ui.list_box("##", &mut i, items.as_slice(), 20) {
-                        let item: &str = items.get(i as usize).unwrap();
-
-                        self.window_list.request_focus(item);
-                    }
-
-                    color.end();
-
-                    // let items = self
-                    //     .window_list
-                    //     .depth_sorted_by_index
-                    //     .lock()
-                    //     .unwrap()
-                    //     .iter()
-                    //     .map(|w| self.window_list.windows.get(*w).unwrap().name.as_str())
-                    //     .collect_vec();
-
-                    // s.ui.separator();
-                    // s.ui.set_next_item_width(-1.0);
-                    // let color =
-                    //     s.ui.push_style_color(StyleColor::FrameBg, [0.1, 0.1, 0.15, 1.0]);
-                    // s.ui.list_box("##depth-index", &mut 0, items.as_slice(), 20);
-                    // color.end();
+                if s.ui.list_box("##", &mut i, items.as_slice(), 20) {
+                    let item: &str = items.get(i as usize).unwrap();
+                    self.window_list.request_focus(item);
                 }
+
+                color.end();
             }
 
             w.end();
@@ -430,9 +417,7 @@ impl GraspEditorState {
                 .size([300.0, viewport.size().y - 18.0], Condition::FirstUseEver)
                 .begin()
         {
-            let focused_index = GetWindowFocus(&self.editor_mosaic).query();
-
-            if let Some(focused_window) = self.window_list.get_position(focused_index) {
+            if let Some(focused_window) = self.window_list.windows.front_mut() {
                 let mut selected = focused_window.editor_data.selected.clone();
                 selected = selected.into_iter().unique().collect_vec();
 
@@ -522,7 +507,7 @@ impl GraspEditorState {
     fn show_document_menu(&mut self, s: &GuiState) {
         if let Some(f) = s.begin_menu("Document") {
             if s.menu_item("New Window") {
-                self.new_window(all_tiles());
+                self.new_window(None);
             }
 
             if s.menu_item("Open") {
@@ -531,8 +516,15 @@ impl GraspEditorState {
                     .set_directory(env::current_dir().unwrap())
                     .pick_file()
                 {
-                    let window_id = self.new_window(all_tiles());
-                    let window = self.window_list.windows.get(window_id).unwrap();
+                    self.new_window(Some(
+                        file.file_name()
+                            .unwrap()
+                            .to_str()
+                            .unwrap()
+                            .to_string()
+                            .clone(),
+                    ));
+                    let window = self.window_list.windows.front().unwrap();
                     let window_mosaic = &window.document_mosaic;
 
                     Self::prepare_mosaic(Arc::clone(window_mosaic));

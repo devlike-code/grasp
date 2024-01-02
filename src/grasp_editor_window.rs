@@ -6,15 +6,13 @@ use crate::core::queues;
 use crate::editor_state_machine::EditorState;
 use crate::grasp_common::GraspEditorData;
 use crate::grasp_editor_state::GraspEditorState;
-use crate::grasp_editor_window_list::{GetWindowFocus, SetWindowFocus};
 use crate::grasp_queues::NamedFocusWindowRequestQueue;
 use crate::grasp_render::GraspRenderer;
 use crate::GuiState;
 use ::mosaic::internals::{EntityId, Mosaic, MosaicCRUD, MosaicIO, Tile, Value};
 use imgui::ImColor32;
 use mosaic::capabilities::{ArchetypeSubject, QueueCapability};
-use mosaic::internals::collage::Collage;
-use mosaic::internals::{par, void, MosaicTypelevelCRUD, TileFieldEmptyQuery};
+use mosaic::internals::{par, void, MosaicTypelevelCRUD};
 use mosaic::iterators::tile_deletion::TileDeletion;
 use quadtree_rs::{
     area::{Area, AreaBuilder},
@@ -32,7 +30,6 @@ pub struct GraspEditorWindow {
     pub quadtree: Mutex<Quadtree<i32, EntityId>>,
     pub document_mosaic: Arc<Mosaic>,
     pub object_to_area: Mutex<HashMap<EntityId, u64>>,
-    pub collage: Box<Collage>,
     pub ruler_visible: bool,
     pub grid_visible: bool,
     pub editor_data: GraspEditorData,
@@ -61,7 +58,6 @@ impl GraspEditorWindow {
     pub fn set_focus(&self) {
         let editor_state = self.grasp_editor_state.upgrade().unwrap();
         editor_state.window_list.request_focus(&self.name);
-        SetWindowFocus(&editor_state.editor_mosaic, self.window_tile.id).query();
     }
 
     pub fn show(&mut self, s: &GuiState, caught_events: &mut Vec<u64>) {
@@ -110,18 +106,17 @@ impl GraspEditorWindow {
                     self.editor_data.window_offset = window_offset;
                 }
 
-                if s.ui.is_window_focused()
-                    && GetWindowFocus(editor_mosaic)
-                        .query()
-                        .is_some_and(|m| m != self.window_tile.id)
-                {
+                let is_other_window_focused = editor_state
+                    .window_list
+                    .windows
+                    .front()
+                    .is_some_and(|w| w.window_tile.id != self.window_tile.id);
+
+                if s.ui.is_window_focused() && is_other_window_focused {
                     self.set_focus();
                 }
 
-                if GetWindowFocus(editor_mosaic)
-                    .query()
-                    .is_some_and(|m| m != self.window_tile.id)
-                {
+                if is_other_window_focused {
                     self.state = EditorState::Idle;
                 }
 
