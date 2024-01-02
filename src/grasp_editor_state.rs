@@ -268,6 +268,9 @@ impl GraspEditorState {
         let close_window_request_queue = editor_mosaic.make_queue();
         close_window_request_queue.add_component("CloseWindowRequestQueue", void());
 
+        let named_focus_window_request_queue = editor_mosaic.make_queue();
+        named_focus_window_request_queue.add_component("NamedFocusWindowRequestQueue", void());
+
         let toast_request_queue = editor_mosaic.make_queue();
         toast_request_queue.add_component("ToastRequestQueue", void());
 
@@ -392,7 +395,7 @@ impl GraspEditorState {
                     if s.ui.list_box("##", &mut i, items.as_slice(), 20) {
                         let item: &str = items.get(i as usize).unwrap();
 
-                        self.window_list.focus(item);
+                        self.window_list.request_focus(item);
                     }
 
                     color.end();

@@ -1,11 +1,13 @@
 use crate::core::gui::calc_text_size;
-use crate::core::gui::windowing::set_window_focus;
+use crate::core::gui::windowing::gui_set_window_focus;
 use crate::core::math::rect2::Rect2;
 use crate::core::math::vec2::Vec2;
+use crate::core::queues;
 use crate::editor_state_machine::EditorState;
 use crate::grasp_common::GraspEditorData;
 use crate::grasp_editor_state::GraspEditorState;
 use crate::grasp_editor_window_list::{GetWindowFocus, SetWindowFocus};
+use crate::grasp_queues::NamedFocusWindowRequestQueue;
 use crate::grasp_render::GraspRenderer;
 use crate::GuiState;
 use ::mosaic::internals::{EntityId, Mosaic, MosaicCRUD, MosaicIO, Tile, Value};
@@ -58,6 +60,7 @@ impl GraspEditorWindow {
 
     pub fn set_focus(&self) {
         let editor_state = self.grasp_editor_state.upgrade().unwrap();
+        editor_state.window_list.request_focus(&self.name);
         SetWindowFocus(&editor_state.editor_mosaic, self.window_tile.id).query();
     }
 
@@ -131,8 +134,14 @@ impl GraspEditorWindow {
                         }
                         "FocusWindowRequest" => {
                             println!("FOCUSING WINDOW {} FROM QUEUE", self.name);
-                            set_window_focus(&self.name);
+                            gui_set_window_focus(&self.name);
                             request.iter().delete();
+
+                            queues::enqueue(
+                                NamedFocusWindowRequestQueue,
+                                editor_mosaic
+                                    .new_object("NamedFocusWindowRequest", par(self.name.as_str())),
+                            );
                         }
                         _ => {}
                     }

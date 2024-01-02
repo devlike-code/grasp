@@ -1,7 +1,7 @@
 use grasp_proc_macros::GraspQueue;
 use mosaic::{
     capabilities::CollageImportCapability,
-    internals::{void, MosaicIO, Tile},
+    internals::{void, MosaicIO, Tile, TileFieldEmptyQuery},
     iterators::{
         component_selectors::ComponentSelectors, tile_deletion::TileDeletion,
         tile_getters::TileGetters,
@@ -12,6 +12,7 @@ use std::vec::IntoIter;
 use crate::{
     core::queues::{self, dequeue, GraspQueue},
     grasp_editor_state::GraspEditorState,
+    grasp_editor_window_list::SetWindowFocus,
 };
 
 #[derive(GraspQueue)]
@@ -19,6 +20,9 @@ pub struct ToastRequestQueue;
 
 #[derive(GraspQueue)]
 pub struct NewWindowRequestQueue;
+
+#[derive(GraspQueue)]
+pub struct NamedFocusWindowRequestQueue;
 
 #[derive(GraspQueue)]
 pub struct CloseWindowRequestQueue;
@@ -42,6 +46,7 @@ impl GraspEditorState {
     //processing all queues on Editor level
     pub fn process_requests(&mut self) {
         self.process_toast_queue();
+        self.process_named_focus_window_queue();
         self.process_new_window_queue();
         self.process_quadtree_queue();
         self.process_close_window_queue();
@@ -59,6 +64,23 @@ impl GraspEditorState {
             //     .show();
 
             request.iter().delete();
+        }
+    }
+
+    fn process_named_focus_window_queue(&mut self) {
+        while let Some(request) = queues::dequeue(NamedFocusWindowRequestQueue, &self.editor_mosaic)
+        {
+            let data = request.get("self").as_s32();
+            if let Some(pos) = self
+                .window_list
+                .windows
+                .iter()
+                .position(|w| w.name == data.to_string())
+            {
+                let window = self.window_list.windows.remove(pos).unwrap();
+                SetWindowFocus(&self.editor_mosaic, window.window_tile.id).query();
+                self.window_list.windows.push_front(window);
+            }
         }
     }
 

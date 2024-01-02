@@ -81,7 +81,7 @@ impl GraspEditorWindowList {
         caught_events.clear();
     }
 
-    pub fn focus(&self, name: &str) {
+    pub fn request_focus(&self, name: &str) {
         if let Some(index) = self.windows.iter().position(|w| w.name.as_str() == name) {
             let window = self.windows.get(index).unwrap();
             let mosaic = &window.get_editor_mosaic();

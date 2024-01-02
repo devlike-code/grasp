@@ -286,7 +286,7 @@ pub fn run_main_forever<F: FnMut(&Ui, &mut bool)>(mut update: F) {
     }
 }
 
-pub fn set_window_focus(name: &str) {
+pub fn gui_set_window_focus(name: &str) {
     unsafe {
         imgui::sys::igSetWindowFocus_Str(ImString::new(name).as_ptr());
     }
