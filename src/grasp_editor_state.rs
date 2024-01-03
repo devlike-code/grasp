@@ -12,6 +12,12 @@ use std::{
 
 use imgui::{Condition, ImString, MouseButton, StyleColor, TreeNodeFlags};
 use itertools::Itertools;
+use layout::{
+    backends::svg::SVGWriter,
+    core::utils::save_to_file,
+    gv::{self, GraphBuilder},
+    topo::layout::VisualGraph,
+};
 use mosaic::{
     capabilities::QueueTile,
     internals::{
@@ -53,10 +59,10 @@ impl ToastCapability for Arc<Mosaic> {
                 text
             );
         } else {
-            queues::enqueue(
-                ToastRequestQueue,
-                self.new_object("ToastRequest", par(text)),
-            );
+            // queues::enqueue(
+            //     ToastRequestQueue,
+            //     self.new_object("ToastRequest", par(text)),
+            // );
             println!("ToastRequest enqueued");
         }
     }
@@ -145,17 +151,39 @@ impl GraspEditorState {
         }
     }
 
+    fn generate_svg(graph: &mut VisualGraph, name: &str) {
+        let mut svg = SVGWriter::new();
+        graph.do_it(false, false, false, &mut svg);
+        let content = svg.finalize();
+
+        let output_path = format!(".//{}.svg", name);
+        let res = save_to_file(output_path.as_str(), &content);
+        if let Result::Err(err) = res {
+            log::error!("Could not write the file {}", output_path.as_str());
+            log::error!("Error {}", err);
+        }
+    }
+
     pub fn snapshot(&self, name: &str, mosaic: &Arc<Mosaic>) {
-        let name = name.to_string();
-        let mosaic = Arc::clone(mosaic);
-        thread::spawn(move || {
-            let content = mosaic.dot(name.as_str());
-            open::that(format!(
-                "https://dreampuf.github.io/GraphvizOnline/#{}",
-                urlencoding::encode(content.as_str())
-            ))
-            .unwrap();
-        });
+        let content = mosaic.dot(name);
+        let mut parser = gv::DotParser::new(&content);
+        match parser.process() {
+            Ok(ast) => {
+                println!("{:?}", ast);
+                let mut gb = GraphBuilder::new();
+                gb.visit_graph(&ast);
+                let mut vg = gb.get();
+                Self::generate_svg(&mut vg, name);
+            }
+            Err(err) => panic!("{:?}", err),
+        }
+
+        // let content = mosaic.dot(name);
+        // open::that(format!(
+        //     "https://dreampuf.github.io/GraphvizOnline/#{}",
+        //     urlencoding::encode(content.as_str())
+        // ))
+        // .unwrap();
     }
 
     fn load_mosaic_components_from_file(
@@ -183,6 +211,7 @@ impl GraspEditorState {
                 ..Default::default()
             };
 
+            println!("\tCategory name: {:?}", category.name);
             if menu.match_archetype(&["Hidden"]) {
                 category.hidden = true;
             }
@@ -191,6 +220,11 @@ impl GraspEditorState {
 
             for item in items {
                 let component_name = Label(&item).query();
+                println!("\t\tItem: {:?}", item);
+                assert_eq!(item.mosaic, loader_mosaic);
+                println!("\t\tArrows: {:?}", item.iter().get_arrows_from());
+                println!("\t\tComponent name: {:?}", component_name);
+
                 let mut component_entry = ComponentEntry {
                     name: component_name.clone(),
                     display: component_name.clone(),
@@ -218,6 +252,7 @@ impl GraspEditorState {
                     let field = current_field.as_ref().unwrap();
                     let field_name = Label(field).query();
                     let field_datatype = Label(&field.target()).query();
+                    println!("\t\t\t{:?}: {:?}", field_name, field_datatype);
                     fields.push((field_name, field_datatype));
                     current_field = field.iter().get_arrows_from().get_targets().next();
                 }
@@ -266,7 +301,6 @@ impl GraspEditorState {
         let (_, components) = Self::prepare_mosaic(Arc::clone(&editor_mosaic));
 
         let editor_state_tile = editor_mosaic.new_object("EditorState", void());
-        editor_mosaic.new_extension(&editor_state_tile, "EditorStateFocusedWindow", par(0u64));
 
         let new_window_request_queue = editor_mosaic.make_queue();
         new_window_request_queue.add_component("NewWindowRequestQueue", void());
@@ -322,7 +356,9 @@ impl GraspEditorState {
         let id = self.window_list.windows.len();
 
         let document_mosaic = Mosaic::new();
+        assert!(self.editor_mosaic.id != document_mosaic.id);
         Self::prepare_mosaic(Arc::clone(&document_mosaic));
+        assert!(self.editor_mosaic.id != document_mosaic.id);
 
         let filename = name.unwrap_or(format!("Untitled {}", new_index));
         let name = format!("[{}] {}", id, filename);
@@ -616,6 +652,8 @@ impl GraspEditorState {
 
             if s.menu_item("Save") {
                 if let Some(focused_window) = self.window_list.get_focused() {
+                    assert!(focused_window.document_mosaic.id != self.editor_mosaic.id);
+                    self.snapshot_all("SAVED");
                     let document = focused_window.document_mosaic.save();
                     if let Some(file) = rfd::FileDialog::new()
                         .add_filter("Mosaic", &["mos"])
