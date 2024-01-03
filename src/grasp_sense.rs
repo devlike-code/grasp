@@ -231,9 +231,14 @@ impl GraspEditorWindow {
         {
             //
             let tile_under_mouse = under_cursor.fetch_tile(&self.document_mosaic);
-            self.editor_data.selected = vec![tile_under_mouse];
+            self.editor_data.selected = vec![tile_under_mouse.clone()];
             caught_events.push(hash_input("start drag left"));
-            self.trigger(DragToLink);
+
+            if tile_under_mouse.is_arrow() || tile_under_mouse.is_object() {
+                self.trigger(DragToLink);
+            } else {
+                self.trigger(DragToMove);
+            }
             //
         } else if start_dragging_left
             && !under_cursor.is_empty()
