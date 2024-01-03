@@ -1,78 +1,73 @@
-use egui::{CursorIcon, Key, Rect, Ui};
+use imgui::Key;
 use itertools::Itertools;
-use mosaic::{
-    capabilities::QueueCapability, internals::MosaicIO, iterators::tile_deletion::TileDeletion,
-};
+use mosaic::internals::MosaicIO;
 
-use crate::{
-    editor_state_machine::EditorState,
-    grasp_common::{GraspEditorTab, QuadTreeFetch},
-};
+use crate::core::gui::imgui_keys::ExtraKeyEvents;
+use crate::core::math::rect2::Rect2;
+use crate::editor_state_machine::EditorState;
+use crate::grasp_editor_window::GraspEditorWindow;
+use crate::utilities::QuadTreeFetch;
+use crate::GuiState;
 
-impl GraspEditorTab {
-    pub fn update(&mut self, ui: &mut Ui) {
-        while let Some(request) = self.document_mosaic.dequeue(&self.tab_tile) {
-            self.update_quadtree(None);
-            request.iter().delete();
-        }
-
+impl GraspEditorWindow {
+    pub fn update(&mut self, s: &GuiState) {
         match &self.state {
-            EditorState::Idle => {
-                if ui.input(|i| i.key_released(Key::F12)) {
-                    let content = self.document_mosaic.dot();
-                    open::that(format!(
-                        "https://dreampuf.github.io/GraphvizOnline/#{}",
-                        urlencoding::encode(content.as_str())
-                    ))
-                    .unwrap();
-                }
-
-                // if ui.input(|i| i.key_released(Key::Space)) {
-                //     if let Some(queue) = self
-                //         .document_mosaic
-                //         .get_all()
-                //         .include_component("NewTabRequestQueue")
-                //         .get_targets()
-                //         .next()
-                //     {
-                //         self.document_mosaic.enqueue(
-                //             &queue,
-                //             &take_objects(all_tiles()).to_tiles(&self.document_mosaic),
-                //         );
-                //     }
-                // }
-            }
-
+            EditorState::Idle => {}
             EditorState::Move => {
                 self.update_selected_positions_by(self.editor_data.cursor_delta);
             }
 
             EditorState::Pan => {
-                ui.ctx().set_cursor_icon(CursorIcon::Move);
+                s.ui.set_mouse_cursor(Some(imgui::MouseCursor::Hand));
                 self.editor_data.pan += self.editor_data.cursor_delta;
             }
 
             EditorState::Link => {
-                let region = self.build_circle_area(self.editor_data.cursor, 1);
-                let query = self.quadtree.query(region).collect_vec();
+                let quadtree = self.quadtree.lock().unwrap();
+                let region = self.build_circle_area(
+                    self.editor_data.cursor - self.editor_data.window_offset - self.editor_data.pan,
+                    1,
+                );
+                let query = quadtree.query(region).collect_vec();
                 if !query.is_empty() {
                     let tile_id = query.first().unwrap().value_ref();
-                    self.editor_data.link_end = self.document_mosaic.get(*tile_id);
+                    if let Some(tile) = self.document_mosaic.get(*tile_id) {
+                        if tile.is_object() || tile.is_arrow() {
+                            self.editor_data.link_end = Some(tile);
+                        }
+                    }
                 } else {
                     self.editor_data.link_end = None;
                 }
             }
 
             EditorState::Rect => {
-                if let Some(min) = self.editor_data.rect_start_pos {
+                if let Some(mut min) = self.editor_data.rect_start_pos {
+                    min -= self.editor_data.window_offset;
                     if let Some(delta) = self.editor_data.rect_delta {
                         let end_pos = min + delta;
-                        let rect = Rect::from_two_pos(min, end_pos);
-
+                        let rect = Rect2::from_two_pos(min, end_pos);
+                        let quadtree = self.quadtree.lock().unwrap();
                         let region = self.build_rect_area(rect);
-                        let query = self.quadtree.query(region).collect_vec();
+                        let query = quadtree.query(region).collect_vec();
                         if !query.is_empty() {
-                            self.editor_data.selected = query.fetch_tiles(&self.document_mosaic);
+                            if s.ui.is_modkey_down(Key::LeftAlt)
+                                || s.ui.is_modkey_down(Key::RightAlt)
+                            {
+                                self.editor_data.selected = query
+                                    .fetch_tiles(&self.document_mosaic)
+                                    .iter()
+                                    .filter(|t| t.is_object() || t.is_arrow())
+                                    .cloned()
+                                    .collect_vec();
+                            } else {
+                                self.editor_data.selected = query
+                                    .fetch_tiles(&self.document_mosaic)
+                                    .iter()
+                                    .filter(|t| t.is_object())
+                                    .cloned()
+                                    .collect_vec();
+                            }
                         } else {
                             self.editor_data.selected = vec![];
                         }
@@ -81,8 +76,8 @@ impl GraspEditorTab {
             }
 
             EditorState::PropertyChanging => {}
+            EditorState::WindowResizing => {}
 
-            EditorState::Reposition => {}
             EditorState::ContextMenu => {}
         }
     }

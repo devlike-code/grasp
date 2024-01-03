@@ -6,9 +6,18 @@ pub enum EditorState {
     Move,
     Link,
     Rect,
+    WindowResizing,
     PropertyChanging,
-    Reposition,
     ContextMenu,
+}
+
+impl EditorState {
+    pub fn uses_dragging(&self) -> bool {
+        self == &EditorState::Pan
+            || self == &EditorState::Move
+            || self == &EditorState::Rect
+            || self == &EditorState::Link
+    }
 }
 
 #[allow(dead_code)]
@@ -27,6 +36,7 @@ pub enum EditorStateTrigger {
     DragToSelect,
     DragToMove,
     DragToLink,
+    DragToWindowResize,
 
     EndDrag,
 

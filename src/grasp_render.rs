@@ -1,354 +1,313 @@
-use crate::{
-    editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
-    grasp_common::{get_pos_from_tile, GraspEditorTab},
-    utilities::{Label, Pos},
-};
-use egui::{
-    Align2, Color32, FontId, Painter, Pos2, Rangef, Rect, Rounding, Stroke, TextEdit, Ui, Vec2,
-};
+use std::f32::consts;
+
+use crate::core::gui::windowing::gui_draw_image;
+use crate::core::math::bezier::gui_draw_bezier_arrow;
+use crate::core::math::Vec2;
+use crate::editor_state_machine::EditorState;
+use crate::editor_state_machine::EditorStateTrigger::*;
+use crate::editor_state_machine::StateMachine;
+use crate::grasp_editor_window::GraspEditorWindow;
+
+use crate::grasp_transitions::query_position_recursive;
+use crate::grasp_transitions::QuadtreeUpdateCapability;
+use crate::utilities::Label;
+use crate::utilities::Offset;
+use crate::GuiState;
+use imgui::sys::ImVec2;
+use imgui::DrawListMut;
+use imgui::ImColor32;
+use itertools::Itertools;
+use mosaic::capabilities::ArchetypeSubject;
+use mosaic::internals::Tile;
 use mosaic::internals::TileFieldEmptyQuery;
-use mosaic::{capabilities::ArchetypeSubject, internals::MosaicCollage};
-use mosaic::{
-    internals::{MosaicIO, Tile},
-    iterators::{component_selectors::ComponentSelectors, tile_filters::TileFilters},
-};
-use std::ops::Add;
+use mosaic::internals::{MosaicIO, TileFieldSetter};
+use mosaic::iterators::component_selectors::ComponentSelectors;
+use mosaic::iterators::tile_getters::TileGetters;
 
-impl GraspEditorTab {
-    pub fn draw_debug(&mut self, ui: &mut Ui) {
-        if !self.editor_data.debug {
-            return;
+pub type GraspRenderer = fn(&mut GraspEditorWindow, &GuiState);
+
+fn gui_set_cursor_pos(x: f32, y: f32) {
+    unsafe {
+        imgui::sys::igSetCursorPos(ImVec2::new(x, y));
+    }
+}
+
+fn default_renderer_draw_object(
+    tile: &Tile,
+    pos: Vec2,
+    window: &mut GraspEditorWindow,
+    painter: &DrawListMut<'_>,
+    s: &GuiState,
+) {
+    let editor_mosaic = &window.grasp_editor_state.upgrade().unwrap().editor_mosaic;
+
+    painter
+        .add_circle([pos.x, pos.y], 10.0, ImColor32::from_rgb(255, 0, 0))
+        .build();
+
+    let is_selected = window.editor_data.selected.contains(tile);
+    let image = if is_selected { "[dot]" } else { "dot" };
+
+    gui_draw_image(
+        image,
+        [20.0, 20.0],
+        [pos.x - window.rect.x, pos.y - window.rect.y],
+        0.0,
+        1.0,
+    );
+
+    let mut cancel: bool = true;
+    let mut trigger_end_drag = true;
+    let offset = tile
+        .get_component("Label")
+        .map(|l| Offset(&l).query())
+        .unwrap_or_default();
+
+    if window.state == EditorState::PropertyChanging
+        && window.editor_data.tile_changing == Some(tile.id)
+    {
+        if let Some(selected) = window.editor_data.selected.first() {
+            if tile.id == selected.id {
+                let cx = pos.x - window.rect.x + offset.x;
+                let cy = pos.y - window.rect.y + offset.y;
+                gui_set_cursor_pos(cx, cy);
+                let text = &mut window.editor_data.text;
+
+                s.ui.set_keyboard_focus_here();
+                s.ui.set_next_item_width(100.0);
+                if s.ui
+                    .input_text("##", text)
+                    .auto_select_all(true)
+                    .enter_returns_true(true)
+                    .build()
+                {
+                    if text.len() >= 32 {
+                        *text = text[0..32].to_string();
+                    }
+
+                    if let Ok(t) = text.parse::<String>() {
+                        if window.editor_data.previous_text != *text {
+                            if let Some(mut label) = tile.clone().get_component("Label") {
+                                label.set("self", t);
+                                editor_mosaic.request_quadtree_update();
+                            } else {
+                                cancel = false;
+                                trigger_end_drag = false;
+                            }
+                        }
+                    }
+                } else {
+                    cancel = false;
+                    trigger_end_drag = false;
+                }
+            }
         }
-
-        let painter = ui.painter();
-
-        self.quadtree.iter().for_each(|area| {
-            let anchor_pos = self.pos_with_pan(Pos2 {
-                x: area.anchor().x as f32,
-                y: area.anchor().y as f32,
-            }) - self.editor_data.tab_offset;
-            painter.rect(
-                Rect {
-                    min: Pos2 {
-                        x: anchor_pos.x,
-                        y: anchor_pos.y,
-                    },
-                    max: Pos2 {
-                        x: (anchor_pos.x + area.width() as f32),
-                        y: (anchor_pos.y + area.height() as f32),
-                    },
-                },
-                Rounding::ZERO,
-                Color32::TRANSPARENT,
-                Stroke::new(1.0, Color32::RED),
-            );
-        });
+    } else {
+        trigger_end_drag = false;
     }
 
-    #[allow(clippy::too_many_arguments)]
-    fn internal_draw_arrow(
-        &self,
-        painter: &egui::Painter,
-        origin: Pos2,
-        middle: Pos2,
-        vec: Vec2,
-        stroke: Stroke,
-        start_offset: f32,
-        end_offset: f32,
-    ) {
-        let rot = egui::emath::Rot2::from_angle(std::f32::consts::TAU / 15.0);
-        let tip_length = 15.0;
-        let dir = vec.normalized();
-        let a_start: Pos2 = origin + dir * start_offset;
-        let tip = a_start + vec - dir * (start_offset + end_offset);
-        //let middle = a_start.lerp(tip, 0.5);
-
-        let shape = egui::epaint::QuadraticBezierShape {
-            points: [a_start, middle, tip],
-            closed: false,
-            fill: Color32::TRANSPARENT,
-            stroke,
-        };
-
-        painter.add(shape);
-        painter.line_segment([tip, tip - tip_length * (rot * dir)], stroke);
-        painter.line_segment([tip, tip - tip_length * (rot.inverse() * dir)], stroke);
-
-        painter.circle_filled(shape.sample(0.5), 10.0, Color32::GRAY);
+    if trigger_end_drag {
+        window.trigger(EndDrag);
     }
 
-    fn draw_arrow(&mut self, painter: &Painter, arrow: &Tile) {
-        let source_node = self.document_mosaic.get(arrow.source_id()).unwrap();
-        let target_node = self.document_mosaic.get(arrow.target_id()).unwrap();
-        let arrow_node = self.document_mosaic.get(arrow.id).unwrap();
+    if cancel {
+        let label = Label(tile).query();
+        painter.add_text(
+            [pos.x + offset.x, pos.y + offset.y],
+            ImColor32::WHITE,
+            label,
+        );
+    }
+}
 
-        let source_pos = self.pos_with_pan(get_pos_from_tile(&source_node).unwrap());
-        let target_pos = self.pos_with_pan(get_pos_from_tile(&target_node).unwrap());
-        let mid_pos = self.pos_with_pan(get_pos_from_tile(&arrow_node).unwrap());
+pub fn angle_between_points(p1: Vec2, p2: Vec2) -> f32 {
+    let dx = p1.x - p2.x;
+    let dy = p1.y - p2.y;
+    let mut angle = dy.atan2(dx);
+    if angle < 0.0 {
+        angle += 2.0 * consts::PI;
+    }
 
-        self.internal_draw_arrow(
-            painter,
-            source_pos,
-            mid_pos,
-            target_pos - source_pos,
-            Stroke::new(1.0, Color32::LIGHT_GRAY),
-            10.0,
-            10.0,
+    angle + consts::PI
+}
+
+fn default_renderer_draw_arrow(
+    tile: &Tile,
+    pos: Vec2,
+    window: &mut GraspEditorWindow,
+    painter: &DrawListMut<'_>,
+    s: &GuiState,
+) {
+    let editor_mosaic = &window.grasp_editor_state.upgrade().unwrap().editor_mosaic;
+
+    let is_selected = window.editor_data.selected.contains(tile);
+    let image = if is_selected { "[arrow]" } else { "arrow" };
+
+    let p = query_position_recursive(&tile.source());
+    let q = query_position_recursive(&tile.target());
+    let angle = angle_between_points(p, q);
+    gui_draw_image(
+        image,
+        [20.0, 20.0],
+        [pos.x - window.rect.x, pos.y - window.rect.y],
+        angle,
+        1.0,
+    );
+
+    let mut cancel: bool = true;
+    let mut trigger_end_drag = true;
+    let offset = tile
+        .get_component("Label")
+        .map(|l| Offset(&l).query())
+        .unwrap_or_default();
+
+    if window.state == EditorState::PropertyChanging
+        && window.editor_data.tile_changing == Some(tile.id)
+    {
+        if let Some(selected) = window.editor_data.selected.first() {
+            if tile.id == selected.id {
+                let cx = pos.x - window.rect.x + offset.x;
+                let cy = pos.y - window.rect.y + offset.y;
+                gui_set_cursor_pos(cx, cy);
+                let text = &mut window.editor_data.text;
+
+                s.ui.set_keyboard_focus_here();
+                s.ui.set_next_item_width(100.0);
+                if s.ui
+                    .input_text("##", text)
+                    .auto_select_all(true)
+                    .enter_returns_true(true)
+                    .build()
+                {
+                    if text.len() >= 32 {
+                        *text = text[0..32].to_string();
+                    }
+
+                    if let Ok(t) = text.parse::<String>() {
+                        if window.editor_data.previous_text != *text {
+                            if let Some(mut label) = tile.clone().get_component("Label") {
+                                label.set("self", t);
+                                editor_mosaic.request_quadtree_update();
+                            } else {
+                                cancel = false;
+                                trigger_end_drag = false;
+                            }
+                        }
+                    }
+                } else {
+                    cancel = false;
+                    trigger_end_drag = false;
+                }
+            }
+        }
+    } else {
+        trigger_end_drag = false;
+    }
+
+    if trigger_end_drag {
+        window.trigger(EndDrag);
+    }
+
+    if cancel {
+        let label = Label(tile).query();
+        painter.add_text(
+            [pos.x + offset.x, pos.y + offset.y],
+            ImColor32::WHITE,
+            label,
+        );
+    }
+}
+
+pub fn default_renderer_draw(window: &mut GraspEditorWindow, s: &GuiState) {
+    let mut painter = s.ui.get_window_draw_list();
+
+    let arrows = window
+        .document_mosaic
+        .get_all()
+        .include_component("Arrow")
+        .collect_vec();
+
+    for arrow in &arrows {
+        let target = arrow.target();
+        let p1 = window.get_position_with_offset_and_pan(query_position_recursive(&arrow.source()));
+        let p2 = window.get_position_with_offset_and_pan(query_position_recursive(&target));
+
+        let offset = Offset(arrow).query();
+        let arrow_end_offset = if target.is_object() { 15.0f32 } else { 11.0f32 };
+
+        let mid = p1.lerp(p2, 0.5) + offset;
+        gui_draw_bezier_arrow(
+            &mut painter,
+            [p1, mid, p2],
+            2.0,
+            32,
+            window.rect.min(),
+            arrow_end_offset,
         );
     }
 
-    #[allow(clippy::single_match)]
-    fn draw_node(&mut self, ui: &mut Ui, node: &Tile) {
-        let painter = ui.painter();
-        if node.match_archetype(&["Position", "Label"]) {
-            let _arcs = node.get_archetype(&["Position", "Label"]);
-            let pos = Pos(node.clone()).query();
-            let label = Label(node.clone()).query();
+    for arrow in &arrows {
+        let p1 = window.get_position_with_offset_and_pan(query_position_recursive(&arrow.source()));
+        let p2 = window.get_position_with_offset_and_pan(query_position_recursive(&arrow.target()));
+        let offset = Offset(arrow).query();
 
-            painter.circle_filled(pos, 10.0, Color32::GRAY);
+        let mid = p1.lerp(p2, 0.5) + offset;
+        default_renderer_draw_arrow(arrow, mid, window, &painter, s);
+    }
 
-            let floating_pos = pos.add(Vec2::new(10.0, 10.0));
+    let tiles = window
+        .document_mosaic
+        .get_all()
+        .include_component("Position")
+        .get_targets();
 
-            if self.state == EditorState::PropertyChanging
-                && self.editor_data.tile_changing == Some(node.id)
-            {
-                let text_edit = TextEdit::singleline(&mut self.editor_data.text)
-                    .char_limit(30)
-                    .cursor_at_end(true);
-                let text_edit_response = ui.put(
-                    Rect::from_two_pos(
-                        floating_pos.add(Vec2::new(0.0, -5.0)),
-                        floating_pos.add(Vec2::new(60.0, 20.0)),
-                    ),
-                    text_edit,
-                );
+    if tiles.len() > 0 {
+        for tile in tiles {
+            if tile.is_object() {
+                let pos = window.get_position_with_offset_and_pan(query_position_recursive(&tile));
+                default_renderer_draw_object(&tile, pos, window, &painter, s);
+            }
+        }
+    }
 
-                text_edit_response.request_focus();
-
-                if ui.input(|i| i.key_pressed(egui::Key::Enter)) {
-                    self.trigger(EditorStateTrigger::EndDrag);
-                } else if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
-                    self.editor_data.text = self.editor_data.previous_text.clone();
-                    self.trigger(EditorStateTrigger::EndDrag);
-                }
+    match window.state {
+        EditorState::Link => {
+            let a: [f32; 2] = window.editor_data.link_start_pos.unwrap().into();
+            let pos: [f32; 2] = if let Some(b) = window.editor_data.link_end.as_ref() {
+                (window.get_position_with_offset_and_pan(query_position_recursive(b))).into()
             } else {
-                painter.text(
-                    floating_pos,
-                    Align2::LEFT_CENTER,
-                    label,
-                    FontId::default(),
-                    Color32::GRAY,
-                );
-            }
+                s.ui.io().mouse_pos
+            };
+            //pos = window.get_position_with_offset_and_pan(pos.into()).into();
+
+            painter.add_line(a, pos, ImColor32::WHITE).build();
         }
-    }
-
-    fn draw_link(&mut self, painter: &Painter) {
-        if self.state != EditorState::Link {
-            return;
-        }
-
-        if let Some(start_pos) = self.editor_data.link_start_pos {
-            let mut end_pos = self.pos_with_pan(self.editor_data.cursor);
-            let mut end_offset = 0.0;
-            if let Some(end) = &self.editor_data.link_end {
-                end_pos = self.pos_with_pan(get_pos_from_tile(end).unwrap());
-                end_offset = 10.0;
-            }
-            let mid_pos = start_pos.lerp(end_pos, 0.5);
-            self.internal_draw_arrow(
-                painter,
-                start_pos,
-                mid_pos,
-                end_pos - start_pos,
-                Stroke::new(2.0, Color32::DARK_BLUE),
-                10.0,
-                end_offset,
-            )
-        }
-    }
-
-    fn draw_selected(&mut self, painter: &Painter) {
-        for selected in &self.editor_data.selected {
-            let mut selected_pos = self.pos_with_pan(Pos(selected.clone()).query());
-
-            if selected.is_arrow() {
-                let start_pos = self.pos_with_pan(Pos(selected.source().clone()).query());
-                let end_pos = self.pos_with_pan(Pos(selected.target().clone()).query());
-
-                let shape = egui::epaint::QuadraticBezierShape {
-                    points: [start_pos, selected_pos, end_pos],
-                    closed: false,
-                    fill: Color32::DARK_BLUE,
-                    stroke: Stroke {
-                        width: 2.0,
-                        color: Color32::DARK_BLUE,
-                    },
-                };
-
-                selected_pos = shape.sample(0.5);
-            }
-
-            let stroke = Stroke {
-                width: 0.5,
-                color: Color32::LIGHT_GREEN,
+        EditorState::Rect => {
+            let a: [f32; 2] = {
+                let position = window.editor_data.rect_start_pos.unwrap();
+                position.into()
+                //window.get_position_with_offset_and_pan(position).into()
             };
 
-            painter.circle(selected_pos, 11.0, Color32::DARK_BLUE, stroke);
-        }
-    }
+            let b: [f32; 2] = {
+                let position = window.editor_data.rect_start_pos.unwrap()
+                    + window.editor_data.rect_delta.unwrap();
+                position.into()
+                // window.get_position_with_offset_and_pan(position).into()
+            };
 
-    fn draw_rect_select(&mut self, painter: &Painter) {
-        if self.state != EditorState::Rect {
-            return;
-        }
-        if let Some(min) = self.editor_data.rect_start_pos {
-            if let Some(delta) = self.editor_data.rect_delta {
-                let min = self.pos_with_pan(min);
-                let end_pos = min + delta;
-                let semi_transparent_light_blue = Color32::from_rgba_unmultiplied(255, 120, 255, 2);
-                let rect = Rect::from_two_pos(min, end_pos);
-
-                let stroke = Stroke {
-                    width: 0.5,
-                    color: Color32::LIGHT_BLUE,
-                };
-
-                painter.rect(
-                    rect,
-                    Rounding::default(),
-                    semi_transparent_light_blue,
-                    stroke,
-                );
-            }
-        }
-    }
-
-    pub fn draw_ruler(&mut self, ui: &mut Ui) {
-        let painter = ui.painter();
-        let max_rect = ui.max_rect();
-        let pan = self.editor_data.pan;
-        let min_x = max_rect.min.x;
-        let max_x = max_rect.max.x;
-        let min_y = max_rect.min.y;
-        let max_y = max_rect.max.y;
-
-        // Draw horizontal ruler
-        {
-            painter.rect_filled(
-                Rect {
-                    min: (min_x, min_y).into(),
-                    max: (max_x, min_y + 20.0).into(),
-                },
-                Rounding::default(),
-                Color32::DARK_GRAY,
+            painter.add_rect_filled_multicolor(
+                a,
+                b,
+                ImColor32::from_rgba(77, 102, 128, 30),
+                ImColor32::from_rgba(102, 77, 128, 30),
+                ImColor32::from_rgba(77, 128, 102, 30),
+                ImColor32::from_rgba(102, 128, 77, 30),
             );
-
-            let step = 50;
-            let low_bound = (min_x - pan.x) as i32 / step;
-            let upper_bound = (max_x - pan.x) as i32 / step;
-            let range_y = Rangef::new(min_y + 10.0f32, 20.0);
-            for i in low_bound..(upper_bound + 1) {
-                painter.vline(
-                    (i * step) as f32 + pan.x,
-                    range_y,
-                    Stroke::new(2.0, Color32::WHITE),
-                );
-                painter.text(
-                    ((i * step) as f32 + pan.x, min_y + 10.0).into(),
-                    Align2::CENTER_CENTER,
-                    format!("{}", i * step),
-                    FontId::default(),
-                    Color32::WHITE,
-                );
-            }
+            painter
+                .add_rect(a, b, ImColor32::from_rgba(255, 255, 255, 40))
+                .build();
         }
-
-        // Draw vertical ruler
-        {
-            painter.rect_filled(
-                Rect {
-                    min: (min_x, min_y).into(),
-                    max: (min_x + 20.0, max_y).into(),
-                },
-                Rounding::default(),
-                Color32::DARK_GRAY,
-            );
-
-            let step = 50;
-            let low_bound = (min_y - pan.y) as i32 / step;
-            let upper_bound = (max_y - pan.y) as i32 / step;
-            let range_x = Rangef::new(min_x + 20.0, 20.0);
-            for i in low_bound..(upper_bound + 1) {
-                painter.hline(
-                    range_x,
-                    (i * step) as f32 + pan.y,
-                    Stroke::new(2.0, Color32::WHITE),
-                );
-                painter.text(
-                    (min_x + 15.0, (i * step) as f32 + pan.y).into(),
-                    Align2::CENTER_CENTER,
-                    format!("{}", i * step),
-                    FontId::default(),
-                    Color32::WHITE,
-                );
-            }
-        }
-
-        self.draw_pointer_position(painter, min_x, min_y);
-    }
-
-    pub fn draw_pointer_position(&mut self, painter: &Painter, min_x: f32, min_y: f32) {
-        painter.rect_filled(
-            Rect {
-                min: (min_x, min_y).into(),
-                max: (min_x + 35.0, min_y + 20.0).into(),
-            },
-            Rounding::default(),
-            Color32::DARK_GRAY,
-        );
-
-        painter.text(
-            (min_x, min_y).into(),
-            Align2::LEFT_TOP,
-            format!("({:.2},", self.editor_data.cursor.x),
-            FontId::proportional(7.0),
-            Color32::WHITE,
-        );
-
-        painter.text(
-            (min_x, min_y + 10.0).into(),
-            Align2::LEFT_TOP,
-            format!("{:.2})", self.editor_data.cursor.y),
-            FontId::proportional(7.0),
-            Color32::WHITE,
-        );
-    }
-
-    pub fn render(&mut self, ui: &mut Ui) {
-        let tab_mosaic = self.document_mosaic.apply_collage(&self.collage, None);
-        for node in tab_mosaic
-            .clone()
-            .filter_objects()
-            .include_component("Node")
-        {
-            self.draw_node(ui, &node);
-        }
-
-        let painter = ui.painter();
-
-        for arrow in tab_mosaic.filter_arrows().include_component("Arrow") {
-            self.draw_arrow(painter, &arrow);
-        }
-
-        self.draw_link(painter);
-        self.draw_selected(painter);
-        self.draw_rect_select(painter);
-        if self.ruler_visible {
-            self.draw_ruler(ui);
-        }
-
-        self.update_context_menu(ui);
-        self.draw_debug(ui);
+        _ => {}
     }
 }
