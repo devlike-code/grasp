@@ -222,15 +222,10 @@ pub fn run_main_forever<F: FnMut(&Ui, &mut bool)>(mut update: F) {
 
     'running: loop {
         use sdl2::event::Event;
-        use sdl2::keyboard::Keycode;
 
         for event in event_pump.poll_iter() {
             match event {
-                Event::Quit { .. }
-                | Event::KeyDown {
-                    keycode: Some(Keycode::Escape),
-                    ..
-                } => break 'running,
+                Event::Quit { .. } => break 'running,
 
                 Event::KeyDown {
                     scancode: Some(fkey),

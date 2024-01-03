@@ -653,7 +653,7 @@ impl GraspEditorState {
             if s.menu_item("Save") {
                 if let Some(focused_window) = self.window_list.get_focused() {
                     assert!(focused_window.document_mosaic.id != self.editor_mosaic.id);
-                    self.snapshot_all("SAVED");
+
                     let document = focused_window.document_mosaic.save();
                     if let Some(file) = rfd::FileDialog::new()
                         .add_filter("Mosaic", &["mos"])
