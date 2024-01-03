@@ -18,7 +18,10 @@ use mosaic::{
         par, void, Datatype, FromByteArray, Mosaic, MosaicCRUD, MosaicIO, MosaicTypelevelCRUD,
         Tile, TileFieldEmptyQuery, TileFieldSetter, ToByteArray, Value, S32,
     },
-    iterators::tile_getters::TileGetters,
+    iterators::{
+        component_selectors::ComponentSelectors, tile_filters::TileFilters,
+        tile_getters::TileGetters,
+    },
 };
 use quadtree_rs::Quadtree;
 
@@ -353,13 +356,13 @@ impl GraspEditorState {
     }
 
     pub fn show(&mut self, s: &GuiState) {
-        self.show_left_sidebar(s);
-        self.show_right_sidebar(s);
+        self.show_hierarchy(s);
+        self.show_properties(s);
         self.show_menu_bar(s);
         self.window_list.show(s);
     }
 
-    fn show_left_sidebar(&mut self, s: &GuiState) {
+    fn show_hierarchy(&mut self, s: &GuiState) {
         let viewport = GuiViewport::get_main_viewport();
         if let Some(w) =
             s.ui.window(ImString::new("Hierarchy"))
@@ -409,7 +412,7 @@ impl GraspEditorState {
         }
     }
 
-    fn show_right_sidebar(&mut self, s: &GuiState) {
+    fn show_properties(&mut self, s: &GuiState) {
         let viewport = GuiViewport::get_main_viewport();
         if let Some(w) =
             s.ui.window(ImString::new("Properties"))
@@ -421,73 +424,151 @@ impl GraspEditorState {
                 let mut selected = focused_window.editor_data.selected.clone();
                 selected = selected.into_iter().unique().collect_vec();
 
-                for o in selected {
-                    let header_color = s.ui.push_style_color(
-                        imgui::StyleColor::Header,
-                        [34.0 / 255.0, 43.0 / 255.0, 90.0 / 255.0, 1.0],
-                    );
-                    if s.ui.collapsing_header(
-                        format!("ID: {}##{}-header", o.id, o.id),
-                        TreeNodeFlags::DEFAULT_OPEN,
-                    ) {
-                        header_color.end();
-                        s.ui.indent();
+                if !selected.is_empty() {
+                    for o in selected {
+                        let header_color = s.ui.push_style_color(
+                            imgui::StyleColor::Header,
+                            [34.0 / 255.0, 43.0 / 255.0, 90.0 / 255.0, 1.0],
+                        );
+                        if s.ui.collapsing_header(
+                            format!("ID: {}##{}-header", o.id, o.id),
+                            TreeNodeFlags::DEFAULT_OPEN,
+                        ) {
+                            header_color.end();
+                            s.ui.indent();
 
-                        for (part, tiles) in &o
-                            .get_full_archetype()
-                            .into_iter()
-                            .sorted_by(|a, b| (a.1.first().cmp(&b.1.first())))
-                            .collect_vec()
-                        {
-                            for tile in tiles.iter().sorted_by(|a, b| a.id.cmp(&b.id)) {
-                                let subheader_color = s.ui.push_style_color(
-                                    imgui::StyleColor::Header,
-                                    [66.0 / 255.0, 64.0 / 255.0, 123.0 / 255.0, 1.0],
-                                );
-                                if let Some(renderer) =
-                                    self.component_renderers.get(&part.as_str().into())
-                                {
-                                    if s.ui.collapsing_header(
+                            for (part, tiles) in &o
+                                .get_full_archetype()
+                                .into_iter()
+                                .sorted_by(|a, b| (a.1.first().cmp(&b.1.first())))
+                                .collect_vec()
+                            {
+                                for tile in tiles.iter().sorted_by(|a, b| a.id.cmp(&b.id)) {
+                                    let subheader_color = s.ui.push_style_color(
+                                        imgui::StyleColor::Header,
+                                        [66.0 / 255.0, 64.0 / 255.0, 123.0 / 255.0, 1.0],
+                                    );
+                                    if let Some(renderer) =
+                                        self.component_renderers.get(&part.as_str().into())
+                                    {
+                                        if s.ui.collapsing_header(
+                                            format!("{} [ID: {}]", part, tile.id),
+                                            TreeNodeFlags::DEFAULT_OPEN,
+                                        ) {
+                                            subheader_color.end();
+                                            renderer(s, focused_window, tile.clone());
+                                        }
+                                    } else if s.ui.collapsing_header(
                                         format!("{} [ID: {}]", part, tile.id),
                                         TreeNodeFlags::DEFAULT_OPEN,
                                     ) {
+                                        let is_locked =
+                                            self.locked_components.contains(&tile.component);
+                                        let is_header_covered = s.ui.is_item_hovered();
+                                        let is_header_clicked =
+                                            s.ui.is_item_clicked_with_button(MouseButton::Right);
+
+                                        if !is_locked && is_header_covered && is_header_clicked {
+                                            self.queued_component_delete = Some(tile.id);
+                                            s.ui.open_popup(ImString::new("Component Menu"));
+                                        }
+
                                         subheader_color.end();
-                                        renderer(s, focused_window, tile.clone());
+                                        draw_default_property_renderer(
+                                            s,
+                                            focused_window,
+                                            tile.clone(),
+                                        );
                                     }
-                                } else if s.ui.collapsing_header(
-                                    format!("{} [ID: {}]", part, tile.id),
-                                    TreeNodeFlags::DEFAULT_OPEN,
-                                ) {
-                                    let is_locked =
-                                        self.locked_components.contains(&tile.component);
-                                    let is_header_covered = s.ui.is_item_hovered();
-                                    let is_header_clicked =
-                                        s.ui.is_item_clicked_with_button(MouseButton::Right);
-
-                                    if !is_locked && is_header_covered && is_header_clicked {
-                                        self.queued_component_delete = Some(tile.id);
-                                        s.ui.open_popup(ImString::new("Component Menu"));
-                                    }
-
-                                    subheader_color.end();
-                                    draw_default_property_renderer(s, focused_window, tile.clone());
                                 }
                             }
+                            s.ui.unindent();
                         }
-                        s.ui.unindent();
-                    }
 
-                    s.ui.spacing();
-                    s.ui.spacing();
-                    s.ui.separator();
+                        s.ui.spacing();
+                        s.ui.spacing();
+                        s.ui.separator();
+                    }
+                } else if s.ui.collapsing_header("Meta", TreeNodeFlags::empty()) {
+                    for o in focused_window
+                        .document_mosaic
+                        .get_all()
+                        .filter_objects()
+                        .exclude_component("Node")
+                    {
+                        let header_color = s.ui.push_style_color(
+                            imgui::StyleColor::Header,
+                            [34.0 / 255.0, 43.0 / 255.0, 90.0 / 255.0, 1.0],
+                        );
+                        if s.ui.collapsing_header(
+                            format!("ID: {}##{}-header", o.id, o.id),
+                            TreeNodeFlags::DEFAULT_OPEN,
+                        ) {
+                            header_color.end();
+                            s.ui.indent();
+
+                            for (part, tiles) in &o
+                                .get_full_archetype()
+                                .into_iter()
+                                .sorted_by(|a, b| (a.1.first().cmp(&b.1.first())))
+                                .collect_vec()
+                            {
+                                for tile in tiles.iter().sorted_by(|a, b| a.id.cmp(&b.id)) {
+                                    let subheader_color = s.ui.push_style_color(
+                                        imgui::StyleColor::Header,
+                                        [66.0 / 255.0, 64.0 / 255.0, 123.0 / 255.0, 1.0],
+                                    );
+                                    if let Some(renderer) =
+                                        self.component_renderers.get(&part.as_str().into())
+                                    {
+                                        if s.ui.collapsing_header(
+                                            format!("{} [ID: {}]", part, tile.id),
+                                            TreeNodeFlags::DEFAULT_OPEN,
+                                        ) {
+                                            subheader_color.end();
+                                            renderer(s, focused_window, tile.clone());
+                                        }
+                                    } else if s.ui.collapsing_header(
+                                        format!("{} [ID: {}]", part, tile.id),
+                                        TreeNodeFlags::DEFAULT_OPEN,
+                                    ) {
+                                        let is_locked =
+                                            self.locked_components.contains(&tile.component);
+                                        let is_header_covered = s.ui.is_item_hovered();
+                                        let is_header_clicked =
+                                            s.ui.is_item_clicked_with_button(MouseButton::Right);
+
+                                        if !is_locked && is_header_covered && is_header_clicked {
+                                            self.queued_component_delete = Some(tile.id);
+                                            s.ui.open_popup(ImString::new("Component Menu"));
+                                        }
+
+                                        subheader_color.end();
+                                        draw_default_property_renderer(
+                                            s,
+                                            focused_window,
+                                            tile.clone(),
+                                        );
+                                    }
+                                }
+                            }
+                            s.ui.unindent();
+                        }
+
+                        s.ui.spacing();
+                        s.ui.spacing();
+                        s.ui.separator();
+                    }
                 }
 
                 s.ui.popup(ImString::new("Component Menu"), || {
                     if s.ui.menu_item(ImString::new("Delete")) {
                         if let Some(tile) = self.queued_component_delete {
                             println!("DELETING TILE {}", tile);
-                            self.editor_mosaic.delete_tile(tile);
-                            self.queued_component_delete = None;
+                            if let Some(window) = self.window_list.get_focused() {
+                                window.document_mosaic.delete_tile(tile);
+                                self.queued_component_delete = None;
+                            }
                         }
                     }
                 });
