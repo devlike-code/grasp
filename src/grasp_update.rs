@@ -1,6 +1,8 @@
+use imgui::Key;
 use itertools::Itertools;
 use mosaic::internals::MosaicIO;
 
+use crate::core::gui::imgui_keys::ExtraKeyEvents;
 use crate::core::math::rect2::Rect2;
 use crate::editor_state_machine::EditorState;
 use crate::grasp_editor_window::GraspEditorWindow;
@@ -49,12 +51,23 @@ impl GraspEditorWindow {
                         let region = self.build_rect_area(rect);
                         let query = quadtree.query(region).collect_vec();
                         if !query.is_empty() {
-                            self.editor_data.selected = query
-                                .fetch_tiles(&self.document_mosaic)
-                                .iter()
-                                .filter(|t| t.is_object() || t.is_arrow())
-                                .cloned()
-                                .collect_vec();
+                            if s.ui.is_modkey_down(Key::LeftAlt)
+                                || s.ui.is_modkey_down(Key::RightAlt)
+                            {
+                                self.editor_data.selected = query
+                                    .fetch_tiles(&self.document_mosaic)
+                                    .iter()
+                                    .filter(|t| t.is_object() || t.is_arrow())
+                                    .cloned()
+                                    .collect_vec();
+                            } else {
+                                self.editor_data.selected = query
+                                    .fetch_tiles(&self.document_mosaic)
+                                    .iter()
+                                    .filter(|t| t.is_object())
+                                    .cloned()
+                                    .collect_vec();
+                            }
                         } else {
                             self.editor_data.selected = vec![];
                         }
