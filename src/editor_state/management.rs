@@ -47,7 +47,7 @@ pub struct GraspEditorState {
 impl GraspEditorState {
     pub fn new() -> Self {
         let editor_mosaic = Mosaic::new();
-        let (_, components) = Self::prepare_mosaic(&editor_mosaic, Arc::clone(&editor_mosaic));
+        let (_, _) = Self::prepare_mosaic(&editor_mosaic, Arc::clone(&editor_mosaic));
 
         let editor_state_tile = editor_mosaic.new_object("EditorState", void());
 
@@ -63,7 +63,7 @@ impl GraspEditorState {
         let named_focus_window_request_queue = editor_mosaic.make_queue();
         named_focus_window_request_queue.add_component("NamedFocusWindowRequestQueue", void());
 
-        let new_editor_state = Self {
+        Self {
             component_renderers: HashMap::new(),
             editor_state_tile,
             new_tab_request_queue: new_window_request_queue,
@@ -78,9 +78,7 @@ impl GraspEditorState {
                 "Position".into(),
                 "Offset".into(),
             ],
-        };
-
-        new_editor_state
+        }
     }
 
     fn load_mosaic_components_from_file(
@@ -171,7 +169,7 @@ impl GraspEditorState {
             component_categories.push(category);
         });
 
-        let mut category_set = editor_mosaic
+        let category_set = editor_mosaic
             .get_all()
             .include_component("ComponentCategorySet")
             .next();

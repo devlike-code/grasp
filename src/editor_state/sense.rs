@@ -1,26 +1,22 @@
 use std::{
     collections::hash_map::DefaultHasher,
     hash::{Hash, Hasher},
-    sync::Arc,
 };
 
 use imgui::Key;
 use itertools::Itertools;
 use mosaic::{
-    internals::{par, void, Mosaic, MosaicCRUD, MosaicIO, Tile, Value},
+    internals::{MosaicCRUD, MosaicIO, Tile, Value},
     iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
 };
 
 use crate::{
     core::{
         gui::imgui_keys::ExtraKeyEvents,
-        has_mosaic::HasMosaic,
         math::{Rect2, Vec2},
-        queues,
     },
     editor_state::helpers::RequireWindowFocus,
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
-    grasp_queues::NamedFocusWindowRequestQueue,
     utilities::QuadTreeFetch,
     GuiState,
 };
@@ -62,10 +58,6 @@ impl GraspEditorWindow {
             .query(self.build_cursor_area())
             .map(|e| *e.value_ref())
             .collect_vec()
-    }
-
-    pub fn get_editor_mosaic(&self) -> Arc<Mosaic> {
-        Arc::clone(&self.editor_mosaic)
     }
 
     pub fn sense(

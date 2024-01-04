@@ -1,12 +1,8 @@
-use std::sync::Arc;
-
 use itertools::Itertools;
 use log::warn;
 use mosaic::{
     capabilities::ArchetypeSubject,
-    internals::{
-        void, Mosaic, MosaicIO, Tile, TileFieldEmptyQuery, TileFieldQuery, TileFieldSetter, Value,
-    },
+    internals::{MosaicIO, Tile, TileFieldEmptyQuery, TileFieldQuery, TileFieldSetter, Value},
     iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
 };
 
@@ -14,11 +10,9 @@ use crate::{
     core::{
         gui::calc_text_size,
         math::{vec2::Vec2, Rect2},
-        queues::enqueue,
     },
     editor_state::windows::GraspEditorWindow,
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
-    grasp_queues::QuadtreeUpdateRequestQueue,
     utilities::{Offset, Pos},
 };
 
