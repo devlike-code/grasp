@@ -1,19 +1,16 @@
 use core::gui::imgui_keys::ExtraKeyEvents;
 use core::gui::windowing::run_main_forever;
-use grasp_editor_state::GraspEditorState;
+use editor_state::management::GraspEditorState;
 use imgui::{Key, Ui};
 
 mod core;
+mod editor_state;
 mod editor_state_machine;
 mod grasp_common;
 mod grasp_context_menu;
-#[allow(unused_mut, clippy::let_and_return)]
-mod grasp_editor_state;
-mod grasp_editor_window;
 mod grasp_editor_window_list;
 mod grasp_queues;
 mod grasp_render;
-mod grasp_sense;
 mod grasp_transitions;
 mod grasp_update;
 mod seq;

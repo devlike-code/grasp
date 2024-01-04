@@ -4,8 +4,8 @@ use mosaic::internals::MosaicIO;
 
 use crate::core::gui::imgui_keys::ExtraKeyEvents;
 use crate::core::math::rect2::Rect2;
+use crate::editor_state::windows::GraspEditorWindow;
 use crate::editor_state_machine::EditorState;
-use crate::grasp_editor_window::GraspEditorWindow;
 use crate::utilities::QuadTreeFetch;
 use crate::GuiState;
 

@@ -1,8 +1,9 @@
 use std::collections::VecDeque;
 use std::sync::Arc;
 
-use crate::grasp_editor_window::GraspEditorWindow;
 use mosaic::internals::Mosaic;
+
+use crate::editor_state::windows::GraspEditorWindow;
 
 // ================= Grasp editor window list ======================
 pub struct GraspEditorWindowList {

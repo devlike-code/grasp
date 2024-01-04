@@ -18,36 +18,21 @@ use crate::{
         math::{Rect2, Vec2},
         queues,
     },
+    editor_state::helpers::RequireWindowFocus,
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
-    grasp_editor_window::GraspEditorWindow,
     grasp_queues::NamedFocusWindowRequestQueue,
     utilities::QuadTreeFetch,
     GuiState,
 };
 
-use crate::grasp_sense::EditorStateTrigger::*;
+use crate::editor_state::sense::EditorStateTrigger::*;
+
+use super::windows::GraspEditorWindow;
 
 pub fn hash_input(s: &str) -> u64 {
     let mut hasher = DefaultHasher::new();
     s.hash(&mut hasher);
     hasher.finish()
-}
-
-pub trait RequireWindowFocus: HasMosaic {
-    fn require_window_focus(&self, window: Tile) {
-        queues::enqueue_direct(
-            window,
-            self.get_mosaic().new_object("FocusWindowRequest", void()),
-        );
-    }
-
-    fn require_named_window_focus(&self, name: &str) {
-        queues::enqueue(
-            NamedFocusWindowRequestQueue,
-            self.get_mosaic()
-                .new_object("NamedFocusWindowRequest", par(name)),
-        );
-    }
 }
 
 impl GraspEditorWindow {

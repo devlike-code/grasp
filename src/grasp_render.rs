@@ -3,13 +3,14 @@ use std::f32::consts;
 use crate::core::gui::windowing::gui_draw_image;
 use crate::core::math::bezier::gui_draw_bezier_arrow;
 use crate::core::math::Vec2;
+use crate::editor_state::helpers::QuadtreeUpdateCapability;
+use crate::editor_state::windows::GraspEditorWindow;
 use crate::editor_state_machine::EditorState;
 use crate::editor_state_machine::EditorStateTrigger::*;
 use crate::editor_state_machine::StateMachine;
-use crate::grasp_editor_window::GraspEditorWindow;
 
 use crate::grasp_transitions::query_position_recursive;
-use crate::grasp_transitions::QuadtreeUpdateCapability;
+
 use crate::utilities::Label;
 use crate::utilities::Offset;
 use crate::GuiState;

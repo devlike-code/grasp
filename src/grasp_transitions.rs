@@ -16,30 +16,11 @@ use crate::{
         math::{vec2::Vec2, Rect2},
         queues::enqueue,
     },
+    editor_state::windows::GraspEditorWindow,
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
-    grasp_editor_window::GraspEditorWindow,
     grasp_queues::QuadtreeUpdateRequestQueue,
     utilities::{Offset, Pos},
 };
-
-pub trait QuadtreeUpdateCapability {
-    fn request_quadtree_update(&self);
-}
-
-impl QuadtreeUpdateCapability for Arc<Mosaic> {
-    fn request_quadtree_update(&self) {
-        enqueue(
-            QuadtreeUpdateRequestQueue,
-            self.new_object("QuadtreeUpdateRequest", void()),
-        );
-    }
-}
-
-impl GraspEditorWindow {
-    pub fn request_quadtree_update(&self) {
-        self.get_editor_mosaic().request_quadtree_update();
-    }
-}
 
 impl StateMachine for GraspEditorWindow {
     type Trigger = EditorStateTrigger;

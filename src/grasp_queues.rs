@@ -11,11 +11,8 @@ use std::vec::IntoIter;
 
 use crate::{
     core::queues::{self, dequeue, GraspQueue},
-    grasp_editor_state::GraspEditorState,
+    editor_state::management::GraspEditorState,
 };
-
-#[derive(GraspQueue)]
-pub struct ToastRequestQueue;
 
 #[derive(GraspQueue)]
 pub struct NewWindowRequestQueue;
@@ -44,26 +41,10 @@ impl GraspEditorState {
 
     //processing all queues on Editor level
     pub fn process_requests(&mut self) {
-        self.process_toast_queue();
         self.process_named_focus_window_queue();
         self.process_new_window_queue();
         self.process_quadtree_queue();
         self.process_close_window_queue();
-    }
-
-    fn process_toast_queue(&mut self) {
-        while let Some(request) = queues::dequeue(ToastRequestQueue, &self.editor_mosaic) {
-            let toast_message = request.get("self").as_s32();
-
-            println!("TOAST: {:?}", toast_message);
-            // let _ = Notification::new()
-            //     .summary("Grasp")
-            //     .body(toast_message.to_string().as_str())
-            //     .timeout(2000)
-            //     .show();
-
-            request.iter().delete();
-        }
     }
 
     fn process_named_focus_window_queue(&mut self) {

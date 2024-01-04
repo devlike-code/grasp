@@ -7,8 +7,8 @@ use mosaic::{
 };
 
 use crate::{
+    editor_state::windows::GraspEditorWindow,
     editor_state_machine::{EditorStateTrigger, StateMachine},
-    grasp_editor_window::GraspEditorWindow,
     GuiState,
 };
 
