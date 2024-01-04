@@ -3,13 +3,14 @@ use std::f32::consts;
 use crate::core::gui::windowing::gui_draw_image;
 use crate::core::math::bezier::gui_draw_bezier_arrow;
 use crate::core::math::Vec2;
+use crate::editor_state::helpers::QuadtreeUpdateCapability;
+use crate::editor_state::windows::GraspEditorWindow;
 use crate::editor_state_machine::EditorState;
 use crate::editor_state_machine::EditorStateTrigger::*;
 use crate::editor_state_machine::StateMachine;
-use crate::grasp_editor_window::GraspEditorWindow;
 
 use crate::grasp_transitions::query_position_recursive;
-use crate::grasp_transitions::QuadtreeUpdateCapability;
+
 use crate::utilities::Label;
 use crate::utilities::Offset;
 use crate::GuiState;
@@ -39,7 +40,7 @@ fn default_renderer_draw_object(
     painter: &DrawListMut<'_>,
     s: &GuiState,
 ) {
-    let editor_mosaic = &window.grasp_editor_state.upgrade().unwrap().editor_mosaic;
+    let editor_mosaic = &window.editor_mosaic;
 
     painter
         .add_circle([pos.x, pos.y], 10.0, ImColor32::from_rgb(255, 0, 0))
@@ -138,7 +139,7 @@ fn default_renderer_draw_arrow(
     painter: &DrawListMut<'_>,
     s: &GuiState,
 ) {
-    let editor_mosaic = &window.grasp_editor_state.upgrade().unwrap().editor_mosaic;
+    let editor_mosaic = &window.editor_mosaic;
 
     let is_selected = window.editor_data.selected.contains(tile);
     let image = if is_selected { "[arrow]" } else { "arrow" };

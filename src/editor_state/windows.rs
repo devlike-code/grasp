@@ -1,27 +1,24 @@
 use crate::core::gui::calc_text_size;
-use crate::core::gui::windowing::gui_set_window_focus;
+use crate::core::has_mosaic::HasMosaic;
 use crate::core::math::rect2::Rect2;
 use crate::core::math::vec2::Vec2;
-use crate::core::queues;
 use crate::editor_state_machine::EditorState;
 use crate::grasp_common::GraspEditorData;
-use crate::grasp_editor_state::GraspEditorState;
-use crate::grasp_queues::NamedFocusWindowRequestQueue;
 use crate::grasp_render::GraspRenderer;
 use crate::GuiState;
 use ::mosaic::internals::{EntityId, Mosaic, MosaicCRUD, MosaicIO, Tile, Value};
 use imgui::ImColor32;
-use mosaic::capabilities::{ArchetypeSubject, QueueCapability};
+use mosaic::capabilities::ArchetypeSubject;
 use mosaic::internals::{par, void, MosaicTypelevelCRUD};
-use mosaic::iterators::tile_deletion::TileDeletion;
 use quadtree_rs::{
     area::{Area, AreaBuilder},
     Quadtree,
 };
 use std::collections::HashMap;
 use std::ops::Add;
-use std::sync::Weak;
 use std::sync::{Arc, Mutex};
+
+use super::helpers::{QuadtreeUpdateCapability, RequireWindowFocus};
 
 pub struct GraspEditorWindow {
     pub name: String,
@@ -29,6 +26,7 @@ pub struct GraspEditorWindow {
     pub state: EditorState,
     pub quadtree: Mutex<Quadtree<i32, EntityId>>,
     pub document_mosaic: Arc<Mosaic>,
+    pub editor_mosaic: Arc<Mosaic>,
     pub object_to_area: Mutex<HashMap<EntityId, u64>>,
     pub ruler_visible: bool,
     pub grid_visible: bool,
@@ -38,9 +36,16 @@ pub struct GraspEditorWindow {
     pub middle_drag_last_frame: bool,
     pub title_bar_drag: bool,
     pub rect: Rect2,
-    pub grasp_editor_state: Weak<GraspEditorState>,
     pub window_list_index: usize,
 }
+
+impl HasMosaic for GraspEditorWindow {
+    fn get_mosaic(&self) -> Arc<Mosaic> {
+        Arc::clone(&self.editor_mosaic)
+    }
+}
+
+impl RequireWindowFocus for GraspEditorWindow {}
 
 impl PartialEq for GraspEditorWindow {
     fn eq(&self, other: &Self) -> bool {
@@ -49,105 +54,14 @@ impl PartialEq for GraspEditorWindow {
 }
 
 impl GraspEditorWindow {
+    pub fn request_quadtree_update(&self) {
+        self.editor_mosaic.request_quadtree_update();
+    }
+
     pub fn get_position_with_offset_and_pan(&self, position: Vec2) -> Vec2 {
         position
             .add(self.editor_data.pan)
             .add(self.editor_data.window_offset)
-    }
-
-    pub fn set_focus(&self) {
-        let editor_state = self.grasp_editor_state.upgrade().unwrap();
-        editor_state.window_list.request_focus(&self.name);
-    }
-
-    pub fn show(&mut self, s: &GuiState, caught_events: &mut Vec<u64>) {
-        let name = self.name.clone();
-
-        let w = s.ui.window(name);
-
-        w.size_constraints([320.0, 240.0], [1024.0, 768.0])
-            .scroll_bar(false)
-            .size([700.0, 500.0], imgui::Condition::Appearing)
-            .position(
-                [
-                    200.0 + 50.0 * (self.window_tile.id % 5) as f32,
-                    200.0 - 20.0 * (self.window_tile.id % 5) as f32,
-                ],
-                imgui::Condition::Appearing,
-            )
-            .build(|| {
-                let editor_state = self.grasp_editor_state.upgrade().unwrap();
-                let editor_mosaic = &editor_state.editor_mosaic;
-
-                self.rect =
-                    Rect2::from_pos_size(s.ui.window_pos().into(), s.ui.window_size().into());
-
-                let title_bar_rect =
-                    Rect2::from_pos_size(self.rect.min(), Vec2::new(self.rect.width, 18.0));
-
-                if self.title_bar_drag && s.ui.is_mouse_released(imgui::MouseButton::Left) {
-                    self.title_bar_drag = false;
-                } else if !self.title_bar_drag {
-                    if title_bar_rect.contains(s.ui.io().mouse_pos.into())
-                        && s.ui.is_mouse_clicked(imgui::MouseButton::Left)
-                    {
-                        self.title_bar_drag = true;
-                    } else {
-                        self.sense(s, caught_events);
-                    }
-                }
-
-                let window_offset: Vec2 = s.ui.window_pos().into();
-
-                if self.editor_data.window_offset != window_offset {
-                    self.editor_data.window_offset = window_offset;
-                    self.update_quadtree(None);
-                } else {
-                    self.editor_data.window_offset = window_offset;
-                }
-
-                let is_other_window_focused = editor_state
-                    .window_list
-                    .windows
-                    .front()
-                    .is_some_and(|w| w.window_tile.id != self.window_tile.id);
-
-                if s.ui.is_window_focused() && is_other_window_focused {
-                    self.set_focus();
-                }
-
-                if is_other_window_focused {
-                    self.state = EditorState::Idle;
-                }
-
-                if let Some(request) = editor_mosaic.dequeue(&self.window_tile) {
-                    match request.component.to_string().as_str() {
-                        "QuadtreeUpdateRequest" => {
-                            println!("UPDATING QUAD TREE {} FROM QUEUE", self.name);
-                            self.update_quadtree(None);
-                            request.iter().delete();
-                        }
-                        "FocusWindowRequest" => {
-                            println!("FOCUSING WINDOW {} FROM QUEUE", self.name);
-                            gui_set_window_focus(&self.name);
-                            request.iter().delete();
-
-                            queues::enqueue(
-                                NamedFocusWindowRequestQueue,
-                                editor_mosaic
-                                    .new_object("NamedFocusWindowRequest", par(self.name.as_str())),
-                            );
-                        }
-                        _ => {}
-                    }
-                }
-
-                (self.renderer)(self, s);
-                self.draw_debug(s);
-                self.update_context_menu(s);
-                self.context_popup(s);
-            });
-        self.update(s);
     }
 
     pub fn draw_debug(&self, s: &GuiState) {
