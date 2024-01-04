@@ -39,7 +39,7 @@ fn default_renderer_draw_object(
     painter: &DrawListMut<'_>,
     s: &GuiState,
 ) {
-    let editor_mosaic = &window.grasp_editor_state.upgrade().unwrap().editor_mosaic;
+    let editor_mosaic = &window.editor_mosaic;
 
     painter
         .add_circle([pos.x, pos.y], 10.0, ImColor32::from_rgb(255, 0, 0))
@@ -138,7 +138,7 @@ fn default_renderer_draw_arrow(
     painter: &DrawListMut<'_>,
     s: &GuiState,
 ) {
-    let editor_mosaic = &window.grasp_editor_state.upgrade().unwrap().editor_mosaic;
+    let editor_mosaic = &window.editor_mosaic;
 
     let is_selected = window.editor_data.selected.contains(tile);
     let image = if is_selected { "[arrow]" } else { "arrow" };

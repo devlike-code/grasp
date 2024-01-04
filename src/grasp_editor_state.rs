@@ -7,7 +7,6 @@ use std::{
     str::FromStr,
     sync::Weak,
     sync::{Arc, Mutex},
-    thread,
 };
 
 use imgui::{Condition, ImString, MouseButton, StyleColor, TreeNodeFlags};
@@ -21,8 +20,9 @@ use layout::{
 use mosaic::{
     capabilities::QueueTile,
     internals::{
-        par, void, Datatype, FromByteArray, Mosaic, MosaicCRUD, MosaicIO, MosaicTypelevelCRUD,
-        Tile, TileFieldEmptyQuery, TileFieldSetter, ToByteArray, Value, S32,
+        pars, void, ComponentValuesBuilderSetter, Datatype, FromByteArray, Mosaic, MosaicCRUD,
+        MosaicIO, MosaicTypelevelCRUD, Tile, TileFieldEmptyQuery, TileFieldSetter, ToByteArray,
+        Value, S32,
     },
     iterators::{
         component_selectors::ComponentSelectors, tile_filters::TileFilters,
@@ -32,12 +32,13 @@ use mosaic::{
 use quadtree_rs::Quadtree;
 
 use crate::{
-    core::{gui::docking::GuiViewport, math::Rect2, queues},
+    core::{gui::docking::GuiViewport, has_mosaic::HasMosaic, math::Rect2},
     editor_state_machine::EditorState,
+    grasp_editor_state,
     grasp_editor_window::GraspEditorWindow,
     grasp_editor_window_list::GraspEditorWindowList,
-    grasp_queues::ToastRequestQueue,
     grasp_render,
+    grasp_sense::RequireWindowFocus,
     grasp_transitions::QuadtreeUpdateCapability,
     utilities::Label,
     GuiState,
@@ -77,7 +78,6 @@ pub struct GraspEditorState {
     pub new_tab_request_queue: QueueTile,
     pub refresh_quadtree_queue: QueueTile,
     pub toast_request_queue: QueueTile,
-    pub loaded_categories: Vec<ComponentCategory>,
     show_tabview: bool,
     locked_components: Vec<S32>,
     queued_component_delete: Option<usize>,
@@ -111,6 +111,14 @@ impl<'a> TileFieldEmptyQuery for DisplayName<'a> {
     }
 }
 
+impl HasMosaic for GraspEditorState {
+    fn get_mosaic(&self) -> Arc<Mosaic> {
+        Arc::clone(&self.editor_mosaic)
+    }
+}
+
+impl RequireWindowFocus for GraspEditorState {}
+
 impl GraspEditorState {
     #[allow(clippy::comparison_chain)]
     pub fn close_window(&mut self, window_tile: Tile) {
@@ -135,7 +143,7 @@ impl GraspEditorState {
             self.editor_mosaic.delete_tile(window_tile);
 
             if let Some(first) = self.window_list.named_windows.first() {
-                self.window_list.request_focus(first);
+                self.require_named_window_focus(first);
             }
         }
     }
@@ -187,6 +195,7 @@ impl GraspEditorState {
     }
 
     fn load_mosaic_components_from_file(
+        editor_mosaic: &Arc<Mosaic>,
         mosaic: &Arc<Mosaic>,
         file: PathBuf,
     ) -> Vec<ComponentCategory> {
@@ -211,7 +220,6 @@ impl GraspEditorState {
                 ..Default::default()
             };
 
-            println!("\tCategory name: {:?}", category.name);
             if menu.match_archetype(&["Hidden"]) {
                 category.hidden = true;
             }
@@ -220,10 +228,7 @@ impl GraspEditorState {
 
             for item in items {
                 let component_name = Label(&item).query();
-                println!("\t\tItem: {:?}", item);
                 assert_eq!(item.mosaic, loader_mosaic);
-                println!("\t\tArrows: {:?}", item.iter().get_arrows_from());
-                println!("\t\tComponent name: {:?}", component_name);
 
                 let mut component_entry = ComponentEntry {
                     name: component_name.clone(),
@@ -252,7 +257,6 @@ impl GraspEditorState {
                     let field = current_field.as_ref().unwrap();
                     let field_name = Label(field).query();
                     let field_datatype = Label(&field.target()).query();
-                    println!("\t\t\t{:?}: {:?}", field_name, field_datatype);
                     fields.push((field_name, field_datatype));
                     current_field = field.iter().get_arrows_from().get_targets().next();
                 }
@@ -274,19 +278,72 @@ impl GraspEditorState {
 
                 mosaic.new_type(&formatted).unwrap();
             }
+
             component_categories.push(category);
         });
 
+        let mut category_set = editor_mosaic
+            .get_all()
+            .include_component("ComponentCategorySet")
+            .next();
+
+        let categories_tile = category_set.expect("Category set has to exist at this point.");
+
+        component_categories.iter().for_each(|cat| {
+            let cat_tile = editor_mosaic.new_extension(
+                &categories_tile,
+                "ComponentCategory",
+                pars()
+                    .set("name", cat.name.as_str())
+                    .set("hidden", cat.hidden)
+                    .ok(),
+            );
+
+            cat.components.iter().for_each(|entry| {
+                editor_mosaic.new_extension(
+                    &cat_tile,
+                    "ComponentEntry",
+                    pars()
+                        .set("name", entry.name.as_str())
+                        .set("display", entry.display.as_str())
+                        .set("hidden", entry.hidden)
+                        .ok(),
+                );
+            });
+        });
         component_categories
     }
 
-    pub fn prepare_mosaic(mosaic: Arc<Mosaic>) -> (Arc<Mosaic>, Vec<ComponentCategory>) {
+    pub fn prepare_mosaic(
+        editor_mosaic: &Arc<Mosaic>,
+        mosaic: Arc<Mosaic>,
+    ) -> (Arc<Mosaic>, Vec<ComponentCategory>) {
+        editor_mosaic
+            .new_type("ComponentEntry: { name: s32, display: s32, hidden: bool };")
+            .unwrap();
+        editor_mosaic
+            .new_type("ComponentCategory: { name: s32, hidden: bool };")
+            .unwrap();
+        editor_mosaic
+            .new_type("ComponentCategorySet: unit;")
+            .unwrap();
+
+        if let Some(cat_set) = editor_mosaic
+            .get_all()
+            .include_component("ComponentCategorySet")
+            .next()
+        {
+            editor_mosaic.delete_tile(cat_set);
+        }
+
+        editor_mosaic.new_object("ComponentCategorySet", void());
+
         let components: Vec<ComponentCategory> = fs::read_dir("env\\components")
             .unwrap()
             .flat_map(|file_entry| {
                 if let Ok(file) = file_entry {
                     println!("Loading {:?}", file);
-                    Self::load_mosaic_components_from_file(&mosaic, file.path())
+                    Self::load_mosaic_components_from_file(editor_mosaic, &mosaic, file.path())
                 } else {
                     vec![]
                 }
@@ -298,7 +355,7 @@ impl GraspEditorState {
 
     pub fn new() -> Self {
         let editor_mosaic = Mosaic::new();
-        let (_, components) = Self::prepare_mosaic(Arc::clone(&editor_mosaic));
+        let (_, components) = Self::prepare_mosaic(&editor_mosaic, Arc::clone(&editor_mosaic));
 
         let editor_state_tile = editor_mosaic.new_object("EditorState", void());
 
@@ -318,13 +375,13 @@ impl GraspEditorState {
         toast_request_queue.add_component("ToastRequestQueue", void());
 
         let new_editor_state = Self {
-            editor_mosaic,
             component_renderers: HashMap::new(),
             editor_state_tile,
             new_tab_request_queue: new_window_request_queue,
             refresh_quadtree_queue,
             toast_request_queue,
-            window_list: GraspEditorWindowList::default(),
+            window_list: GraspEditorWindowList::new(&editor_mosaic),
+            editor_mosaic,
             show_tabview: false,
             queued_component_delete: None,
             locked_components: vec![
@@ -333,7 +390,6 @@ impl GraspEditorState {
                 "Position".into(),
                 "Offset".into(),
             ],
-            loaded_categories: components,
         };
 
         new_editor_state
@@ -357,7 +413,7 @@ impl GraspEditorState {
 
         let document_mosaic = Mosaic::new();
         assert!(self.editor_mosaic.id != document_mosaic.id);
-        Self::prepare_mosaic(Arc::clone(&document_mosaic));
+        Self::prepare_mosaic(&self.editor_mosaic, Arc::clone(&document_mosaic));
         assert!(self.editor_mosaic.id != document_mosaic.id);
 
         let filename = name.unwrap_or(format!("Untitled {}", new_index));
@@ -368,6 +424,7 @@ impl GraspEditorState {
             window_tile,
             quadtree: Mutex::new(Quadtree::new_with_anchor((-1000, -1000).into(), 16)),
             document_mosaic,
+            editor_mosaic: Arc::clone(&self.editor_mosaic),
             object_to_area: Default::default(),
             editor_data: Default::default(),
             state: EditorState::Idle,
@@ -383,7 +440,6 @@ impl GraspEditorState {
                 width: 0.0,
                 height: 0.0,
             },
-            grasp_editor_state: unsafe { Weak::from_raw(self) },
             window_list_index: id,
         };
 
@@ -395,7 +451,12 @@ impl GraspEditorState {
         self.show_hierarchy(s);
         self.show_properties(s);
         self.show_menu_bar(s);
-        self.window_list.show(s);
+
+        let mut caught_events = vec![];
+
+        self.show_windows(s, &mut caught_events);
+
+        caught_events.clear();
     }
 
     fn show_hierarchy(&mut self, s: &GuiState) {
@@ -438,7 +499,7 @@ impl GraspEditorState {
 
                 if s.ui.list_box("##", &mut i, items.as_slice(), 20) {
                     let item: &str = items.get(i as usize).unwrap();
-                    self.window_list.request_focus(item);
+                    self.require_named_window_focus(item);
                 }
 
                 color.end();
@@ -600,7 +661,6 @@ impl GraspEditorState {
                 s.ui.popup(ImString::new("Component Menu"), || {
                     if s.ui.menu_item(ImString::new("Delete")) {
                         if let Some(tile) = self.queued_component_delete {
-                            println!("DELETING TILE {}", tile);
                             if let Some(window) = self.window_list.get_focused() {
                                 window.document_mosaic.delete_tile(tile);
                                 self.queued_component_delete = None;
@@ -644,7 +704,7 @@ impl GraspEditorState {
                     let window = self.window_list.windows.front().unwrap();
                     let window_mosaic = &window.document_mosaic;
 
-                    Self::prepare_mosaic(Arc::clone(window_mosaic));
+                    Self::prepare_mosaic(&self.editor_mosaic, Arc::clone(window_mosaic));
                     window_mosaic.load(&fs::read(file).unwrap()).unwrap();
                     self.editor_mosaic.request_quadtree_update();
                 }

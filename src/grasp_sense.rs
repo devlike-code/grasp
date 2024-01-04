@@ -7,18 +7,20 @@ use std::{
 use imgui::Key;
 use itertools::Itertools;
 use mosaic::{
-    internals::{Mosaic, MosaicCRUD, MosaicIO, Tile, Value},
+    internals::{par, void, Mosaic, MosaicCRUD, MosaicIO, Tile, Value},
     iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
 };
 
 use crate::{
     core::{
         gui::imgui_keys::ExtraKeyEvents,
+        has_mosaic::HasMosaic,
         math::{Rect2, Vec2},
+        queues,
     },
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
-    grasp_editor_state::GraspEditorState,
     grasp_editor_window::GraspEditorWindow,
+    grasp_queues::NamedFocusWindowRequestQueue,
     utilities::QuadTreeFetch,
     GuiState,
 };
@@ -29,6 +31,23 @@ pub fn hash_input(s: &str) -> u64 {
     let mut hasher = DefaultHasher::new();
     s.hash(&mut hasher);
     hasher.finish()
+}
+
+pub trait RequireWindowFocus: HasMosaic {
+    fn require_window_focus(&self, window: Tile) {
+        queues::enqueue_direct(
+            window,
+            self.get_mosaic().new_object("FocusWindowRequest", void()),
+        );
+    }
+
+    fn require_named_window_focus(&self, name: &str) {
+        queues::enqueue(
+            NamedFocusWindowRequestQueue,
+            self.get_mosaic()
+                .new_object("NamedFocusWindowRequest", par(name)),
+        );
+    }
 }
 
 impl GraspEditorWindow {
@@ -60,15 +79,16 @@ impl GraspEditorWindow {
             .collect_vec()
     }
 
-    pub fn get_editor_state(&self) -> Arc<GraspEditorState> {
-        self.grasp_editor_state.upgrade().unwrap()
-    }
-
     pub fn get_editor_mosaic(&self) -> Arc<Mosaic> {
-        Arc::clone(&self.grasp_editor_state.upgrade().unwrap().editor_mosaic)
+        Arc::clone(&self.editor_mosaic)
     }
 
-    pub fn sense(&mut self, s: &GuiState, caught_events: &mut Vec<u64>) {
+    pub fn sense(
+        &mut self,
+        s: &GuiState,
+        front_window_id: Option<usize>,
+        caught_events: &mut Vec<u64>,
+    ) {
         fn trigger_rename(
             window: &mut GraspEditorWindow,
             tile: Tile,
@@ -103,12 +123,8 @@ impl GraspEditorWindow {
             .unwrap_or(false);
         let pos: Vec2 = s.ui.io().mouse_pos.into();
 
-        let is_focused = self
-            .get_editor_state()
-            .window_list
-            .windows
-            .front()
-            .map(|window| window == self)
+        let is_focused = front_window_id
+            .map(|window| window == self.window_tile.id)
             .unwrap_or(false);
         let mouse_in_window = self.rect.contains(pos);
         let is_resizing = {
@@ -192,7 +208,7 @@ impl GraspEditorWindow {
             //
             //println!("CLICK MIDDLE");
             if !is_focused {
-                self.set_focus();
+                self.require_window_focus(self.window_tile.clone());
             }
             caught_events.push(hash_input("click middle"));
             self.trigger(ClickToDeselect);
@@ -200,7 +216,7 @@ impl GraspEditorWindow {
             //
             //println!("CLICK RIGHT");
             if !is_focused {
-                self.set_focus();
+                self.require_window_focus(self.window_tile.clone());
             }
             caught_events.push(hash_input("click right"));
 
@@ -273,7 +289,7 @@ impl GraspEditorWindow {
             //
         } else if start_dragging_middle && mouse_in_window {
             if !is_focused {
-                self.set_focus();
+                self.require_window_focus(self.window_tile.clone());
             }
 
             caught_events.push(hash_input("start drag middle"));
