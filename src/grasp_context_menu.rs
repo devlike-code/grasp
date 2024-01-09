@@ -1,4 +1,4 @@
-use std::thread::panicking;
+use std::{sync::Arc, thread::panicking};
 
 use itertools::Itertools;
 use mosaic::{
@@ -11,20 +11,24 @@ use mosaic::{
 };
 
 use crate::{
+    core::{math::Vec2, queues},
     editor_state::windows::GraspEditorWindow,
     editor_state_machine::{EditorStateTrigger, StateMachine},
+    grasp_queues::CloseWindowRequestQueue,
     GuiState,
 };
 
 impl GraspEditorWindow {
     pub fn context_popup(&mut self, s: &GuiState) {
         s.ui.popup("context-menu", || {
-            if self.editor_data.selected.is_empty() {
-                if self.show_default_menu(s) {
-                    self.trigger(EditorStateTrigger::ExitContextMenu);
-                    s.ui.close_current_popup();
-                }
-            } else if self.show_selection_menu(s) {
+            if self.show_default_menu(s) {
+                self.trigger(EditorStateTrigger::ExitContextMenu);
+                s.ui.close_current_popup();
+            }
+
+            s.ui.separator();
+
+            if !self.editor_data.selected.is_empty() && self.show_selection_menu(s) {
                 self.trigger(EditorStateTrigger::ExitContextMenu);
                 s.ui.close_current_popup();
             }
@@ -199,27 +203,25 @@ impl GraspEditorWindow {
     }
 
     fn show_default_menu(&mut self, s: &GuiState) -> bool {
-        true
-        // let editor_state = self.get_editor_state();
-        // let editor_mosaic = &editor_state.editor_mosaic;
+        let editor_mosaic = Arc::clone(&self.editor_mosaic);
 
-        // if s.ui.button("Create new node") {
-        //     let pos: Vec2 = s.ui.mouse_pos_on_opening_current_popup().into();
-        //     self.create_new_object(pos - self.editor_data.window_offset - self.editor_data.pan);
+        if s.ui.button("Create new node") {
+            let pos: Vec2 = s.ui.mouse_pos_on_opening_current_popup().into();
+            self.create_new_object(pos - self.editor_data.window_offset - self.editor_data.pan);
 
-        //     return true;
-        // }
+            return true;
+        }
 
-        // if s.ui.button("Toggle debug draw") {
-        //     self.editor_data.debug = !self.editor_data.debug;
-        //     return true;
-        // }
+        if s.ui.button("Toggle debug draw") {
+            self.editor_data.debug = !self.editor_data.debug;
+            return true;
+        }
 
-        // if s.ui.button("Close Window") {
-        //     let request = editor_mosaic.new_object("CloseWindowRequest", void());
-        //     queues::enqueue(CloseWindowRequestQueue, request);
-        //     return true;
-        // }
-        // false
+        if s.ui.button("Close Window") {
+            let request = editor_mosaic.new_object("CloseWindowRequest", void());
+            queues::enqueue(CloseWindowRequestQueue, request);
+            return true;
+        }
+        false
     }
 }
