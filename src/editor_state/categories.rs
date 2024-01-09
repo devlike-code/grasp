@@ -11,3 +11,9 @@ pub struct ComponentCategory {
     pub components: Vec<ComponentEntry>,
     pub hidden: bool,
 }
+
+#[derive(Default, Debug, Clone)]
+pub struct Transformer {
+    pub fn_name: String,
+    pub display: String,
+}

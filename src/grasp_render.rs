@@ -237,6 +237,7 @@ pub fn default_renderer_draw(window: &mut GraspEditorWindow, s: &GuiState) {
         let arrow_end_offset = if target.is_object() { 15.0f32 } else { 11.0f32 };
 
         let mid = p1.lerp(p2, 0.5) + offset;
+        
         gui_draw_bezier_arrow(
             &mut painter,
             [p1, mid, p2],

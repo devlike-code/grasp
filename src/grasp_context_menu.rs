@@ -1,7 +1,11 @@
 use std::thread::panicking;
 
+use itertools::Itertools;
 use mosaic::{
-    capabilities::ArchetypeSubject,
+    capabilities::{
+        process::{self, ProcessCapability},
+        ArchetypeSubject,
+    },
     internals::{void, MosaicIO},
     iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
 };
@@ -93,8 +97,36 @@ impl GraspEditorWindow {
             token.end();
         }
 
-        // s.ui.separator();
+        s.ui.separator();
 
+        if let Some(token) = s.ui.begin_menu("Transformers") {
+            if let Some(transformers_tile) = self
+                .editor_mosaic
+                .get_all()
+                .include_component("Transformers")
+                .next()
+            {
+                let transformers = transformers_tile
+                    .iter()
+                    .get_dependents()
+                    .include_component("Transformer");
+
+                for transformer in transformers {
+                    let name = transformer.get("display").as_s32().to_string();
+                    let func = transformer.get("fn_name").as_s32().to_string();
+                    if s.ui.menu_item(name.clone()) {
+                        println!("Started {:?} process with {:?} function", name, func);
+                        // if let Some(process) = transformer.mosaic.create_process(&name, params).ok() {
+
+                        // }
+
+                        return true;
+                    }
+                }
+
+                token.end();
+            }
+        }
         // if s.ui.button("Select") {
         //     let selection_tile = self.document_mosaic.make_selection();
         //     self.document_mosaic
