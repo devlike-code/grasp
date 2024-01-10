@@ -24,21 +24,9 @@ impl GraspEditorWindow {
             if self.show_default_menu(s) {
                 self.trigger(EditorStateTrigger::ExitContextMenu);
             }
-
-            s.ui.separator();
-
-            if !self.editor_data.selected.is_empty() && self.show_selection_menu(s) {
-                let previous_selection = self.editor_data.selected.to_owned();
-                self.trigger(EditorStateTrigger::ExitContextMenu);
-
-                if self.editor_data.selected.is_empty() {
-                    self.editor_data.selected = previous_selection;
-                    self.trigger(EditorStateTrigger::ClickToSelect);
-                }
-                s.ui.close_current_popup();
-            }
-        }//if the state is still ContextMenu after closing the menu change state by triggering exit
-         else if self.state == EditorState::ContextMenu {
+        }
+        //if the state is still ContextMenu after closing the menu change state by triggering exit
+        else if self.state == EditorState::ContextMenu {
             self.trigger(EditorStateTrigger::ExitContextMenu);
         }
     }
@@ -184,6 +172,15 @@ impl GraspEditorWindow {
         s.ui.separator();
 
         if !self.editor_data.selected.is_empty() && self.show_selection_menu(s) {
+
+            let previous_selection = self.editor_data.selected.to_owned();
+            self.trigger(EditorStateTrigger::ExitContextMenu);
+
+            if self.editor_data.selected.is_empty() {
+                self.editor_data.selected = previous_selection;
+                self.trigger(EditorStateTrigger::ClickToSelect);
+            }
+
             return true;
         }
 
