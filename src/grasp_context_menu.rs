@@ -1,6 +1,5 @@
-use std::{sync::Arc, thread::panicking};
+use std::sync::Arc;
 
-use itertools::Itertools;
 use mosaic::{
     capabilities::{
         process::{self, ProcessCapability},
@@ -20,13 +19,11 @@ use crate::{
 
 impl GraspEditorWindow {
     pub fn context_popup(&mut self, s: &GuiState) {
-        if let Some(token) = s.ui.begin_popup("context-menu") {
+        if let Some(_token) = s.ui.begin_popup("context-menu") {
             if self.show_default_menu(s) {
                 self.trigger(EditorStateTrigger::ExitContextMenu);
             }
-        }
-        //if the state is still ContextMenu after closing the menu change state by triggering exit
-        else if self.state == EditorState::ContextMenu {
+        } else if self.state == EditorState::ContextMenu {
             self.trigger(EditorStateTrigger::ExitContextMenu);
         }
     }
@@ -54,7 +51,7 @@ impl GraspEditorWindow {
         //     .next()
         //     .unwrap();
 
-        if let Some(token) = s.ui.begin_menu("Add Component") {
+        if let Some(_token) = s.ui.begin_menu("Add Component") {
             if let Some(category_set) = self
                 .editor_mosaic
                 .get_all()
@@ -101,7 +98,7 @@ impl GraspEditorWindow {
 
         s.ui.separator();
 
-        if let Some(token) = s.ui.begin_menu("Transformers") {
+        if let Some(_token) = s.ui.begin_menu("Transformers") {
             if let Some(transformers_tile) = self
                 .editor_mosaic
                 .get_all()
@@ -147,17 +144,22 @@ impl GraspEditorWindow {
 
         s.ui.separator();
 
-        if let Some(menu_token) = s.ui.begin_menu("Debug") {
-            if s.ui.menu_item(format!(
-                "[{}] Debug Draw",
-                if self.editor_data.debug { "X" } else { " " }
-            )) {
-                self.editor_data.debug = !self.editor_data.debug;
-                menu_token.end();
-                return true;
+        if let Some(_menu_token) = s.ui.begin_menu("View") {
+            let grid_on = if self.grid_visible { "X" } else { " " };
+            let debug_on = if self.editor_data.debug { "X" } else { " " };
+            let ruler_on = if self.ruler_visible { "X" } else { " " };
+
+            if s.menu_item(format!("[{}] Toggle Ruler", ruler_on)) {
+                self.ruler_visible = !self.ruler_visible;
             }
 
-            menu_token.end();
+            if s.menu_item(format!("[{}] Toggle Debug Draw", debug_on)) {
+                self.editor_data.debug = !self.editor_data.debug;
+            }
+
+            if s.menu_item(format!("[{}] Toggle Grid", grid_on)) {
+                self.grid_visible = !self.grid_visible;
+            }
         }
 
         s.ui.separator();
@@ -172,7 +174,6 @@ impl GraspEditorWindow {
         s.ui.separator();
 
         if !self.editor_data.selected.is_empty() && self.show_selection_menu(s) {
-
             let previous_selection = self.editor_data.selected.to_owned();
             self.trigger(EditorStateTrigger::ExitContextMenu);
 
