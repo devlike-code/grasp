@@ -23,6 +23,10 @@ impl StateMachine for GraspEditorWindow {
     fn on_transition(&mut self, from: Self::State, trigger: Self::Trigger) -> Option<EditorState> {
         println!("from {:?} trigger {:?}", from, trigger);
         match (from, trigger) {
+            (EditorState::ContextMenu, EditorStateTrigger::ExitContextMenu) => {
+                Some(EditorState::Idle)
+            }
+            (EditorState::ContextMenu, _) => Some(EditorState::ContextMenu),
             (_, EditorStateTrigger::DblClickToCreate) => {
                 self.create_new_object(
                     self.editor_data.cursor - self.editor_data.window_offset - self.editor_data.pan,
@@ -34,14 +38,6 @@ impl StateMachine for GraspEditorWindow {
             (_, EditorStateTrigger::DblClickToRename) => Some(EditorState::PropertyChanging),
             (_, EditorStateTrigger::MouseDownOverNode) => None,
             (_, EditorStateTrigger::ClickToSelect) => Some(EditorState::Idle),
-            (_, EditorStateTrigger::ExitContextMenu) => {
-                //self.editor_data.selected.clear();
-                Some(EditorState::Idle)
-            }
-            (EditorState::ContextMenu, EditorStateTrigger::ClickToDeselect) => {
-                //SPECIAL case because this happens before context menu and selection shouldn't be cleared if we have SELECTION MENU active
-                Some(EditorState::Idle)
-            }
             (EditorState::Pan, EditorStateTrigger::ClickToDeselect) => {
                 self.request_quadtree_update();
                 Some(EditorState::Idle)
@@ -66,7 +62,6 @@ impl StateMachine for GraspEditorWindow {
             }
             (_, EditorStateTrigger::DragToMove) => Some(EditorState::Move),
             (_, EditorStateTrigger::ClickToContextMenu) => Some(EditorState::ContextMenu),
-            (EditorState::ContextMenu, _) => Some(EditorState::Idle),
             (EditorState::Idle, EditorStateTrigger::DragToSelect) => {
                 self.editor_data.rect_delta = Some(Default::default());
                 self.editor_data.rect_start_pos = Some(self.editor_data.cursor);
@@ -95,15 +90,9 @@ impl StateMachine for GraspEditorWindow {
 
                     let mid_pos = src_pos.lerp(tgt_pos, 0.5);
 
-                    // let bez = (1..=9)
-                    //     .map(|i| src_pos.lerp(tgt_pos, i as f32 / 10.0))
-                    //     .map(|p| {
-                    //         Rect2::from_two_pos(p - Vec2::new(5.0, 5.0), p + Vec2::new(5.0, 5.0))
-                    //     });
-
                     self.create_new_arrow(&start, &tile, mid_pos); //, bez.collect_vec());
                 }
-                // self.editor_data.selected.clear();
+
                 self.editor_data.link_start_pos = None;
                 self.editor_data.link_end = None;
 

@@ -62,4 +62,5 @@ pub struct GraspEditorData {
     pub y_pos: String,
     pub previous_x_pos: String,
     pub previous_y_pos: String,
+    pub popup_cursor: Vec2,
 }
