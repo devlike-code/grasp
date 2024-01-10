@@ -205,19 +205,19 @@ impl GraspEditorWindow {
     fn show_default_menu(&mut self, s: &GuiState) -> bool {
         let editor_mosaic = Arc::clone(&self.editor_mosaic);
 
-        if s.ui.button("Create new node") {
+        if s.ui.menu_item("Create new node") {
             let pos: Vec2 = s.ui.mouse_pos_on_opening_current_popup().into();
             self.create_new_object(pos - self.editor_data.window_offset - self.editor_data.pan);
 
             return true;
         }
 
-        if s.ui.button("Toggle debug draw") {
+        if s.ui.menu_item("Toggle debug draw") {
             self.editor_data.debug = !self.editor_data.debug;
             return true;
         }
 
-        if s.ui.button("Close Window") {
+        if s.ui.menu_item("Close Window") {
             let request = editor_mosaic.new_object("CloseWindowRequest", void());
             queues::enqueue(CloseWindowRequestQueue, request);
             return true;
