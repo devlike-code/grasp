@@ -37,23 +37,10 @@ impl GraspEditorState {
 
     pub fn snapshot(&self, name: &str, mosaic: &Arc<Mosaic>) {
         let content = mosaic.dot(name);
-        let mut parser = gv::DotParser::new(&content);
-        match parser.process() {
-            Ok(ast) => {
-                println!("{:?}", ast);
-                let mut gb = GraphBuilder::new();
-                gb.visit_graph(&ast);
-                let mut vg = gb.get();
-                Self::generate_svg(&mut vg, name);
-            }
-            Err(err) => panic!("{:?}", err),
-        }
-
-        // let content = mosaic.dot(name);
-        // open::that(format!(
-        //     "https://dreampuf.github.io/GraphvizOnline/#{}",
-        //     urlencoding::encode(content.as_str())
-        // ))
-        // .unwrap();
+        open::that(format!(
+            "https://dreampuf.github.io/GraphvizOnline/#{}",
+            urlencoding::encode(content.as_str())
+        ))
+        .unwrap();
     }
 }

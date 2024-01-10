@@ -10,7 +10,10 @@ use mosaic::{
 use std::vec::IntoIter;
 
 use crate::{
-    core::queues::{self, dequeue, GraspQueue},
+    core::{
+        gui::windowing::gui_set_window_focus,
+        queues::{self, dequeue, GraspQueue},
+    },
     editor_state::management::GraspEditorState,
 };
 
@@ -51,6 +54,7 @@ impl GraspEditorState {
         while let Some(request) = queues::dequeue(NamedFocusWindowRequestQueue, &self.editor_mosaic)
         {
             let data = request.get("self").as_s32();
+
             if let Some(pos) = self
                 .window_list
                 .windows
@@ -59,6 +63,7 @@ impl GraspEditorState {
             {
                 let window = self.window_list.windows.remove(pos).unwrap();
                 self.window_list.windows.push_front(window);
+                gui_set_window_focus(&data.to_string());
             }
         }
     }

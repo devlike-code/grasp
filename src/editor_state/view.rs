@@ -2,6 +2,7 @@ use std::{env, fmt::Display, fs, str::FromStr, sync::Arc};
 
 use imgui::{Condition, ImString, MouseButton, StyleColor, TreeNodeFlags};
 use itertools::Itertools;
+use log::error;
 use mosaic::{
     capabilities::{ArchetypeSubject, QueueCapability},
     internals::{
@@ -118,7 +119,9 @@ impl GraspEditorState {
 
                                 window.require_named_window_focus(&window.name.clone());
                             }
-                            _ => {}
+                            other => {
+                                error!("REQUEST UNFULFILLED: {:?}", other);
+                            }
                         }
                     }
 
@@ -177,6 +180,7 @@ impl GraspEditorState {
                 if s.ui.list_box("##window-list", &mut i, items.as_slice(), 20) {
                     let item: &str = items.get(i as usize).unwrap();
                     self.require_named_window_focus(item);
+                    println!("Focus on {}", item);
                 }
 
                 color.end();
