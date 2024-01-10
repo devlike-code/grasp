@@ -25,7 +25,6 @@ impl StateMachine for GraspEditorWindow {
             (EditorState::ContextMenu, EditorStateTrigger::ExitContextMenu) => {
                 if self.under_cursor().is_empty() {
                     self.editor_data.selected.clear();
-                } else {
                 }
                 Some(EditorState::Idle)
             }

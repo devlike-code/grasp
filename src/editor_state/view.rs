@@ -2,6 +2,7 @@ use std::{env, fmt::Display, fs, str::FromStr, sync::Arc};
 
 use imgui::{Condition, ImString, MouseButton, StyleColor, TreeNodeFlags};
 use itertools::Itertools;
+use log::error;
 use mosaic::{
     capabilities::{ArchetypeSubject, QueueCapability},
     internals::{
@@ -118,7 +119,9 @@ impl GraspEditorState {
 
                                 window.require_named_window_focus(&window.name.clone());
                             }
-                            _ => {}
+                            other => {
+                                error!("REQUEST UNFULFILLED: {:?}", other);
+                            }
                         }
                     }
 
@@ -177,6 +180,7 @@ impl GraspEditorState {
                 if s.ui.list_box("##window-list", &mut i, items.as_slice(), 20) {
                     let item: &str = items.get(i as usize).unwrap();
                     self.require_named_window_focus(item);
+                    println!("Focus on {}", item);
                 }
 
                 color.end();
@@ -353,7 +357,10 @@ impl GraspEditorState {
     pub fn show_menu_bar(&mut self, s: &GuiState) {
         if let Some(m) = s.begin_main_menu_bar() {
             self.show_document_menu(s);
-            self.show_view_menu(s);
+
+            if let Some(f) = s.begin_menu("View") {
+                self.show_view_menu(s);
+            }
             m.end();
         }
     }
@@ -412,60 +419,44 @@ impl GraspEditorState {
         }
     }
 
+    fn xo(b: Option<bool>) -> String {
+        if let Some(s) = b {
+            (if s { "X" } else { " " }).to_string()
+        } else {
+            " ".to_string()
+        }
+    }
+
     fn show_view_menu(&mut self, s: &GuiState) {
-        if let Some(f) = s.begin_menu("View") {
-            let tabview_on = {
-                if self.show_tabview {
-                    "x"
-                } else {
-                    ""
-                }
-            };
+        let tabview_on = if self.show_tabview { "X" } else { " " };
+        let (grid_on, debug_on, ruler_on) = {
+            let front = self.window_list.windows.front();
+            let grid_on = Self::xo(front.map(|m| m.grid_visible));
+            let debug_on = Self::xo(front.map(|m| m.editor_data.debug));
+            let ruler_on = Self::xo(front.map(|m| m.ruler_visible));
+            (grid_on, debug_on, ruler_on)
+        };
 
-            if s.menu_item(format!("Show Tab View {}", tabview_on)) {
-                self.show_tabview = !self.show_tabview;
+        if s.menu_item(format!("[{}] Show Tab View", tabview_on)) {
+            self.show_tabview = !self.show_tabview;
+        }
+
+        if s.menu_item(format!("[{}] Toggle Ruler", ruler_on)) {
+            if let Some(window) = self.window_list.windows.front_mut() {
+                window.ruler_visible = !window.ruler_visible;
             }
+        }
 
-            let ruler_on = {
-                let mut checked = "";
-                // if let Some((_, tab)) = self.dock_state.find_active_focused() {
-                //     if tab.ruler_visible {
-                //         checked = "x";
-                //     }
-                // }
-                checked
-            };
-
-            if s.menu_item(format!("Toggle Ruler {}", ruler_on)) {
-
-                // if let Some((_, tab)) = self.dock_state.find_active_focused() {
-                //     tab.ruler_visible = !tab.ruler_visible;
-                // }
+        if s.menu_item(format!("[{}] Toggle Debug Draw", debug_on)) {
+            if let Some(window) = self.window_list.windows.front_mut() {
+                window.editor_data.debug = !window.editor_data.debug;
             }
+        }
 
-            if s.menu_item(format!("Toggle Debug Draw {}", ruler_on)) {
-                if let Some(window) = self.window_list.get_focused_mut() {
-                    window.editor_data.debug = !window.editor_data.debug;
-                }
+        if s.menu_item(format!("[{}] Toggle Grid", grid_on)) {
+            if let Some(window) = self.window_list.windows.front_mut() {
+                window.grid_visible = !window.grid_visible;
             }
-
-            let grid_on = {
-                let mut checked = "";
-                // if let Some((_, tab)) = self.dock_state.find_active_focused() {
-                //     if tab.grid_visible {
-                //         checked = "x";
-                //     }
-                // }
-                checked
-            };
-
-            if s.menu_item(format!("Toggle Grid {}", grid_on)) {
-                // if let Some((_, tab)) = self.dock_state.find_active_focused() {
-                //     tab.grid_visible = !tab.grid_visible;
-                // }
-            }
-
-            f.end();
         }
     }
 }
