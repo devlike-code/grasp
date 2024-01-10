@@ -15,6 +15,7 @@ use mosaic::{
     iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
 };
 use quadtree_rs::Quadtree;
+use stb_image::image::load_from_memory;
 
 use crate::{
     core::math::Rect2,
@@ -50,6 +51,26 @@ pub struct GraspEditorState {
 }
 
 impl GraspEditorState {
+    fn load_transformers(&self) {
+        let transformers: Vec<Transformer> = fs::read_dir("env\\transformers")
+            .unwrap()
+            .flat_map(|file_entry| {
+                if let Ok(file) = file_entry {
+                    println!("Loading Transformers {:?}", file);
+                    GraspEditorState::load_mosaic_transformers_from_file(
+                        &self.component_mosaic,
+                        &self.editor_mosaic,
+                        file.path(),
+                    )
+                } else {
+                    vec![]
+                }
+            })
+            .collect_vec();
+
+        println!("TRANSFORMERS {:?}", transformers);
+    }
+
     pub fn new() -> Self {
         let editor_mosaic = Mosaic::new();
         let mut component_mosaic = Mosaic::new();
@@ -97,17 +118,20 @@ impl GraspEditorState {
         };
 
         instance.initialize_networked();
+        instance.load_transformers();
         instance
     }
 
     fn load_mosaic_transformers_from_file(
         component_mosaic: &Arc<Mosaic>,
         editor_mosaic: &Arc<Mosaic>,
-        target_mosaic: &Arc<Mosaic>,
         file: PathBuf,
     ) -> Vec<Transformer> {
         // let mut transformers = vec![];
         let loader_mosaic = Mosaic::new();
+        let (loader_mosaic, _) =
+            Self::prepare_mosaic(component_mosaic, editor_mosaic, loader_mosaic);
+
         loader_mosaic.new_type("Node: unit;").unwrap();
         loader_mosaic.new_type("Arrow: unit;").unwrap();
         loader_mosaic.new_type("Label: s32;").unwrap();
@@ -143,7 +167,7 @@ impl GraspEditorState {
 
         if let Some(trans_tile) = trans_tile_iter {
             trans_vec.iter().for_each(|entry| {
-                target_mosaic.new_extension(
+                editor_mosaic.new_extension(
                     &trans_tile,
                     "Transformer",
                     pars()
@@ -314,25 +338,6 @@ impl GraspEditorState {
                 }
             })
             .collect_vec();
-
-        let transformers: Vec<Transformer> = fs::read_dir("env\\transformers")
-            .unwrap()
-            .flat_map(|file_entry| {
-                if let Ok(file) = file_entry {
-                    println!("Loading Transformers {:?}", file);
-                    Self::load_mosaic_transformers_from_file(
-                        component_mosaic,
-                        editor_mosaic,
-                        &mosaic,
-                        file.path(),
-                    )
-                } else {
-                    vec![]
-                }
-            })
-            .collect_vec();
-
-        println!("TRANSFORMERS {:?}", transformers);
 
         (mosaic, components)
     }
