@@ -23,7 +23,6 @@ impl GraspEditorWindow {
         if let Some(token) = s.ui.begin_popup("context-menu") {
             if self.show_default_menu(s) {
                 self.trigger(EditorStateTrigger::ExitContextMenu);
-                s.ui.close_current_popup();
             }
 
             s.ui.separator();
@@ -52,6 +51,7 @@ impl GraspEditorWindow {
             let state_before = self.state;
             self.trigger(EditorStateTrigger::ClickToContextMenu);
             if self.state != state_before && self.state == EditorState::ContextMenu {
+                self.editor_data.popup_cursor = s.ui.io().mouse_pos.into();
                 s.ui.open_popup("context-menu");
             }
         }
@@ -109,8 +109,6 @@ impl GraspEditorWindow {
             } else {
                 panic!("No category set!");
             }
-
-            token.end();
         }
 
         s.ui.separator();
@@ -139,76 +137,8 @@ impl GraspEditorWindow {
                         return true;
                     }
                 }
-                token.end();
             }
         }
-        // if s.ui.button("Select") {
-        //     let selection_tile = self.document_mosaic.make_selection();
-        //     self.document_mosaic
-        //         .fill_selection(&selection_tile, &self.editor_data.selected.clone());
-
-        //     let c1 = targets_from(take_components(
-        //         &["Group"],
-        //         arrows_from(descriptors_from(tiles(vec![selection_tile.clone()]))),
-        //     ));
-
-        //     let c2 = arrows_from(targets_from(take_components(
-        //         &["Group"],
-        //         arrows_from(descriptors_from(tiles(vec![selection_tile.clone()]))),
-        //     )));
-
-        //     let c = gather(vec![c1, c2]);
-        //     let tile = c.to_tiles(&self.document_mosaic);
-        //     tile.add_component("Label", par("Selection"));
-
-        //     self.document_mosaic.enqueue(&queue, &tile);
-        //     self.document_mosaic.request_quadtree_update();
-
-        //     return true;
-        // }
-
-        // if s.ui.button("Group - todo") {
-        //     let selection_tile = self.document_mosaic.make_selection();
-        //     if let Some(group) = self
-        //         .document_mosaic
-        //         .get_component(&selection_tile, "GroupOwner")
-        //     {
-        //         let name = group.get("self").as_s32().to_string();
-        //         let members = self
-        //             .document_mosaic
-        //             .get_group_members(&name, &selection_tile);
-        //         let c = tiles(members.collect_vec());
-        //         let tile = c.to_tiles(&self.document_mosaic);
-        //         tile.add_component("Label", par(format!("Group: {}", name).as_str()));
-
-        //         self.document_mosaic.enqueue(&queue, &tile);
-        //         self.document_mosaic.request_quadtree_update();
-        //     }
-        //     return true;
-        // }
-
-        // if s.ui.button("First Neigbours") {
-        //     if let Some(queue) = self
-        //         .document_mosaic
-        //         .get_all()
-        //         .include_component("NewWindowRequestQueue")
-        //         .get_targets()
-        //         .next()
-        //     {
-        //         let c1 = targets_from(arrows_from(tiles(self.editor_data.selected.clone())));
-        //         let c2 = tiles(self.editor_data.selected.clone());
-        //         let c3 = arrows_from(tiles(self.editor_data.selected.clone()));
-
-        //         let c = gather(vec![c1, c2, c3]);
-        //         let tile = c.to_tiles(&self.document_mosaic);
-        //         tile.add_component("Label", par("First Neighbour"));
-
-        //         self.document_mosaic.enqueue(&queue, &tile);
-        //         self.document_mosaic.request_quadtree_update();
-        //     }
-
-        //     return true;
-        // }
 
         false
     }
@@ -216,23 +146,47 @@ impl GraspEditorWindow {
     fn show_default_menu(&mut self, s: &GuiState) -> bool {
         let editor_mosaic = Arc::clone(&self.editor_mosaic);
 
-        if s.ui.button("Create new node") {
-            let pos: Vec2 = s.ui.mouse_pos_on_opening_current_popup().into();
+        if let Some(menu_token) = s.ui.begin_menu("Window") {
+            if s.ui.menu_item("Close") {
+                let request = editor_mosaic.new_object("CloseWindowRequest", void());
+                queues::enqueue(CloseWindowRequestQueue, request);
+                menu_token.end();
+                return true;
+            }
+
+            menu_token.end();
+        }
+
+        s.ui.separator();
+
+        if let Some(menu_token) = s.ui.begin_menu("Debug") {
+            if s.ui.menu_item(format!(
+                "[{}] Debug Draw",
+                if self.editor_data.debug { "X" } else { " " }
+            )) {
+                self.editor_data.debug = !self.editor_data.debug;
+                menu_token.end();
+                return true;
+            }
+
+            menu_token.end();
+        }
+
+        s.ui.separator();
+        s.ui.separator();
+
+        if s.ui.menu_item("Create new node") {
+            let pos: Vec2 = self.editor_data.popup_cursor;
             self.create_new_object(pos - self.editor_data.window_offset - self.editor_data.pan);
-
             return true;
         }
 
-        if s.ui.button("Toggle debug draw") {
-            self.editor_data.debug = !self.editor_data.debug;
+        s.ui.separator();
+
+        if !self.editor_data.selected.is_empty() && self.show_selection_menu(s) {
             return true;
         }
 
-        if s.ui.button("Close Window") {
-            let request = editor_mosaic.new_object("CloseWindowRequest", void());
-            queues::enqueue(CloseWindowRequestQueue, request);
-            return true;
-        }
         false
     }
 }

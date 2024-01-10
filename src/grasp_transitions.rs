@@ -93,15 +93,9 @@ impl StateMachine for GraspEditorWindow {
 
                     let mid_pos = src_pos.lerp(tgt_pos, 0.5);
 
-                    // let bez = (1..=9)
-                    //     .map(|i| src_pos.lerp(tgt_pos, i as f32 / 10.0))
-                    //     .map(|p| {
-                    //         Rect2::from_two_pos(p - Vec2::new(5.0, 5.0), p + Vec2::new(5.0, 5.0))
-                    //     });
-
                     self.create_new_arrow(&start, &tile, mid_pos); //, bez.collect_vec());
                 }
-                // self.editor_data.selected.clear();
+
                 self.editor_data.link_start_pos = None;
                 self.editor_data.link_end = None;
 
@@ -132,7 +126,7 @@ impl StateMachine for GraspEditorWindow {
                 None
             }
         };
-        
+
         if result.is_some() {
             println!("from {:?} trigger {:?}: Executed", from, trigger);
         } else {
