@@ -13,14 +13,14 @@ use mosaic::{
 use crate::{
     core::{math::Vec2, queues},
     editor_state::windows::GraspEditorWindow,
-    editor_state_machine::{EditorStateTrigger, StateMachine},
+    editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
     grasp_queues::CloseWindowRequestQueue,
     GuiState,
 };
 
 impl GraspEditorWindow {
     pub fn context_popup(&mut self, s: &GuiState) {
-        s.ui.popup("context-menu", || {
+        if let Some(token) = s.ui.begin_popup("context-menu") {
             if self.show_default_menu(s) {
                 self.trigger(EditorStateTrigger::ExitContextMenu);
                 s.ui.close_current_popup();
@@ -29,10 +29,19 @@ impl GraspEditorWindow {
             s.ui.separator();
 
             if !self.editor_data.selected.is_empty() && self.show_selection_menu(s) {
+                let previous_selection = self.editor_data.selected.to_owned();
                 self.trigger(EditorStateTrigger::ExitContextMenu);
+
+                if self.editor_data.selected.is_empty() {
+                    self.editor_data.selected = previous_selection;
+                    self.trigger(EditorStateTrigger::ClickToSelect);
+                }
                 s.ui.close_current_popup();
             }
-        });
+        }//if the state is still ContextMenu after closing the menu change state by triggering exit
+         else if self.state == EditorState::ContextMenu {
+            self.trigger(EditorStateTrigger::ExitContextMenu);
+        }
     }
 
     pub(crate) fn update_context_menu(&mut self, front_window_id: Option<usize>, s: &GuiState) {
@@ -40,19 +49,22 @@ impl GraspEditorWindow {
             && self.rect.contains(s.ui.io().mouse_pos.into())
             && s.ui.is_mouse_clicked(imgui::MouseButton::Right)
         {
+            let state_before = self.state;
             self.trigger(EditorStateTrigger::ClickToContextMenu);
-            s.ui.open_popup("context-menu");
+            if self.state != state_before && self.state == EditorState::ContextMenu {
+                s.ui.open_popup("context-menu");
+            }
         }
     }
 
     fn show_selection_menu(&mut self, s: &GuiState) -> bool {
-        let queue = self
-            .editor_mosaic
-            .get_all()
-            .include_component("NewWindowRequestQueue")
-            .get_targets()
-            .next()
-            .unwrap();
+        // let queue = self
+        //     .editor_mosaic
+        //     .get_all()
+        //     .include_component("NewWindowRequestQueue")
+        //     .get_targets()
+        //     .next()
+        //     .unwrap();
 
         if let Some(token) = s.ui.begin_menu("Add Component") {
             if let Some(category_set) = self
@@ -127,7 +139,6 @@ impl GraspEditorWindow {
                         return true;
                     }
                 }
-
                 token.end();
             }
         }

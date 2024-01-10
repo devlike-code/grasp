@@ -183,15 +183,25 @@ impl GraspEditorWindow {
             //
         } else if clicked_middle && under_cursor.is_empty() && mouse_in_window {
             //
-            //println!("CLICK MIDDLE");
             if !is_focused {
                 self.require_window_focus(self.window_tile.clone());
             }
             caught_events.push(hash_input("click middle"));
             self.trigger(ClickToDeselect);
-        } else if clicked_right && under_cursor.is_empty() && mouse_in_window {
             //
-            //println!("CLICK RIGHT");
+        } else if clicked_right && !under_cursor.is_empty() && mouse_in_window {
+            //
+            println!("Not empty right");
+            if !is_focused {
+                self.require_window_focus(self.window_tile.clone());
+            }
+            caught_events.push(hash_input("click right"));
+            self.editor_data.selected = under_cursor.fetch_tiles(&self.document_mosaic);        
+            self.trigger(ClickToSelect);
+            //
+        }
+        else if clicked_right && under_cursor.is_empty() && mouse_in_window {
+            //
             if !is_focused {
                 self.require_window_focus(self.window_tile.clone());
             }
@@ -200,7 +210,8 @@ impl GraspEditorWindow {
             self.trigger(EndDrag);
 
             //
-        } else if clicked_left
+        } 
+         else if clicked_left
             && !under_cursor.is_empty()
             && mouse_in_window
             && !self.editor_data.selected.contains(
