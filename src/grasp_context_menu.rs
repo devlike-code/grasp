@@ -120,7 +120,8 @@ impl GraspEditorWindow {
                         println!("Started {:?} process with {:?} function", name, func);
                         // if let Some(process) = transformer.mosaic.create_process(&name, params).ok() {
 
-                        // }
+                        // }.
+                        
 
                         return true;
                     }
