@@ -196,11 +196,10 @@ impl GraspEditorWindow {
                 self.require_window_focus(self.window_tile.clone());
             }
             caught_events.push(hash_input("click right"));
-            self.editor_data.selected = under_cursor.fetch_tiles(&self.document_mosaic);        
+            self.editor_data.selected = under_cursor.fetch_tiles(&self.document_mosaic);
             self.trigger(ClickToSelect);
             //
-        }
-        else if clicked_right && under_cursor.is_empty() && mouse_in_window {
+        } else if clicked_right && under_cursor.is_empty() && mouse_in_window {
             //
             if !is_focused {
                 self.require_window_focus(self.window_tile.clone());
@@ -210,8 +209,7 @@ impl GraspEditorWindow {
             self.trigger(EndDrag);
 
             //
-        } 
-         else if clicked_left
+        } else if clicked_left
             && !under_cursor.is_empty()
             && mouse_in_window
             && !self.editor_data.selected.contains(
@@ -223,7 +221,9 @@ impl GraspEditorWindow {
         {
             //
             caught_events.push(hash_input("click left"));
-            self.editor_data.selected = under_cursor.fetch_tiles(&self.document_mosaic);
+            self.editor_data.selected.clear();
+            let tile_under_mouse = under_cursor.fetch_tile(&self.document_mosaic);
+            self.editor_data.selected.push(tile_under_mouse.clone());
             self.trigger(ClickToSelect);
             //
         } else if start_dragging_left
@@ -231,7 +231,6 @@ impl GraspEditorWindow {
             && (s.ui.is_modkey_down(Key::LeftAlt) || s.ui.is_modkey_down(Key::RightAlt))
             && mouse_in_window
             && is_focused
-        //
         {
             //
             let tile_under_mouse = under_cursor.fetch_tile(&self.document_mosaic);
