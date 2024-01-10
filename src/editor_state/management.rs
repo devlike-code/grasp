@@ -29,7 +29,10 @@ use crate::{
     utilities::Label,
 };
 
-use super::{categories::ComponentCategory, view::ComponentRenderer};
+use super::{
+    categories::{ComponentCategory, Transformer},
+    view::ComponentRenderer,
+};
 
 #[allow(dead_code)]
 pub struct GraspEditorState {
@@ -63,6 +66,9 @@ impl GraspEditorState {
         let named_focus_window_request_queue = editor_mosaic.make_queue();
         named_focus_window_request_queue.add_component("NamedFocusWindowRequestQueue", void());
 
+        // let types = editor_mosaic.component_registry.component_definitions.lock().unwrap();
+        // dbg!(types);
+
         Self {
             component_renderers: HashMap::new(),
             editor_state_tile,
@@ -79,6 +85,63 @@ impl GraspEditorState {
                 "Offset".into(),
             ],
         }
+    }
+
+    fn load_mosaic_transformers_from_file(
+        editor_mosaic: &Arc<Mosaic>,
+        mosaic: &Arc<Mosaic>,
+        file: PathBuf,
+    ) -> Vec<Transformer> {
+        // let mut transformers = vec![];
+        let loader_mosaic = Mosaic::new();
+        loader_mosaic.new_type("Node: unit;").unwrap();
+        loader_mosaic.new_type("Arrow: unit;").unwrap();
+        loader_mosaic.new_type("Label: s32;").unwrap();
+
+        loader_mosaic.new_type("Hidden: unit;").unwrap();
+        loader_mosaic.new_type("DisplayName: s32;").unwrap();
+
+        loader_mosaic.load(&fs::read(file).unwrap()).unwrap();
+
+        let trans_vec = loader_mosaic
+            .get_all()
+            .filter_map(|t| {
+                if t.is_object()
+                    && t.iter().get_arrows_into().len() == 0
+                    && t.match_archetype(&["Label"])
+                    && t.match_archetype(&["DisplayName"])
+                {
+                    Some(t)
+                } else {
+                    None
+                }
+            })
+            .map(|t| Transformer {
+                fn_name: Label(&t).query(),
+                display: DisplayName(&t).query().unwrap(),
+            })
+            .collect_vec();
+
+        let trans_tile_iter = editor_mosaic
+            .get_all()
+            .include_component("Transformers")
+            .next();
+
+        let trans_tile = trans_tile_iter.expect("Transformers tile has to exist at this point.");
+
+        trans_vec.iter().for_each(|entry| {
+            editor_mosaic.new_extension(
+                &trans_tile,
+                "Transformer",
+                pars()
+                    .set("fn_name", entry.fn_name.as_str())
+                    .set("display", entry.display.as_str())
+                    // .set("hidden", entry.hidden)
+                    .ok(),
+            );
+        });
+
+        trans_vec
     }
 
     fn load_mosaic_components_from_file(
@@ -215,6 +278,8 @@ impl GraspEditorState {
             .new_type("ComponentCategorySet: unit;")
             .unwrap();
 
+        editor_mosaic.new_type("Transformers: unit;").unwrap();
+
         if let Some(cat_set) = editor_mosaic
             .get_all()
             .include_component("ComponentCategorySet")
@@ -223,19 +288,42 @@ impl GraspEditorState {
             editor_mosaic.delete_tile(cat_set);
         }
 
+        if let Some(trans) = editor_mosaic
+            .get_all()
+            .include_component("Transformers")
+            .next()
+        {
+            editor_mosaic.delete_tile(trans);
+        }
+
         editor_mosaic.new_object("ComponentCategorySet", void());
+        editor_mosaic.new_object("Transformers", void());
 
         let components: Vec<ComponentCategory> = fs::read_dir("env\\components")
             .unwrap()
             .flat_map(|file_entry| {
                 if let Ok(file) = file_entry {
-                    println!("Loading {:?}", file);
+                    println!("Loading ComponentCategories{:?}", file);
                     Self::load_mosaic_components_from_file(editor_mosaic, &mosaic, file.path())
                 } else {
                     vec![]
                 }
             })
             .collect_vec();
+
+        let transformers: Vec<Transformer> = fs::read_dir("env\\transformers")
+            .unwrap()
+            .flat_map(|file_entry| {
+                if let Ok(file) = file_entry {
+                    println!("Loading Transformers {:?}", file);
+                    Self::load_mosaic_transformers_from_file(editor_mosaic, &mosaic, file.path())
+                } else {
+                    vec![]
+                }
+            })
+            .collect_vec();
+
+        println!("TRANSFORMERS {:?}", transformers);
 
         (mosaic, components)
     }
