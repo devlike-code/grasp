@@ -77,7 +77,7 @@ fn default_renderer_draw_object(
                 s.ui.set_keyboard_focus_here();
                 s.ui.set_next_item_width(100.0);
                 if s.ui
-                    .input_text("##", text)
+                    .input_text(format!("##{}-self", tile.id), text)
                     .auto_select_all(true)
                     .enter_returns_true(true)
                     .build()
@@ -175,7 +175,7 @@ fn default_renderer_draw_arrow(
                 s.ui.set_keyboard_focus_here();
                 s.ui.set_next_item_width(100.0);
                 if s.ui
-                    .input_text("##", text)
+                    .input_text(format!("##{}-self", tile.id), text)
                     .auto_select_all(true)
                     .enter_returns_true(true)
                     .build()

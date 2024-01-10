@@ -174,7 +174,7 @@ impl GraspEditorState {
                 let color =
                     s.ui.push_style_color(StyleColor::FrameBg, [0.1, 0.1, 0.15, 1.0]);
 
-                if s.ui.list_box("##", &mut i, items.as_slice(), 20) {
+                if s.ui.list_box("##window-list", &mut i, items.as_slice(), 20) {
                     let item: &str = items.get(i as usize).unwrap();
                     self.require_named_window_focus(item);
                 }
@@ -535,7 +535,9 @@ fn draw_property_value<T: Display + FromStr + ToByteArray>(
     let mut text = format!("{}", t);
     let previous_text = format!("{}", t);
 
-    state.ui.columns(2, "##", false);
+    state
+        .ui
+        .columns(2, format!("##{}.{}-c2", tile.id, name), false);
     let region_width = state.ui.window_content_region_max()[0];
     let max_label_width = 100.0;
     let mut label_width = region_width * 0.25;
@@ -595,7 +597,9 @@ fn draw_property_value<T: Display + FromStr + ToByteArray>(
         }
     };
     color.end();
-    state.ui.columns(1, "##", false);
+    state
+        .ui
+        .columns(1, format!("##{}.{}-c1", tile.id, name), false);
     if let Ok(t) = text.parse::<T>() {
         if previous_text != text {
             tile.clone().set(name, t);
