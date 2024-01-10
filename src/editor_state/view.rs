@@ -24,8 +24,8 @@ use crate::{
 };
 
 use super::{
+    foundation::GraspEditorState,
     helpers::{QuadtreeUpdateCapability, RequireWindowFocus},
-    management::GraspEditorState,
     windows::GraspEditorWindow,
 };
 
@@ -388,7 +388,12 @@ impl GraspEditorState {
                     let window = self.window_list.windows.front().unwrap();
                     let window_mosaic = &window.document_mosaic;
 
-                    Self::prepare_mosaic(&self.editor_mosaic, Arc::clone(window_mosaic));
+                    Self::prepare_mosaic(
+                        &window.component_mosaic,
+                        &self.editor_mosaic,
+                        Arc::clone(window_mosaic),
+                    );
+
                     window_mosaic.load(&fs::read(file).unwrap()).unwrap();
                     self.editor_mosaic.request_quadtree_update();
                 }

@@ -14,7 +14,7 @@ use crate::{
         gui::windowing::gui_set_window_focus,
         queues::{self, dequeue, GraspQueue},
     },
-    editor_state::management::GraspEditorState,
+    editor_state::foundation::GraspEditorState,
 };
 
 #[derive(GraspQueue)]

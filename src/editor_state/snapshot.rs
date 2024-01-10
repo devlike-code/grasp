@@ -8,15 +8,51 @@ use layout::{
 };
 use mosaic::internals::Mosaic;
 
-use super::management::GraspEditorState;
+use super::{
+    foundation::GraspEditorState,
+    network::{Networked, DOTS},
+};
 
 impl GraspEditorState {
     pub fn snapshot_all(&self, name: &str) {
-        self.snapshot(format!("{}_EDITOR", name).as_str(), &self.editor_mosaic);
+        self.open_snapshot(
+            format!("{}_COMPS", name).as_str(),
+            &self.component_mosaic,
+            &self.component_mosaic,
+        );
+
+        self.open_snapshot(
+            format!("{}_EDITOR", name).as_str(),
+            self,
+            &self.editor_mosaic,
+        );
+
+        for window in &self.window_list.windows {
+            self.open_snapshot(
+                format!("{}_WINDOW_{}", name, window.window_tile.id).as_str(),
+                &window.document_mosaic,
+                &window.document_mosaic,
+            );
+        }
+    }
+
+    pub fn update_snapshot_all(&self, name: &str) {
+        self.snapshot(
+            format!("{}_COMPS", name).as_str(),
+            self,
+            &self.component_mosaic,
+        );
+
+        self.snapshot(
+            format!("{}_EDITOR", name).as_str(),
+            self,
+            &self.editor_mosaic,
+        );
 
         for window in &self.window_list.windows {
             self.snapshot(
                 format!("{}_WINDOW_{}", name, window.window_tile.id).as_str(),
+                &window.document_mosaic,
                 &window.document_mosaic,
             );
         }
@@ -35,12 +71,14 @@ impl GraspEditorState {
         }
     }
 
-    pub fn snapshot(&self, name: &str, mosaic: &Arc<Mosaic>) {
-        let content = mosaic.dot(name);
-        open::that(format!(
-            "https://dreampuf.github.io/GraphvizOnline/#{}",
-            urlencoding::encode(content.as_str())
-        ))
-        .unwrap();
+    pub fn open_snapshot(&self, name: &str, networked: &dyn Networked, mosaic: &Arc<Mosaic>) {
+        let _ = open::that(format!("http://localhost:9000/#{}", networked.get_id()));
+        self.snapshot(name, networked, mosaic);
+    }
+
+    pub fn snapshot(&self, name: &str, networked: &dyn Networked, mosaic: &Arc<Mosaic>) {
+        let content = networked.prepare_content();
+        let mut lock = DOTS.lock().unwrap();
+        lock.insert(networked.get_id(), content);
     }
 }

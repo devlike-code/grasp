@@ -10,7 +10,7 @@ use crate::{
     grasp_queues::{NamedFocusWindowRequestQueue, QuadtreeUpdateRequestQueue},
 };
 
-use super::management::GraspEditorState;
+use super::foundation::GraspEditorState;
 
 pub struct DisplayName<'a>(pub &'a Tile);
 impl<'a> TileFieldEmptyQuery for DisplayName<'a> {

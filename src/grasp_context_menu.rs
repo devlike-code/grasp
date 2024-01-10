@@ -52,47 +52,34 @@ impl GraspEditorWindow {
         //     .unwrap();
 
         if let Some(_token) = s.ui.begin_menu("Add Component") {
-            if let Some(category_set) = self
-                .editor_mosaic
+            let categories = self
+                .component_mosaic
                 .get_all()
-                .include_component("ComponentCategorySet")
-                .next()
-            {
-                let categories = category_set
-                    .iter()
-                    .get_dependents()
-                    .include_component("ComponentCategory");
+                .include_component("ComponentCategory");
 
-                for category in categories {
-                    if !category.get("hidden").as_bool() {
-                        if let Some(token) =
-                            s.ui.begin_menu(category.get("name").as_s32().to_string())
+            for category in categories {
+                if !category.get("hidden").as_bool() {
+                    if let Some(token) = s.ui.begin_menu(category.get("name").as_s32().to_string())
+                    {
+                        for item in category
+                            .iter()
+                            .get_dependents()
+                            .include_component("ComponentEntry")
                         {
-                            for item in category
-                                .iter()
-                                .get_dependents()
-                                .include_component("ComponentEntry")
+                            if !item.get("hidden").as_bool()
+                                && s.ui.menu_item(item.get("display").as_s32().to_string())
                             {
-                                if !item.get("hidden").as_bool()
-                                    && s.ui.menu_item(item.get("display").as_s32().to_string())
-                                {
-                                    for s in &self.editor_data.selected {
-                                        s.add_component(
-                                            &item.get("name").as_s32().to_string(),
-                                            void(),
-                                        );
-                                    }
-
-                                    return true;
+                                for s in &self.editor_data.selected {
+                                    s.add_component(&item.get("name").as_s32().to_string(), void());
                                 }
-                            }
 
-                            token.end();
+                                return true;
+                            }
                         }
+
+                        token.end();
                     }
                 }
-            } else {
-                panic!("No category set!");
             }
         }
 

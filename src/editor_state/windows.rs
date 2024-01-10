@@ -26,6 +26,7 @@ pub struct GraspEditorWindow {
     pub state: EditorState,
     pub quadtree: Mutex<Quadtree<i32, EntityId>>,
     pub document_mosaic: Arc<Mosaic>,
+    pub component_mosaic: Arc<Mosaic>,
     pub editor_mosaic: Arc<Mosaic>,
     pub object_to_area: Mutex<HashMap<EntityId, u64>>,
     pub ruler_visible: bool,

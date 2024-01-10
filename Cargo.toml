@@ -28,3 +28,6 @@ imgui = { version = "0.11.0", features = [ "docking" ] }
 imgui-sdl2 = "0.15.3"
 imgui-opengl-renderer = "0.12.1"
 layout-rs = "0.1.1"
+tokio = { version = "1", features = ["full"] }
+warp = "0.3"
+futures = "0.3.30"

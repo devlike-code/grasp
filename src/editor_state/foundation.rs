@@ -31,12 +31,14 @@ use crate::{
 
 use super::{
     categories::{ComponentCategory, Transformer},
+    network::Networked,
     view::ComponentRenderer,
 };
 
 #[allow(dead_code)]
 pub struct GraspEditorState {
     pub editor_mosaic: Arc<Mosaic>,
+    pub component_mosaic: Arc<Mosaic>,
     pub component_renderers: HashMap<S32, ComponentRenderer>,
     pub window_list: GraspEditorWindowList,
     pub editor_state_tile: Tile,
@@ -50,7 +52,14 @@ pub struct GraspEditorState {
 impl GraspEditorState {
     pub fn new() -> Self {
         let editor_mosaic = Mosaic::new();
-        let (_, _) = Self::prepare_mosaic(&editor_mosaic, Arc::clone(&editor_mosaic));
+        let mut component_mosaic = Mosaic::new();
+        component_mosaic.initialize_networked();
+
+        let (_, _) = Self::prepare_mosaic(
+            &component_mosaic,
+            &editor_mosaic,
+            Arc::clone(&editor_mosaic),
+        );
 
         let editor_state_tile = editor_mosaic.new_object("EditorState", void());
 
@@ -69,13 +78,14 @@ impl GraspEditorState {
         // let types = editor_mosaic.component_registry.component_definitions.lock().unwrap();
         // dbg!(types);
 
-        Self {
+        let mut instance = Self {
             component_renderers: HashMap::new(),
             editor_state_tile,
             new_tab_request_queue: new_window_request_queue,
             refresh_quadtree_queue,
             window_list: GraspEditorWindowList::new(&editor_mosaic),
             editor_mosaic,
+            component_mosaic,
             show_tabview: false,
             queued_component_delete: None,
             locked_components: vec![
@@ -84,12 +94,16 @@ impl GraspEditorState {
                 "Position".into(),
                 "Offset".into(),
             ],
-        }
+        };
+
+        instance.initialize_networked();
+        instance
     }
 
     fn load_mosaic_transformers_from_file(
+        component_mosaic: &Arc<Mosaic>,
         editor_mosaic: &Arc<Mosaic>,
-        mosaic: &Arc<Mosaic>,
+        target_mosaic: &Arc<Mosaic>,
         file: PathBuf,
     ) -> Vec<Transformer> {
         // let mut transformers = vec![];
@@ -122,31 +136,32 @@ impl GraspEditorState {
             })
             .collect_vec();
 
-        let trans_tile_iter = editor_mosaic
+        let trans_tile_iter = loader_mosaic
             .get_all()
             .include_component("Transformers")
             .next();
 
-        let trans_tile = trans_tile_iter.expect("Transformers tile has to exist at this point.");
-
-        trans_vec.iter().for_each(|entry| {
-            editor_mosaic.new_extension(
-                &trans_tile,
-                "Transformer",
-                pars()
-                    .set("fn_name", entry.fn_name.as_str())
-                    .set("display", entry.display.as_str())
-                    // .set("hidden", entry.hidden)
-                    .ok(),
-            );
-        });
+        if let Some(trans_tile) = trans_tile_iter {
+            trans_vec.iter().for_each(|entry| {
+                target_mosaic.new_extension(
+                    &trans_tile,
+                    "Transformer",
+                    pars()
+                        .set("fn_name", entry.fn_name.as_str())
+                        .set("display", entry.display.as_str())
+                        // .set("hidden", entry.hidden)
+                        .ok(),
+                );
+            });
+        }
 
         trans_vec
     }
 
     fn load_mosaic_components_from_file(
+        component_mosaic: &Arc<Mosaic>,
         editor_mosaic: &Arc<Mosaic>,
-        mosaic: &Arc<Mosaic>,
+        target_mosaic: &Arc<Mosaic>,
         file: PathBuf,
     ) -> Vec<ComponentCategory> {
         let mut component_categories = vec![];
@@ -226,22 +241,15 @@ impl GraspEditorState {
                     format!("{}: {{ {} }};", component_name, field_struct)
                 };
 
-                mosaic.new_type(&formatted).unwrap();
+                target_mosaic.new_type(&formatted).unwrap();
+                editor_mosaic.new_type(&formatted).unwrap();
             }
 
             component_categories.push(category);
         });
 
-        let category_set = editor_mosaic
-            .get_all()
-            .include_component("ComponentCategorySet")
-            .next();
-
-        let categories_tile = category_set.expect("Category set has to exist at this point.");
-
         component_categories.iter().for_each(|cat| {
-            let cat_tile = editor_mosaic.new_extension(
-                &categories_tile,
+            let cat_tile = component_mosaic.new_object(
                 "ComponentCategory",
                 pars()
                     .set("name", cat.name.as_str())
@@ -250,7 +258,7 @@ impl GraspEditorState {
             );
 
             cat.components.iter().for_each(|entry| {
-                editor_mosaic.new_extension(
+                component_mosaic.new_extension(
                     &cat_tile,
                     "ComponentEntry",
                     pars()
@@ -261,50 +269,46 @@ impl GraspEditorState {
                 );
             });
         });
+
         component_categories
     }
 
     pub fn prepare_mosaic(
+        component_mosaic: &Arc<Mosaic>,
         editor_mosaic: &Arc<Mosaic>,
         mosaic: Arc<Mosaic>,
     ) -> (Arc<Mosaic>, Vec<ComponentCategory>) {
-        editor_mosaic
+        assert_ne!(component_mosaic.id, editor_mosaic.id);
+        component_mosaic
             .new_type("ComponentEntry: { name: s32, display: s32, hidden: bool };")
             .unwrap();
-        editor_mosaic
+        component_mosaic
             .new_type("ComponentCategory: { name: s32, hidden: bool };")
             .unwrap();
-        editor_mosaic
-            .new_type("ComponentCategorySet: unit;")
-            .unwrap();
+        component_mosaic.new_type("Transformers: unit;").unwrap();
+        component_mosaic.new_type("Transformer: unit;").unwrap();
 
-        editor_mosaic.new_type("Transformers: unit;").unwrap();
-
-        if let Some(cat_set) = editor_mosaic
-            .get_all()
-            .include_component("ComponentCategorySet")
-            .next()
-        {
-            editor_mosaic.delete_tile(cat_set);
-        }
-
-        if let Some(trans) = editor_mosaic
+        if let Some(trans) = component_mosaic
             .get_all()
             .include_component("Transformers")
             .next()
         {
-            editor_mosaic.delete_tile(trans);
+            component_mosaic.delete_tile(trans);
         }
 
-        editor_mosaic.new_object("ComponentCategorySet", void());
-        editor_mosaic.new_object("Transformers", void());
+        component_mosaic.new_object("Transformers", void());
 
         let components: Vec<ComponentCategory> = fs::read_dir("env\\components")
             .unwrap()
             .flat_map(|file_entry| {
                 if let Ok(file) = file_entry {
                     println!("Loading ComponentCategories{:?}", file);
-                    Self::load_mosaic_components_from_file(editor_mosaic, &mosaic, file.path())
+                    Self::load_mosaic_components_from_file(
+                        component_mosaic,
+                        editor_mosaic,
+                        &mosaic,
+                        file.path(),
+                    )
                 } else {
                     vec![]
                 }
@@ -316,7 +320,12 @@ impl GraspEditorState {
             .flat_map(|file_entry| {
                 if let Ok(file) = file_entry {
                     println!("Loading Transformers {:?}", file);
-                    Self::load_mosaic_transformers_from_file(editor_mosaic, &mosaic, file.path())
+                    Self::load_mosaic_transformers_from_file(
+                        component_mosaic,
+                        editor_mosaic,
+                        &mosaic,
+                        file.path(),
+                    )
                 } else {
                     vec![]
                 }
@@ -346,17 +355,22 @@ impl GraspEditorState {
 
         let document_mosaic = Mosaic::new();
         assert!(self.editor_mosaic.id != document_mosaic.id);
-        Self::prepare_mosaic(&self.editor_mosaic, Arc::clone(&document_mosaic));
+        Self::prepare_mosaic(
+            &self.component_mosaic,
+            &self.editor_mosaic,
+            Arc::clone(&document_mosaic),
+        );
         assert!(self.editor_mosaic.id != document_mosaic.id);
 
         let filename = name.unwrap_or(format!("Untitled {}", new_index));
         let name = format!("[{}] {}", id, filename);
 
-        let window = GraspEditorWindow {
+        let mut window = GraspEditorWindow {
             name: name.clone(),
             window_tile,
             quadtree: Mutex::new(Quadtree::new_with_anchor((-1000, -1000).into(), 16)),
             document_mosaic,
+            component_mosaic: Arc::clone(&self.component_mosaic),
             editor_mosaic: Arc::clone(&self.editor_mosaic),
             object_to_area: Default::default(),
             editor_data: Default::default(),
@@ -375,6 +389,8 @@ impl GraspEditorState {
             },
             window_list_index: id,
         };
+
+        window.document_mosaic.initialize_networked();
 
         self.window_list.named_windows.push(name);
         self.window_list.windows.push_front(window);
