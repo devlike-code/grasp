@@ -12,7 +12,10 @@ use mosaic::{
         pars, void, ComponentValuesBuilderSetter, Mosaic, MosaicCRUD, MosaicIO,
         MosaicTypelevelCRUD, Tile, TileFieldEmptyQuery, S32,
     },
-    iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
+    iterators::{
+        component_selectors::ComponentSelectors, tile_deletion::TileDeletion,
+        tile_getters::TileGetters,
+    },
 };
 use quadtree_rs::Quadtree;
 use stb_image::image::load_from_memory;
@@ -273,6 +276,12 @@ impl GraspEditorState {
         });
 
         component_categories.iter().for_each(|cat| {
+            component_mosaic
+                .get_all()
+                .include_component("ComponentCategory")
+                .filter(|t| t.get("name").as_s32().to_string() == cat.name)
+                .delete();
+
             let cat_tile = component_mosaic.new_object(
                 "ComponentCategory",
                 pars()

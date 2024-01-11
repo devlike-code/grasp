@@ -43,6 +43,7 @@ impl GraspEditorWindow {
     }
 
     fn show_selection_menu(&mut self, s: &GuiState) -> bool {
+        println!("SHOW SELECTION MENU");
         // let queue = self
         //     .editor_mosaic
         //     .get_all()
@@ -105,7 +106,6 @@ impl GraspEditorWindow {
                         // if let Some(process) = transformer.mosaic.create_process(&name, params).ok() {
 
                         // }.
-                        
 
                         return true;
                     }
