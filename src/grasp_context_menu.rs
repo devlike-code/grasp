@@ -5,7 +5,7 @@ use mosaic::{
         process::{self, ProcessCapability},
         ArchetypeSubject,
     },
-    internals::{void, MosaicIO},
+    internals::{void, MosaicIO, TileFieldEmptyQuery},
     iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
 };
 
@@ -14,6 +14,7 @@ use crate::{
     editor_state::windows::GraspEditorWindow,
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
     grasp_queues::CloseWindowRequestQueue,
+    utilities::{Label, Process},
     GuiState,
 };
 
@@ -43,7 +44,6 @@ impl GraspEditorWindow {
     }
 
     fn show_selection_menu(&mut self, s: &GuiState) -> bool {
-        println!("SHOW SELECTION MENU");
         // let queue = self
         //     .editor_mosaic
         //     .get_all()
@@ -87,28 +87,23 @@ impl GraspEditorWindow {
         s.ui.separator();
 
         if let Some(_token) = s.ui.begin_menu("Transformers") {
-            if let Some(transformers_tile) = self
-                .editor_mosaic
+            let transformers = self
+                .transformer_mosaic
                 .get_all()
-                .include_component("Transformers")
-                .next()
-            {
-                let transformers = transformers_tile
-                    .iter()
-                    .get_dependents()
-                    .include_component("Transformer");
+                .include_component("Transformer")
+                .get_targets();
 
-                for transformer in transformers {
-                    let name = transformer.get("display").as_s32().to_string();
-                    let func = transformer.get("fn_name").as_s32().to_string();
-                    if s.ui.menu_item(name.clone()) {
-                        println!("Started {:?} process with {:?} function", name, func);
-                        // if let Some(process) = transformer.mosaic.create_process(&name, params).ok() {
+            for transformer in transformers {
+                let name = Label(&transformer).query();
+                let func = Process(&transformer).query();
+                println!("{:?} {:?}", name, func);
+                if s.ui.menu_item(name.clone()) {
+                    println!("Started {:?} process with {:?} function", name, func);
+                    // if let Some(process) = transformer.mosaic.create_process(&name, params).ok() {
 
-                        // }.
+                    // }.
 
-                        return true;
-                    }
+                    return true;
                 }
             }
         }

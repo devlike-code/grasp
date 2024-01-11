@@ -51,6 +51,20 @@ impl<'a> TileFieldEmptyQuery for Label<'a> {
     }
 }
 
+pub struct Process<'a>(pub &'a Tile);
+impl<'a> TileFieldEmptyQuery for Process<'a> {
+    type Output = String;
+    fn query(&self) -> Self::Output {
+        if let Some(pos_component) = self.0.get_component("Process") {
+            if let Value::S32(s) = pos_component.get("self") {
+                return s.to_string();
+            }
+        }
+
+        "".to_string()
+    }
+}
+
 pub trait QuadTreeFetch {
     fn fetch_tiles(&self, mosaic: &Arc<Mosaic>) -> Vec<Tile>;
     fn fetch_tile(&self, mosaic: &Arc<Mosaic>) -> Tile;

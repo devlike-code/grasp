@@ -14,8 +14,9 @@ use mosaic::{
     },
     iterators::{
         component_selectors::ComponentSelectors, tile_deletion::TileDeletion,
-        tile_getters::TileGetters,
+        tile_filters::TileFilters, tile_getters::TileGetters,
     },
+    transformers::{self, generate_enum},
 };
 use quadtree_rs::Quadtree;
 use stb_image::image::load_from_memory;
@@ -30,7 +31,7 @@ use crate::{
     editor_state_machine::EditorState,
     grasp_editor_window_list::GraspEditorWindowList,
     grasp_render,
-    utilities::Label,
+    utilities::{Label, Process},
 };
 
 use super::{
@@ -39,10 +40,13 @@ use super::{
     view::ComponentRenderer,
 };
 
+pub type TransformerFn = Box<dyn Fn(&Tile) -> Tile + 'static>;
+
 #[allow(dead_code)]
 pub struct GraspEditorState {
     pub editor_mosaic: Arc<Mosaic>,
     pub component_mosaic: Arc<Mosaic>,
+    pub transformer_mosaic: Arc<Mosaic>,
     pub component_renderers: HashMap<S32, ComponentRenderer>,
     pub window_list: GraspEditorWindowList,
     pub editor_state_tile: Tile,
@@ -51,27 +55,27 @@ pub struct GraspEditorState {
     pub locked_components: Vec<S32>,
     pub show_tabview: bool,
     pub queued_component_delete: Option<usize>,
+    pub transformer_functions: HashMap<String, TransformerFn>,
 }
 
 impl GraspEditorState {
-    fn load_transformers(&self) {
-        let transformers: Vec<Transformer> = fs::read_dir("env\\transformers")
+    fn load_transformers(&mut self) {
+        self.transformer_functions
+            .insert("generate_enum".to_string(), Box::new(generate_enum));
+
+        fs::read_dir("env\\transformers")
             .unwrap()
-            .flat_map(|file_entry| {
+            .for_each(|file_entry| {
                 if let Ok(file) = file_entry {
                     println!("Loading Transformers {:?}", file);
                     GraspEditorState::load_mosaic_transformers_from_file(
                         &self.component_mosaic,
                         &self.editor_mosaic,
+                        &self.transformer_mosaic,
                         file.path(),
                     )
-                } else {
-                    vec![]
                 }
-            })
-            .collect_vec();
-
-        println!("TRANSFORMERS {:?}", transformers);
+            });
     }
 
     pub fn new() -> Self {
@@ -79,10 +83,19 @@ impl GraspEditorState {
         let mut component_mosaic = Mosaic::new();
         component_mosaic.initialize_networked();
 
-        let (_, _) = Self::prepare_mosaic(
+        let mut transformer_mosaic = Mosaic::new();
+        transformer_mosaic.initialize_networked();
+
+        let _ = Self::prepare_mosaic(
             &component_mosaic,
             &editor_mosaic,
             Arc::clone(&editor_mosaic),
+        );
+
+        let _ = Self::prepare_mosaic(
+            &component_mosaic,
+            &editor_mosaic,
+            Arc::clone(&transformer_mosaic),
         );
 
         let editor_state_tile = editor_mosaic.new_object("EditorState", void());
@@ -110,6 +123,7 @@ impl GraspEditorState {
             window_list: GraspEditorWindowList::new(&editor_mosaic),
             editor_mosaic,
             component_mosaic,
+            transformer_mosaic,
             show_tabview: false,
             queued_component_delete: None,
             locked_components: vec![
@@ -118,6 +132,7 @@ impl GraspEditorState {
                 "Position".into(),
                 "Offset".into(),
             ],
+            transformer_functions: HashMap::new(),
         };
 
         instance.initialize_networked();
@@ -128,61 +143,76 @@ impl GraspEditorState {
     fn load_mosaic_transformers_from_file(
         component_mosaic: &Arc<Mosaic>,
         editor_mosaic: &Arc<Mosaic>,
+        transformer_mosaic: &Arc<Mosaic>,
         file: PathBuf,
-    ) -> Vec<Transformer> {
-        // let mut transformers = vec![];
-        let loader_mosaic = Mosaic::new();
-        let (loader_mosaic, _) =
-            Self::prepare_mosaic(component_mosaic, editor_mosaic, loader_mosaic);
+    ) {
+        transformer_mosaic.load(&fs::read(file).unwrap()).unwrap();
 
-        loader_mosaic.new_type("Node: unit;").unwrap();
-        loader_mosaic.new_type("Arrow: unit;").unwrap();
-        loader_mosaic.new_type("Label: s32;").unwrap();
-
-        loader_mosaic.new_type("Hidden: unit;").unwrap();
-        loader_mosaic.new_type("DisplayName: s32;").unwrap();
-
-        loader_mosaic.load(&fs::read(file).unwrap()).unwrap();
-
-        let trans_vec = loader_mosaic
+        transformer_mosaic
             .get_all()
-            .filter_map(|t| {
-                if t.is_object()
-                    && t.iter().get_arrows_into().len() == 0
-                    && t.match_archetype(&["Label"])
-                    && t.match_archetype(&["DisplayName"])
-                {
-                    Some(t)
-                } else {
-                    None
-                }
-            })
-            .map(|t| Transformer {
-                fn_name: Label(&t).query(),
-                display: DisplayName(&t).query().unwrap(),
-            })
-            .collect_vec();
+            .include_component("Position")
+            .delete();
 
-        let trans_tile_iter = loader_mosaic
+        transformer_mosaic
             .get_all()
-            .include_component("Transformers")
-            .next();
+            .include_component("Offset")
+            .delete();
 
-        if let Some(trans_tile) = trans_tile_iter {
-            trans_vec.iter().for_each(|entry| {
-                editor_mosaic.new_extension(
-                    &trans_tile,
-                    "Transformer",
-                    pars()
-                        .set("fn_name", entry.fn_name.as_str())
-                        .set("display", entry.display.as_str())
-                        // .set("hidden", entry.hidden)
-                        .ok(),
-                );
-            });
-        }
+        transformer_mosaic
+            .get_all()
+            .filter_arrows()
+            .get_descriptors()
+            .delete();
+        //let mut transformers = vec![];
+        // let loader_mosaic = Mosaic::new();
+        // let (loader_mosaic, _) =
+        //     Self::prepare_mosaic(component_mosaic, editor_mosaic, loader_mosaic);
 
-        trans_vec
+        // loader_mosaic.new_type("Node: unit;").unwrap();
+        // loader_mosaic.new_type("Arrow: unit;").unwrap();
+        // loader_mosaic.new_type("Label: s32;").unwrap();
+
+        // loader_mosaic.new_type("Hidden: unit;").unwrap();
+        // loader_mosaic.new_type("DisplayName: s32;").unwrap();
+
+        // loader_mosaic.load(&fs::read(file).unwrap()).unwrap();
+
+        // let trans_vec = loader_mosaic
+        //     .get_all()
+        //     .filter_map(|t| {
+        //         if t.is_object()
+        //             && t.iter().get_arrows_into().len() == 0
+        //             && t.match_archetype(&["Label"])
+        //             && t.match_archetype(&["DisplayName"])
+        //         {
+        //             Some(t)
+        //         } else {
+        //             None
+        //         }
+        //     })
+        //     .map(|t| {
+        //         let trans_tile_iter = loader_mosaic
+        //             .get_all()
+        //             .include_component("Transformers")
+        //             .next();
+
+        //         if let Some(trans_tile) = trans_tile_iter {
+        //             trans_vec.iter().for_each(|entry| {
+        //                 editor_mosaic.new_extension(
+        //                     &trans_tile,
+        //                     "Transformer",
+        //                     pars()
+        //                         .set("fn_name", entry.fn_name.as_str())
+        //                         .set("display", entry.display.as_str())
+        //                         // .set("hidden", entry.hidden)
+        //                         .ok(),
+        //                 );
+        //             });
+        //         }
+        //     })
+        //     .collect_vec();
+
+        // trans_vec
     }
 
     fn load_mosaic_components_from_file(
@@ -318,18 +348,6 @@ impl GraspEditorState {
         component_mosaic
             .new_type("ComponentCategory: { name: s32, hidden: bool };")
             .unwrap();
-        component_mosaic.new_type("Transformers: unit;").unwrap();
-        component_mosaic.new_type("Transformer: unit;").unwrap();
-
-        if let Some(trans) = component_mosaic
-            .get_all()
-            .include_component("Transformers")
-            .next()
-        {
-            component_mosaic.delete_tile(trans);
-        }
-
-        component_mosaic.new_object("Transformers", void());
 
         let components: Vec<ComponentCategory> = fs::read_dir("env\\components")
             .unwrap()
@@ -386,6 +404,7 @@ impl GraspEditorState {
             document_mosaic,
             component_mosaic: Arc::clone(&self.component_mosaic),
             editor_mosaic: Arc::clone(&self.editor_mosaic),
+            transformer_mosaic: Arc::clone(&self.transformer_mosaic),
             object_to_area: Default::default(),
             editor_data: Default::default(),
             state: EditorState::Idle,

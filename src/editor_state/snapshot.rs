@@ -22,6 +22,12 @@ impl GraspEditorState {
         );
 
         self.open_snapshot(
+            format!("{}_TRANSFORM", name).as_str(),
+            &self.transformer_mosaic,
+            &self.transformer_mosaic,
+        );
+
+        self.open_snapshot(
             format!("{}_EDITOR", name).as_str(),
             self,
             &self.editor_mosaic,
