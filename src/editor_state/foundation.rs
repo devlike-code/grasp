@@ -34,11 +34,7 @@ use crate::{
     utilities::{Label, Process},
 };
 
-use super::{
-    categories::{ComponentCategory, Transformer},
-    network::Networked,
-    view::ComponentRenderer,
-};
+use super::{categories::ComponentCategory, network::Networked, view::ComponentRenderer};
 
 pub type TransformerFn = Box<dyn Fn(&Tile) -> Tile + 'static>;
 
@@ -99,6 +95,9 @@ impl GraspEditorState {
         );
 
         let editor_state_tile = editor_mosaic.new_object("EditorState", void());
+
+        let window_transformer_queue = editor_mosaic.make_queue();
+        window_transformer_queue.add_component("WindowTransformerQueue", void());
 
         let new_window_request_queue = editor_mosaic.make_queue();
         new_window_request_queue.add_component("NewWindowRequestQueue", void());

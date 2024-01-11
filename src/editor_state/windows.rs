@@ -18,6 +18,7 @@ use std::collections::HashMap;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
 
+use super::foundation::TransformerFn;
 use super::helpers::{QuadtreeUpdateCapability, RequireWindowFocus};
 
 pub struct GraspEditorWindow {

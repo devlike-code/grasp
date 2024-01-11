@@ -5,7 +5,7 @@ use mosaic::{
         process::{self, ProcessCapability},
         ArchetypeSubject,
     },
-    internals::{void, MosaicIO, TileFieldEmptyQuery},
+    internals::{pars, void, ComponentValuesBuilderSetter, MosaicIO, TileFieldEmptyQuery},
     iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
 };
 
@@ -13,7 +13,7 @@ use crate::{
     core::{math::Vec2, queues},
     editor_state::windows::GraspEditorWindow,
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
-    grasp_queues::CloseWindowRequestQueue,
+    grasp_queues::{CloseWindowRequestQueue, WindowTransformerQueue},
     utilities::{Label, Process},
     GuiState,
 };
@@ -95,13 +95,19 @@ impl GraspEditorWindow {
 
             for transformer in transformers {
                 let name = Label(&transformer).query();
-                let func = Process(&transformer).query();
-                println!("{:?} {:?}", name, func);
+                // let fn_name = Process(&transformer).query();
                 if s.ui.menu_item(name.clone()) {
-                    println!("Started {:?} process with {:?} function", name, func);
-                    // if let Some(process) = transformer.mosaic.create_process(&name, params).ok() {
+                    // println!("Started {:?} process with {:?} function", name, fn_name);
 
-                    // }.
+                    let request = self.editor_mosaic.new_object(
+                        "WindowTransformerRequest",
+                        pars()
+                            .set("transform", transformer.id as u64)
+                            .set("window_index", self.window_list_index as u64)
+                            .ok(),
+                    );
+
+                    queues::enqueue(WindowTransformerQueue, request);
 
                     return true;
                 }
