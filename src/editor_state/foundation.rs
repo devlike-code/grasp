@@ -16,7 +16,6 @@ use mosaic::{
         component_selectors::ComponentSelectors, tile_deletion::TileDeletion,
         tile_filters::TileFilters, tile_getters::TileGetters,
     },
-    transformers::{self, generate_enum},
 };
 use quadtree_rs::Quadtree;
 use stb_image::image::load_from_memory;
@@ -31,6 +30,7 @@ use crate::{
     editor_state_machine::EditorState,
     grasp_editor_window_list::GraspEditorWindowList,
     grasp_render,
+    transformers::generate_enum,
     utilities::{Label, Process},
 };
 
@@ -147,21 +147,6 @@ impl GraspEditorState {
     ) {
         transformer_mosaic.load(&fs::read(file).unwrap()).unwrap();
 
-        transformer_mosaic
-            .get_all()
-            .include_component("Position")
-            .delete();
-
-        transformer_mosaic
-            .get_all()
-            .include_component("Offset")
-            .delete();
-
-        transformer_mosaic
-            .get_all()
-            .filter_arrows()
-            .get_descriptors()
-            .delete();
         //let mut transformers = vec![];
         // let loader_mosaic = Mosaic::new();
         // let (loader_mosaic, _) =

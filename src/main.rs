@@ -14,6 +14,7 @@ mod grasp_render;
 mod grasp_transitions;
 mod grasp_update;
 mod seq;
+mod transformers;
 mod utilities;
 
 use std::{ops::Deref, sync::Mutex};

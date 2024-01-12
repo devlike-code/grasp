@@ -1,4 +1,4 @@
-internal enum Enum1 {
+internal enum EnumName {
 	Member1,
 	Member2,
 }

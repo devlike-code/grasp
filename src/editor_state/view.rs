@@ -42,6 +42,7 @@ impl GraspEditorState {
         self.show_windows(s, &mut caught_events);
 
         caught_events.clear();
+        self.show_errors(s);
     }
 
     pub fn show_windows(&mut self, s: &GuiState, caught_events: &mut Vec<u64>) {
@@ -139,9 +140,51 @@ impl GraspEditorState {
         }
     }
 
+    fn show_errors(&mut self, s: &GuiState) {
+        if let Some(_w) =
+            s.ui.window(ImString::new("Errors"))
+                .position([100.0, 100.0], Condition::FirstUseEver)
+                .size([300.0, 100.0], Condition::FirstUseEver)
+                .begin()
+        {
+            s.ui.columns(3, "errors_columns", true);
+            s.ui.set_column_width(0, 150.0);
+            s.ui.set_column_width(1, 150.0);
+
+            s.ui.text("Window ID");
+            s.ui.next_column();
+
+            s.ui.text("Entity ID");
+            s.ui.next_column();
+
+            s.ui.text("Message");
+            s.ui.next_column();
+
+            for error in self.editor_mosaic.get_all().include_component("Error") {
+                let id = error.get("window").as_u64() as usize;
+                let name = self
+                    .window_list
+                    .windows
+                    .iter()
+                    .find(|w| w.window_tile.id == id)
+                    .unwrap()
+                    .name
+                    .clone();
+                s.ui.text(&name);
+                s.ui.next_column();
+
+                s.ui.text(format!("{}", error.get("target").as_u64()));
+                s.ui.next_column();
+
+                s.ui.text(&String::from_utf8(error.get("message").as_s128()).unwrap());
+                s.ui.next_column();
+            }
+        }
+    }
+
     fn show_hierarchy(&mut self, s: &GuiState) {
         let viewport = GuiViewport::get_main_viewport();
-        if let Some(w) =
+        if let Some(_w) =
             s.ui.window(ImString::new("Hierarchy"))
                 .position([0.0, 18.0], Condition::FirstUseEver)
                 .size(
@@ -150,43 +193,37 @@ impl GraspEditorState {
                 )
                 .begin()
         {
-            if s.ui
-                .collapsing_header("Windows", TreeNodeFlags::DEFAULT_OPEN)
-            {
-                if s.ui.button("[+] New Window") {
-                    self.new_window(None);
-                }
-
-                let items = self
-                    .window_list
-                    .named_windows
-                    .iter()
-                    .map(|w| w.as_str())
-                    .collect_vec();
-
-                let mut i = if let Some(selected_window) = self.window_list.windows.front() {
-                    self.window_list
-                        .named_windows
-                        .iter()
-                        .position(|n| n == &selected_window.name)
-                        .unwrap() as i32
-                } else {
-                    -1i32
-                };
-                s.ui.set_next_item_width(-1.0);
-                let color =
-                    s.ui.push_style_color(StyleColor::FrameBg, [0.1, 0.1, 0.15, 1.0]);
-
-                if s.ui.list_box("##window-list", &mut i, items.as_slice(), 20) {
-                    let item: &str = items.get(i as usize).unwrap();
-                    self.require_named_window_focus(item);
-                    println!("Focus on {}", item);
-                }
-
-                color.end();
+            if s.ui.button("[+] New Window") {
+                self.new_window(None);
             }
 
-            w.end();
+            let items = self
+                .window_list
+                .named_windows
+                .iter()
+                .map(|w| w.as_str())
+                .collect_vec();
+
+            let mut i = if let Some(selected_window) = self.window_list.windows.front() {
+                self.window_list
+                    .named_windows
+                    .iter()
+                    .position(|n| n == &selected_window.name)
+                    .unwrap() as i32
+            } else {
+                -1i32
+            };
+            s.ui.set_next_item_width(-1.0);
+            let color =
+                s.ui.push_style_color(StyleColor::FrameBg, [0.1, 0.1, 0.15, 1.0]);
+
+            if s.ui.list_box("##window-list", &mut i, items.as_slice(), 20) {
+                let item: &str = items.get(i as usize).unwrap();
+                self.require_named_window_focus(item);
+                println!("Focus on {}", item);
+            }
+
+            color.end();
         }
     }
 

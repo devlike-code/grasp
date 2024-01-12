@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use itertools::Itertools;
 use mosaic::{
     capabilities::{
         process::{self, ProcessCapability},
@@ -53,10 +54,15 @@ impl GraspEditorWindow {
         //     .unwrap();
 
         if let Some(_token) = s.ui.begin_menu("Add Component") {
-            let categories = self
+            let mut categories = self
                 .component_mosaic
                 .get_all()
                 .include_component("ComponentCategory");
+
+            if categories.len() > 0 {
+                categories = categories
+                    .sorted_by(|a, b| a.get("name").as_s32().cmp(&b.get("name").as_s32()));
+            }
 
             for category in categories {
                 if !category.get("hidden").as_bool() {
@@ -95,7 +101,7 @@ impl GraspEditorWindow {
 
             for transformer in transformers {
                 let name = Label(&transformer).query();
-                // let fn_name = Process(&transformer).query();
+
                 if s.ui.menu_item(name.clone()) {
                     // println!("Started {:?} process with {:?} function", name, fn_name);
 
@@ -103,7 +109,7 @@ impl GraspEditorWindow {
                         "WindowTransformerRequest",
                         pars()
                             .set("transform", transformer.id as u64)
-                            .set("window_index", self.window_list_index as u64)
+                            .set("window_index", self.window_tile.id as u64)
                             .ok(),
                     );
 
