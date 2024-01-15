@@ -1,6 +1,6 @@
 use std::{env, fmt::Display, fs, str::FromStr, sync::Arc};
 
-use imgui::{Condition, ImString, MouseButton, StyleColor, TreeNodeFlags, Window, WindowFlags};
+use imgui::{Condition, ImString, MouseButton, StyleColor, TreeNodeFlags, WindowFlags};
 use itertools::Itertools;
 use log::error;
 use mosaic::{

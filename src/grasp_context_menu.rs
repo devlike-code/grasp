@@ -118,15 +118,21 @@ impl GraspEditorWindow {
         let editor_mosaic = Arc::clone(&self.editor_mosaic);
 
         if let Some(menu_token) = s.ui.begin_menu("Window") {
+            if s.ui.menu_item("Save") {
+                self.save_file();
+            }
+
+            if s.ui.menu_item("Save As") {
+                self.save_file_as();
+            }
+
+            s.ui.separator();
+
             if s.ui.menu_item("Close") {
                 let request = editor_mosaic.new_object("CloseWindowRequest", void());
                 queues::enqueue(CloseWindowRequestQueue, request);
                 menu_token.end();
                 return true;
-            }
-
-            if s.ui.menu_item("Save") {
-                self.save_file();
             }
 
             menu_token.end();
