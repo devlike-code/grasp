@@ -6,7 +6,8 @@ use log::error;
 use mosaic::{
     capabilities::{ArchetypeSubject, QueueCapability},
     internals::{
-        Datatype, FromByteArray, MosaicCRUD, MosaicIO, Tile, TileFieldSetter, ToByteArray, Value,
+        void, Datatype, FromByteArray, MosaicCRUD, MosaicIO, Tile, TileFieldSetter, ToByteArray,
+        Value,
     },
     iterators::{
         component_selectors::ComponentSelectors, tile_deletion::TileDeletion,
@@ -18,8 +19,10 @@ use crate::{
     core::{
         gui::{docking::GuiViewport, windowing::gui_set_window_focus},
         math::{Rect2, Vec2},
+        queues,
     },
     editor_state_machine::EditorState,
+    grasp_queues::CloseWindowRequestQueue,
     GuiState,
 };
 
@@ -130,6 +133,16 @@ impl GraspEditorState {
                     window.draw_debug(s);
                     window.update_context_menu(front_window_id, s);
                     window.context_popup(s);
+
+                    if title_bar_rect.contains(s.ui.io().mouse_pos.into())
+                        && s.ui.is_mouse_clicked(imgui::MouseButton::Middle)
+                        && queues::is_empty(CloseWindowRequestQueue, &self.editor_mosaic)
+                    {
+                        let request = window
+                            .editor_mosaic
+                            .new_object("CloseWindowRequest", void());
+                        queues::enqueue(CloseWindowRequestQueue, request);
+                    }
                 });
 
             self.window_list
