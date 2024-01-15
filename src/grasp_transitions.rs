@@ -34,6 +34,7 @@ impl StateMachine for GraspEditorWindow {
                 self.create_new_object(
                     self.editor_data.cursor - self.editor_data.window_offset - self.editor_data.pan,
                 );
+                self.changed = true;
                 //all windows need to update their quadtrees
                 self.request_quadtree_update();
                 Some(EditorState::Idle)
@@ -92,7 +93,8 @@ impl StateMachine for GraspEditorWindow {
 
                     let mid_pos = src_pos.lerp(tgt_pos, 0.5);
 
-                    self.create_new_arrow(&start, &tile, mid_pos); //, bez.collect_vec());
+                    self.create_new_arrow(&start, &tile, mid_pos);
+                    self.changed = true;
                 }
 
                 self.editor_data.link_start_pos = None;
@@ -104,6 +106,7 @@ impl StateMachine for GraspEditorWindow {
             }
             (EditorState::Move, EditorStateTrigger::EndDrag) => {
                 self.update_selected_positions_by(self.editor_data.cursor_delta);
+                self.changed = true;
                 self.request_quadtree_update();
                 Some(EditorState::Idle)
             }
@@ -117,6 +120,7 @@ impl StateMachine for GraspEditorWindow {
                 self.editor_data.field_changing = None;
                 self.editor_data.previous_text.clear();
                 self.editor_data.text.clear();
+                self.changed = true;
                 Some(EditorState::Idle)
             }
 

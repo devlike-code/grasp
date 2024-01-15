@@ -1,6 +1,6 @@
 use std::{env, fmt::Display, fs, str::FromStr, sync::Arc};
 
-use imgui::{Condition, ImString, MouseButton, StyleColor, TreeNodeFlags};
+use imgui::{Condition, ImString, MouseButton, StyleColor, TreeNodeFlags, Window, WindowFlags};
 use itertools::Itertools;
 use log::error;
 use mosaic::{
@@ -27,8 +27,10 @@ use crate::{
 };
 
 use super::{
+    file_operations::SaveFileCapability,
     foundation::GraspEditorState,
     helpers::{QuadtreeUpdateCapability, RequireWindowFocus},
+    sense::hash_input,
     windows::GraspEditorWindow,
 };
 
@@ -44,8 +46,15 @@ impl GraspEditorState {
 
         self.show_windows(s, &mut caught_events);
 
-        caught_events.clear();
         self.show_errors(s);
+
+        if !caught_events.contains(&hash_input("double click left"))
+            && s.ui.is_mouse_double_clicked(imgui::MouseButton::Left)
+        {
+            self.open_files();
+        }
+
+        caught_events.clear();
     }
 
     pub fn show_windows(&mut self, s: &GuiState, caught_events: &mut Vec<u64>) {
@@ -53,11 +62,16 @@ impl GraspEditorState {
         let front_window_id = self.window_list.windows.front().map(|w| w.window_tile.id);
 
         for window_index in 0..len {
-            let (window_name, window_id) = {
+            let (window_name, window_id, changed) = {
                 let window = self.window_list.windows.get(window_index).unwrap();
-                (window.name.clone(), window.window_tile.id)
+                (window.name.clone(), window.window_tile.id, window.changed)
             };
-            let w = s.ui.window(window_name);
+            let mut w = s.ui.window(window_name);
+            if changed {
+                w = w.flags(WindowFlags::UNSAVED_DOCUMENT.union(WindowFlags::NO_COLLAPSE));
+            } else {
+                w = w.flags(WindowFlags::NO_COLLAPSE);
+            }
 
             w.size_constraints([320.0, 240.0], [1024.0, 768.0])
                 .scroll_bar(false)
@@ -87,6 +101,12 @@ impl GraspEditorState {
                         } else {
                             window.sense(s, front_window_id, caught_events);
                         }
+                    }
+
+                    if title_bar_rect.contains(s.ui.io().mouse_pos.into())
+                        && s.ui.is_mouse_double_clicked(imgui::MouseButton::Left)
+                    {
+                        caught_events.push(hash_input("double click left"));
                     }
 
                     let window_offset: Vec2 = s.ui.window_pos().into();
@@ -415,6 +435,29 @@ impl GraspEditorState {
         }
     }
 
+    fn open_files(&mut self) {
+        if let Some(files) = rfd::FileDialog::new()
+            .add_filter("Mosaic", &["mos"])
+            .set_directory(env::current_dir().unwrap())
+            .pick_files()
+        {
+            for file in files {
+                self.new_window(Some(&file));
+                let window = self.window_list.windows.front().unwrap();
+                let window_mosaic = &window.document_mosaic;
+
+                Self::prepare_mosaic(
+                    &window.component_mosaic,
+                    &self.editor_mosaic,
+                    Arc::clone(window_mosaic),
+                );
+
+                window_mosaic.load(&fs::read(file).unwrap()).unwrap();
+                self.editor_mosaic.request_quadtree_update();
+            }
+        }
+    }
+
     fn show_document_menu(&mut self, s: &GuiState) {
         if let Some(f) = s.begin_menu("Document") {
             if s.menu_item("New Window") {
@@ -422,48 +465,15 @@ impl GraspEditorState {
             }
 
             if s.menu_item("Open") {
-                if let Some(files) = rfd::FileDialog::new()
-                    .add_filter("Mosaic", &["mos"])
-                    .set_directory(env::current_dir().unwrap())
-                    .pick_files()
-                {
-                    for file in files {
-                        self.new_window(Some(
-                            file.file_name()
-                                .unwrap()
-                                .to_str()
-                                .unwrap()
-                                .to_string()
-                                .clone(),
-                        ));
-                        let window = self.window_list.windows.front().unwrap();
-                        let window_mosaic = &window.document_mosaic;
-
-                        Self::prepare_mosaic(
-                            &window.component_mosaic,
-                            &self.editor_mosaic,
-                            Arc::clone(window_mosaic),
-                        );
-
-                        window_mosaic.load(&fs::read(file).unwrap()).unwrap();
-                        self.editor_mosaic.request_quadtree_update();
-                    }
-                }
+                self.open_files();
             }
 
             if s.menu_item("Save") {
-                if let Some(focused_window) = self.window_list.get_focused() {
-                    assert!(focused_window.document_mosaic.id != self.editor_mosaic.id);
+                self.save_file();
+            }
 
-                    let document = focused_window.document_mosaic.save();
-                    if let Some(file) = rfd::FileDialog::new()
-                        .add_filter("Mosaic", &["mos"])
-                        .set_directory(env::current_dir().unwrap())
-                        .save_file()
-                    {
-                        fs::write(file, document).unwrap();
-                    }
-                }
+            if s.menu_item("Save As") {
+                self.save_file_as();
             }
 
             s.separator();

@@ -14,11 +14,10 @@ use mosaic::{
     },
     iterators::{
         component_selectors::ComponentSelectors, tile_deletion::TileDeletion,
-        tile_filters::TileFilters, tile_getters::TileGetters,
+        tile_getters::TileGetters,
     },
 };
 use quadtree_rs::Quadtree;
-use stb_image::image::load_from_memory;
 
 use crate::{
     core::math::Rect2,
@@ -31,7 +30,7 @@ use crate::{
     grasp_editor_window_list::GraspEditorWindowList,
     grasp_render,
     transformers::generate_enum,
-    utilities::{Label, Process},
+    utilities::Label,
 };
 
 use super::{categories::ComponentCategory, network::Networked, view::ComponentRenderer};
@@ -140,8 +139,8 @@ impl GraspEditorState {
     }
 
     fn load_mosaic_transformers_from_file(
-        component_mosaic: &Arc<Mosaic>,
-        editor_mosaic: &Arc<Mosaic>,
+        _component_mosaic: &Arc<Mosaic>,
+        _editor_mosaic: &Arc<Mosaic>,
         transformer_mosaic: &Arc<Mosaic>,
         file: PathBuf,
     ) {
@@ -353,7 +352,7 @@ impl GraspEditorState {
         (mosaic, components)
     }
 
-    pub fn new_window(&mut self, name: Option<String>) {
+    pub fn new_window(&mut self, path: Option<&PathBuf>) {
         //new window tile that is at the same time "Queue" component
         let window_tile = self.editor_mosaic.make_queue();
         window_tile.add_component("EditorWindowQueue", void());
@@ -378,12 +377,19 @@ impl GraspEditorState {
         );
         assert!(self.editor_mosaic.id != document_mosaic.id);
 
-        let filename = name.unwrap_or(format!("Untitled {}", new_index));
+        let filename = path
+            .and_then(|p| {
+                p.file_name()
+                    .and_then(|os| os.to_str().map(|s| s.to_string()))
+            })
+            .unwrap_or(format!("Untitled {}", new_index));
         let name = format!("[{}] {}", id, filename);
 
         let mut window = GraspEditorWindow {
             name: name.clone(),
+            path: path.cloned(),
             window_tile,
+            changed: false,
             quadtree: Mutex::new(Quadtree::new_with_anchor((-1000, -1000).into(), 16)),
             document_mosaic,
             component_mosaic: Arc::clone(&self.component_mosaic),

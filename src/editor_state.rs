@@ -1,4 +1,5 @@
 pub mod categories;
+pub mod file_operations;
 pub mod foundation;
 pub mod helpers;
 pub mod network;

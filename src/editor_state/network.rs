@@ -1,16 +1,14 @@
 use std::collections::HashMap;
-use std::sync::atomic::AtomicUsize;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use super::{foundation::GraspEditorState, windows::GraspEditorWindow};
+use super::foundation::GraspEditorState;
 use futures::{SinkExt, StreamExt};
 use mosaic::internals::Mosaic;
 use tokio::time::sleep;
 use warp::filters::ws::Message;
 use warp::{filters::ws::WebSocket, Filter};
 
-pub static ID: AtomicUsize = AtomicUsize::new(0);
 use lazy_static::lazy_static;
 
 lazy_static! {

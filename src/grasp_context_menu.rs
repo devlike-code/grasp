@@ -2,10 +2,7 @@ use std::sync::Arc;
 
 use itertools::Itertools;
 use mosaic::{
-    capabilities::{
-        process::{self, ProcessCapability},
-        ArchetypeSubject,
-    },
+    capabilities::ArchetypeSubject,
     internals::{pars, void, ComponentValuesBuilderSetter, MosaicIO, TileFieldEmptyQuery},
     iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
 };
@@ -15,9 +12,11 @@ use crate::{
     editor_state::windows::GraspEditorWindow,
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
     grasp_queues::{CloseWindowRequestQueue, WindowTransformerQueue},
-    utilities::{Label, Process},
+    utilities::Label,
     GuiState,
 };
+
+use crate::editor_state::file_operations::SaveFileCapability;
 
 impl GraspEditorWindow {
     pub fn context_popup(&mut self, s: &GuiState) {
@@ -45,14 +44,6 @@ impl GraspEditorWindow {
     }
 
     fn show_selection_menu(&mut self, s: &GuiState) -> bool {
-        // let queue = self
-        //     .editor_mosaic
-        //     .get_all()
-        //     .include_component("NewWindowRequestQueue")
-        //     .get_targets()
-        //     .next()
-        //     .unwrap();
-
         if let Some(_token) = s.ui.begin_menu("Add Component") {
             let mut categories = self
                 .component_mosaic
@@ -132,6 +123,10 @@ impl GraspEditorWindow {
                 queues::enqueue(CloseWindowRequestQueue, request);
                 menu_token.end();
                 return true;
+            }
+
+            if s.ui.menu_item("Save") {
+                self.save_file();
             }
 
             menu_token.end();

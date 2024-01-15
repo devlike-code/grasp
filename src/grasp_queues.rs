@@ -4,10 +4,7 @@ use mosaic::{
     capabilities::{
         process::ProcessCapability, ArchetypeSubject, CollageImportCapability, StringCapability,
     },
-    internals::{
-        pars, void, ComponentValuesBuilderSetter, MosaicCRUD, MosaicIO, Tile, TileFieldEmptyQuery,
-        Value,
-    },
+    internals::{pars, void, ComponentValuesBuilderSetter, MosaicIO, Tile, TileFieldEmptyQuery},
     iterators::{
         component_selectors::ComponentSelectors, tile_deletion::TileDeletion,
         tile_getters::TileGetters,
@@ -18,11 +15,10 @@ use std::{fs, vec::IntoIter};
 use crate::{
     core::{
         gui::windowing::gui_set_window_focus,
-        has_mosaic::HasMosaic,
         queues::{self, dequeue, GraspQueue},
     },
     editor_state::foundation::GraspEditorState,
-    utilities::{Label, Process},
+    utilities::Label,
 };
 
 #[derive(GraspQueue)]

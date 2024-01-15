@@ -16,13 +16,15 @@ use quadtree_rs::{
 };
 use std::collections::HashMap;
 use std::ops::Add;
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
-use super::foundation::TransformerFn;
 use super::helpers::{QuadtreeUpdateCapability, RequireWindowFocus};
 
 pub struct GraspEditorWindow {
     pub name: String,
+    pub path: Option<PathBuf>,
+    pub changed: bool,
     pub window_tile: Tile,
     pub state: EditorState,
     pub quadtree: Mutex<Quadtree<i32, EntityId>>,
