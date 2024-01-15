@@ -409,30 +409,32 @@ impl GraspEditorState {
             }
 
             if s.menu_item("Open") {
-                if let Some(file) = rfd::FileDialog::new()
+                if let Some(files) = rfd::FileDialog::new()
                     .add_filter("Mosaic", &["mos"])
                     .set_directory(env::current_dir().unwrap())
-                    .pick_file()
+                    .pick_files()
                 {
-                    self.new_window(Some(
-                        file.file_name()
-                            .unwrap()
-                            .to_str()
-                            .unwrap()
-                            .to_string()
-                            .clone(),
-                    ));
-                    let window = self.window_list.windows.front().unwrap();
-                    let window_mosaic = &window.document_mosaic;
+                    for file in files {
+                        self.new_window(Some(
+                            file.file_name()
+                                .unwrap()
+                                .to_str()
+                                .unwrap()
+                                .to_string()
+                                .clone(),
+                        ));
+                        let window = self.window_list.windows.front().unwrap();
+                        let window_mosaic = &window.document_mosaic;
 
-                    Self::prepare_mosaic(
-                        &window.component_mosaic,
-                        &self.editor_mosaic,
-                        Arc::clone(window_mosaic),
-                    );
+                        Self::prepare_mosaic(
+                            &window.component_mosaic,
+                            &self.editor_mosaic,
+                            Arc::clone(window_mosaic),
+                        );
 
-                    window_mosaic.load(&fs::read(file).unwrap()).unwrap();
-                    self.editor_mosaic.request_quadtree_update();
+                        window_mosaic.load(&fs::read(file).unwrap()).unwrap();
+                        self.editor_mosaic.request_quadtree_update();
+                    }
                 }
             }
 
