@@ -18,7 +18,7 @@ use mosaic::{
 use crate::{
     core::{
         gui::{docking::GuiViewport, windowing::gui_set_window_focus},
-        math::{Rect2, Vec2},
+        math::{bezier::gui_draw_bezier_arrow, Rect2, Vec2},
         queues,
     },
     editor_state_machine::EditorState,
@@ -45,6 +45,19 @@ impl GraspEditorState {
         let mut caught_events = vec![];
 
         self.show_windows(s, &mut caught_events);
+
+        // let p1 = Vec2::new(50.0, 50.0);
+        // let p2 = Vec2::new(600.0, 500.0);
+        // let mid = p1.lerp(p2, 0.5);
+
+        // gui_draw_bezier_arrow(
+        //     &mut s.ui.get_foreground_draw_list(),
+        //     [p1, mid, p2],
+        //     2.0,
+        //     32,
+        //     Vec2::ZERO,
+        //     0.0,
+        // );
 
         self.show_errors(s);
 
@@ -428,7 +441,7 @@ impl GraspEditorState {
         if let Some(m) = s.begin_main_menu_bar() {
             self.show_document_menu(s);
 
-            if let Some(f) = s.begin_menu("View") {
+            if let Some(_f) = s.begin_menu("View") {
                 self.show_view_menu(s);
             }
             m.end();

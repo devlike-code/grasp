@@ -159,7 +159,7 @@ impl GraspEditorWindow {
         }
 
         s.ui.separator();
-        s.ui.separator();
+        s.ui.spacing();
 
         if s.ui.menu_item("Create new node") {
             let pos: Vec2 = self.editor_data.popup_cursor;

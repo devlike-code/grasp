@@ -279,6 +279,8 @@ impl GraspEditorState {
             let transformer_id = request.get("transform").as_u64() as usize;
             let window_index = request.get("window_index").as_u64() as usize;
 
+            request.iter().delete();
+
             self.editor_mosaic
                 .get_all()
                 .include_component("Error")
@@ -311,7 +313,7 @@ impl GraspEditorState {
                         );
 
                         if error_count > 0 {
-                            return;
+                            continue;
                         }
 
                         let mut args = transformer_template
@@ -353,128 +355,9 @@ impl GraspEditorState {
                             &window.document_mosaic.get_string_value(&result).unwrap(),
                         )
                         .unwrap();
-                        /* let input_templates =
-                            transformer_template.iter().get_arrows_into().get_sources();
-
-                        let params = input_templates
-                            .clone()
-                            .map(|i| Label(&i).query())
-                            .collect_vec();
-                        let params2 = params.iter().map(|s| s.as_str()).collect_vec();
-                        let str_slice: &[&str] = &params2;
-
-                        let proc_tile = window
-                            .document_mosaic
-                            .create_process(&fn_name, str_slice)
-                            .unwrap();
-
-                        for input_template in input_templates.collect_vec() {
-                            let input_name = Label(&input_template).query();
-
-                            let input_instance = window.editor_data.selected.first().unwrap();
-
-                            let mut error_count = 0;
-
-                            for validation in input_template.iter().get_descriptors() {
-                                let maybe_error = match validation.component.to_string().as_str() {
-                                    "NoArrowsInto" => {
-                                        if !input_instance
-                                            .iter()
-                                            .get_arrows_into()
-                                            .collect_vec()
-                                            .is_empty()
-                                        {
-                                            Some(format!("This tile requires no that no arrows go into it for transformer {} to work.", fn_name))
-                                        } else {
-                                            None
-                                        }
-                                    }
-                                    "HasArrowsInto" => {
-                                        if input_instance
-                                            .iter()
-                                            .get_arrows_into()
-                                            .collect_vec()
-                                            .is_empty()
-                                        {
-                                            Some(format!("This tile requires at least one arrow going into it for transformer {} to work.", fn_name))
-                                        } else {
-                                            None
-                                        }
-                                    }
-                                    "HasComponent" => {
-                                        let necessary_comp_name =
-                                            validation.get("self").as_s32().to_string();
-
-                                        if input_instance
-                                            .get_component(&necessary_comp_name)
-                                            .is_none()
-                                        {
-                                            Some(format!("Component '{}' required on this tile for transformer {} to work.", necessary_comp_name, fn_name))
-                                        } else {
-                                            None
-                                        }
-                                    }
-                                    "HasArrowsFrom" => {
-                                        if input_instance
-                                            .iter()
-                                            .get_arrows_from()
-                                            .collect_vec()
-                                            .is_empty()
-                                        {
-                                            Some(format!("This tile requires at least one arrow going from it for transformer {} to work.", fn_name))
-                                        } else {
-                                            None
-                                        }
-                                    }
-                                    "NoArrowsFrom" => {
-                                        if !input_instance
-                                            .iter()
-                                            .get_arrows_from()
-                                            .collect_vec()
-                                            .is_empty()
-                                        {
-                                            Some(format!("This tile requires no that no arrows go from it for transformer {} to work.", fn_name))
-                                        } else {
-                                            None
-                                        }
-                                    }
-                                    _ => None,
-                                };
-
-                                maybe_error.map(|err| {
-                                    error_count += 1;
-                                    self.editor_mosaic.new_object(
-                                        "Error",
-                                        pars()
-                                            .set("message", err.as_str().as_bytes())
-                                            .set("target", input_instance.id as u64)
-                                            .set("window", window_index as u64)
-                                            .ok(),
-                                    )
-                                });
-                            }
-
-                            if error_count > 0 {
-                                return;
-                            }
-
-                            window
-                                .document_mosaic
-                                .pass_process_parameter(&proc_tile, &input_name, input_instance)
-                                .unwrap();
-
-                            let result = (func)(&proc_tile);
-                            fs::write(
-                                "MyEnum.cs",
-                                &window.document_mosaic.get_string_value(&result).unwrap(),
-                            )
-                            .unwrap();
-                        } */
                     }
                 }
             }
-
-            request.iter().delete();
         }
     }
 }

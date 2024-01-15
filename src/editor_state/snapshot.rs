@@ -1,11 +1,6 @@
 use std::sync::Arc;
 
-use layout::{
-    backends::svg::SVGWriter,
-    core::utils::save_to_file,
-    gv::{self, GraphBuilder},
-    topo::layout::VisualGraph,
-};
+use layout::{backends::svg::SVGWriter, core::utils::save_to_file, topo::layout::VisualGraph};
 use mosaic::internals::Mosaic;
 
 use super::{

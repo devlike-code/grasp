@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use mosaic::{
-    capabilities::{ArchetypeSubject, QueueCapability},
+    capabilities::QueueCapability,
     internals::{Mosaic, MosaicIO, Tile},
     iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
 };

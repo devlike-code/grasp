@@ -2,12 +2,10 @@ use std::sync::Arc;
 
 use itertools::Itertools;
 use mosaic::{
-    capabilities::{
-        process::ProcessCapability, ArchetypeSubject, CollageCapability, StringCapability, Traverse,
-    },
+    capabilities::{process::ProcessCapability, ArchetypeSubject, StringCapability, Traverse},
     internals::{
-        all_tiles, leave_components, pars, ComponentValuesBuilderSetter, Mosaic, MosaicCollage,
-        MosaicIO, MosaicTypelevelCRUD, Tile, TileFieldEmptyQuery,
+        all_tiles, leave_components, pars, ComponentValuesBuilderSetter, MosaicCollage, MosaicIO,
+        MosaicTypelevelCRUD, Tile, TileFieldEmptyQuery,
     },
     iterators::tile_getters::TileGetters,
 };
