@@ -147,13 +147,17 @@ fn default_renderer_draw_arrow(
     let p = query_position_recursive(&tile.source());
     let q = query_position_recursive(&tile.target());
     let angle = angle_between_points(p, q);
-    gui_draw_image(
-        image,
-        [20.0, 20.0],
-        [pos.x - window.rect.x, pos.y - window.rect.y],
-        angle,
-        1.0,
-    );
+
+    let mouse: Vec2 = s.ui.io().mouse_pos.into();
+    if mouse.distance(pos) < 20.0 {
+        gui_draw_image(
+            image,
+            [20.0, 20.0],
+            [pos.x - window.rect.x, pos.y - window.rect.y],
+            angle,
+            1.0,
+        );
+    }
 
     let mut cancel: bool = true;
     let mut trigger_end_drag = true;
@@ -237,7 +241,7 @@ pub fn default_renderer_draw(window: &mut GraspEditorWindow, s: &GuiState) {
         let arrow_end_offset = if target.is_object() { 15.0f32 } else { 11.0f32 };
 
         let mid = p1.lerp(p2, 0.5) + offset;
-        
+
         gui_draw_bezier_arrow(
             &mut painter,
             [p1, mid, p2],

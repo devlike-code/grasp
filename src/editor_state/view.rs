@@ -322,7 +322,7 @@ impl GraspEditorState {
                                         self.component_renderers.get(&part.as_str().into())
                                     {
                                         if let Some(_subnode_token) =
-                                            tree(s, &format!("{} [{}]", part, part_tile.id), false)
+                                            tree(s, &part.to_string(), false)
                                         {
                                             renderer(s, focused_window, part_tile.clone());
                                         }
@@ -340,11 +340,9 @@ impl GraspEditorState {
                                                     == Datatype::UNIT
                                         };
 
-                                        if let Some(_subnode_token) = tree(
-                                            s,
-                                            &format!("{} [{}]", part, part_tile.id),
-                                            is_bullet,
-                                        ) {
+                                        if let Some(_subnode_token) =
+                                            tree(s, &part.to_string(), is_bullet)
+                                        {
                                             let is_locked = self
                                                 .locked_components
                                                 .contains(&part_tile.component);
@@ -416,16 +414,14 @@ impl GraspEditorState {
                                             if let Some(renderer) =
                                                 self.component_renderers.get(&part.as_str().into())
                                             {
-                                                if let Some(_subnode_token) = tree(
-                                                    s,
-                                                    &format!("{} [{}]", part, tile.id),
-                                                    false,
-                                                ) {
+                                                if let Some(_subnode_token) =
+                                                    tree(s, &part.to_string(), false)
+                                                {
                                                     subheader_color.end();
                                                     renderer(s, focused_window, tile.clone());
                                                 }
                                             } else if let Some(_subnode_token) =
-                                                tree(s, &format!("{} [{}]", part, tile.id), false)
+                                                tree(s, &part.to_string(), false)
                                             {
                                                 let is_locked = self
                                                     .locked_components
@@ -583,22 +579,22 @@ impl GraspEditorState {
     }
 }
 
-pub fn two_float_property_xy_renderer(ui: &GuiState, tab: &mut GraspEditorWindow, d: Tile) {
+pub fn two_float_property_xy_renderer(ui: &GuiState, tab: &mut GraspEditorWindow, tile: Tile) {
     let mosaic = &tab.document_mosaic;
-    let comp = mosaic
+    let _comp = mosaic
         .component_registry
-        .get_component_type(d.component)
+        .get_component_type(tile.component)
         .unwrap();
-    let x = d.get("x").as_f32();
-    let y = d.get("y").as_f32();
+    let x = tile.get("x").as_f32();
+    let y = tile.get("y").as_f32();
 
     if ui
-        .input_float2(comp.name(), &mut [x, y])
+        .input_float2(format!("##{}-xy", tile.id).as_str(), &mut [x, y])
         .enter_returns_true(true)
         .build()
     {
-        d.clone().set("x", x);
-        d.clone().set("y", y);
+        tile.clone().set("x", x);
+        tile.clone().set("y", y);
         tab.changed = true;
         tab.request_quadtree_update();
     }

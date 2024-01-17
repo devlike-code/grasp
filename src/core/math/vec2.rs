@@ -63,6 +63,11 @@ impl Vec2 {
         let dy = other.y - self.y;
         Vec2::new(self.x + dx * t, self.y + dy * t)
     }
+
+    pub fn distance(&self, other: Vec2) -> f32 {
+        let diff = *self - other;
+        diff.len()
+    }
 }
 
 impl std::ops::Neg for Vec2 {
