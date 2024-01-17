@@ -24,7 +24,11 @@ use crate::{
     grasp_render,
 };
 
-use super::{categories::ComponentCategory, network::Networked, view::ComponentRenderer};
+use super::{
+    categories::ComponentCategory,
+    network::Networked,
+    view::{two_float_property_xy_renderer, ComponentRenderer},
+};
 
 pub type TransformerFn = Box<dyn Fn(&Tile) -> Tile + 'static>;
 
@@ -117,6 +121,13 @@ impl GraspEditorState {
             ],
             transformer_functions: HashMap::new(),
         };
+
+        instance
+            .component_renderers
+            .insert("Position".into(), Box::new(two_float_property_xy_renderer));
+        instance
+            .component_renderers
+            .insert("Offset".into(), Box::new(two_float_property_xy_renderer));
 
         instance.initialize_networked();
         instance.load_transformers();

@@ -45,7 +45,8 @@ impl SaveFileCapability for GraspEditorWindow {
             .set_directory(env::current_dir().unwrap())
             .save_file()
         {
-            fs::write(file, document).unwrap();
+            fs::write(file.clone(), document).unwrap();
+            self.path = Some(file);
             self.changed = false;
         }
     }

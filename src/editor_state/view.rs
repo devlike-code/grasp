@@ -35,6 +35,16 @@ pub type ComponentRenderer = Box<dyn Fn(&GuiState, &mut GraspEditorWindow, Tile)
 
 impl GraspEditorState {
     pub fn show(&mut self, s: &GuiState) {
+        {
+            let io = s.ui.io();
+            if io.key_ctrl && io.keys_down[22] {
+                // CTRL+S
+                if let Some(w) = self.window_list.get_focused_mut() {
+                    w.save_file()
+                }
+            }
+        }
+
         self.show_hierarchy(s);
         self.show_properties(s);
         self.show_menu_bar(s);
@@ -297,9 +307,10 @@ impl GraspEditorState {
                     for selected_tile in selected {
                         if let Some(_node_token) = tree(
                             s,
-                            &format!("ID: {}##{}-header", selected_tile.id, selected_tile.id),
+                            &format!("Entity {}##{}-header", selected_tile.id, selected_tile.id),
                             false,
                         ) {
+                            s.ui.separator();
                             for (part, tiles) in &selected_tile
                                 .get_full_archetype()
                                 .into_iter()
@@ -310,11 +321,9 @@ impl GraspEditorState {
                                     if let Some(renderer) =
                                         self.component_renderers.get(&part.as_str().into())
                                     {
-                                        if let Some(_subnode_token) = tree(
-                                            s,
-                                            &format!("{} [ID: {}]", part, part_tile.id),
-                                            false,
-                                        ) {
+                                        if let Some(_subnode_token) =
+                                            tree(s, &format!("{} [{}]", part, part_tile.id), false)
+                                        {
                                             renderer(s, focused_window, part_tile.clone());
                                         }
                                     } else {
@@ -333,7 +342,7 @@ impl GraspEditorState {
 
                                         if let Some(_subnode_token) = tree(
                                             s,
-                                            &format!("{} [ID: {}]", part, part_tile.id),
+                                            &format!("{} [{}]", part, part_tile.id),
                                             is_bullet,
                                         ) {
                                             let is_locked = self
@@ -366,7 +375,7 @@ impl GraspEditorState {
                         s.ui.separator();
                     }
                 } else {
-                    let is_bullet = {
+                    let is_meta_present = {
                         focused_window
                             .document_mosaic
                             .get_all()
@@ -376,73 +385,81 @@ impl GraspEditorState {
                             == 0
                     };
 
-                    if let Some(_subnode_token) = tree(s, &"Meta", is_bullet) {
-                        for o in focused_window
-                            .document_mosaic
-                            .get_all()
-                            .filter_objects()
-                            .exclude_component("Node")
-                        {
-                            let header_color = s.ui.push_style_color(
-                                imgui::StyleColor::Header,
-                                [34.0 / 255.0, 43.0 / 255.0, 90.0 / 255.0, 1.0],
-                            );
-                            if let Some(_subnode_token) =
-                                tree(s, &format!("ID: {}##{}-header", o.id, o.id), false)
+                    if is_meta_present {
+                        if let Some(_subnode_token) = tree(s, &"Meta", false) {
+                            for o in focused_window
+                                .document_mosaic
+                                .get_all()
+                                .filter_objects()
+                                .exclude_component("Node")
                             {
-                                header_color.end();
-
-                                for (part, tiles) in &o
-                                    .get_full_archetype()
-                                    .into_iter()
-                                    .sorted_by(|a, b| (a.1.first().cmp(&b.1.first())))
-                                    .collect_vec()
+                                let header_color = s.ui.push_style_color(
+                                    imgui::StyleColor::Header,
+                                    [34.0 / 255.0, 43.0 / 255.0, 90.0 / 255.0, 1.0],
+                                );
+                                if let Some(_subnode_token) =
+                                    tree(s, &format!("{}##{}-header", o.id, o.id), false)
                                 {
-                                    for tile in tiles.iter().sorted_by(|a, b| a.id.cmp(&b.id)) {
-                                        let subheader_color = s.ui.push_style_color(
-                                            imgui::StyleColor::Header,
-                                            [66.0 / 255.0, 64.0 / 255.0, 123.0 / 255.0, 1.0],
-                                        );
-                                        if let Some(renderer) =
-                                            self.component_renderers.get(&part.as_str().into())
-                                        {
-                                            if let Some(_subnode_token) = tree(
-                                                s,
-                                                &format!("{} [ID: {}]", part, tile.id),
-                                                false,
-                                            ) {
-                                                subheader_color.end();
-                                                renderer(s, focused_window, tile.clone());
-                                            }
-                                        } else if let Some(_subnode_token) =
-                                            tree(s, &format!("{} [ID: {}]", part, tile.id), false)
-                                        {
-                                            let is_locked =
-                                                self.locked_components.contains(&tile.component);
-                                            let is_header_covered = s.ui.is_item_hovered();
-                                            let is_header_clicked = s
-                                                .ui
-                                                .is_item_clicked_with_button(MouseButton::Right);
+                                    header_color.end();
 
-                                            if !is_locked && is_header_covered && is_header_clicked
-                                            {
-                                                self.queued_component_delete = Some(tile.id);
-                                                s.ui.open_popup(ImString::new("Component Menu"));
-                                            }
-
-                                            draw_default_property_renderer(
-                                                s,
-                                                focused_window,
-                                                tile.clone(),
+                                    for (part, tiles) in &o
+                                        .get_full_archetype()
+                                        .into_iter()
+                                        .sorted_by(|a, b| (a.1.first().cmp(&b.1.first())))
+                                        .collect_vec()
+                                    {
+                                        for tile in tiles.iter().sorted_by(|a, b| a.id.cmp(&b.id)) {
+                                            let subheader_color = s.ui.push_style_color(
+                                                imgui::StyleColor::Header,
+                                                [66.0 / 255.0, 64.0 / 255.0, 123.0 / 255.0, 1.0],
                                             );
+                                            if let Some(renderer) =
+                                                self.component_renderers.get(&part.as_str().into())
+                                            {
+                                                if let Some(_subnode_token) = tree(
+                                                    s,
+                                                    &format!("{} [{}]", part, tile.id),
+                                                    false,
+                                                ) {
+                                                    subheader_color.end();
+                                                    renderer(s, focused_window, tile.clone());
+                                                }
+                                            } else if let Some(_subnode_token) =
+                                                tree(s, &format!("{} [{}]", part, tile.id), false)
+                                            {
+                                                let is_locked = self
+                                                    .locked_components
+                                                    .contains(&tile.component);
+                                                let is_header_covered = s.ui.is_item_hovered();
+                                                let is_header_clicked =
+                                                    s.ui.is_item_clicked_with_button(
+                                                        MouseButton::Right,
+                                                    );
+
+                                                if !is_locked
+                                                    && is_header_covered
+                                                    && is_header_clicked
+                                                {
+                                                    self.queued_component_delete = Some(tile.id);
+                                                    s.ui.open_popup(ImString::new(
+                                                        "Component Menu",
+                                                    ));
+                                                }
+
+                                                draw_default_property_renderer(
+                                                    s,
+                                                    focused_window,
+                                                    tile.clone(),
+                                                );
+                                            }
                                         }
                                     }
                                 }
-                            }
 
-                            s.ui.spacing();
-                            s.ui.spacing();
-                            s.ui.separator();
+                                s.ui.spacing();
+                                s.ui.spacing();
+                                s.ui.separator();
+                            }
                         }
                     }
                 }
@@ -566,6 +583,27 @@ impl GraspEditorState {
     }
 }
 
+pub fn two_float_property_xy_renderer(ui: &GuiState, tab: &mut GraspEditorWindow, d: Tile) {
+    let mosaic = &tab.document_mosaic;
+    let comp = mosaic
+        .component_registry
+        .get_component_type(d.component)
+        .unwrap();
+    let x = d.get("x").as_f32();
+    let y = d.get("y").as_f32();
+
+    if ui
+        .input_float2(comp.name(), &mut [x, y])
+        .enter_returns_true(true)
+        .build()
+    {
+        d.clone().set("x", x);
+        d.clone().set("y", y);
+        tab.changed = true;
+        tab.request_quadtree_update();
+    }
+}
+
 fn draw_default_property_renderer(ui: &GuiState, tab: &mut GraspEditorWindow, d: Tile) {
     let mosaic = &tab.document_mosaic;
     let comp = mosaic
@@ -602,7 +640,7 @@ fn draw_default_property_renderer(ui: &GuiState, tab: &mut GraspEditorWindow, d:
             Value::U64(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
             Value::F32(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
             Value::F64(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
-            Value::S32(v) => draw_property_value(ui, tab, &d, name.as_str(), v.to_string()),
+            Value::S32(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
             Value::STR(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
 
             Value::BOOL(v) => {
@@ -629,31 +667,11 @@ fn draw_property_value<T: Display + FromStr + ToByteArray>(
     let mut text = format!("{}", t);
     let previous_text = format!("{}", t);
 
-    state
-        .ui
-        .columns(2, format!("##{}.{}-c2", tile.id, name), false);
-    let region_width = state.ui.window_content_region_max()[0];
-    let max_label_width = 100.0;
-    let mut label_width = region_width * 0.25;
-    let text_width = if label_width > max_label_width {
-        label_width = max_label_width;
-        region_width - max_label_width
-    } else {
-        state.ui.window_content_region_max()[0] * 0.75
-    };
-
-    state.ui.set_column_width(0, label_width);
-    state.ui.set_column_width(1, text_width);
-
-    state.ui.text(name);
-    state.ui.next_column();
-    state.ui.set_next_item_width(-1.0);
-
     match datatype {
         Datatype::S32 => {
             state
                 .ui
-                .input_text(id, &mut text)
+                .input_text(format!("{}##{}", name, id), &mut text)
                 .enter_returns_true(true)
                 .build();
 
@@ -663,12 +681,13 @@ fn draw_property_value<T: Display + FromStr + ToByteArray>(
         }
 
         Datatype::STR => {
+            let rect = state.ui.content_region_avail();
             state
                 .ui
                 .input_text_multiline(
-                    id,
+                    format!("{}##{}", name, id),
                     &mut window.editor_data.text,
-                    state.ui.content_region_avail(),
+                    [rect[0], rect[1].min(150.0)],
                 )
                 .enter_returns_true(true)
                 .build();
@@ -677,7 +696,7 @@ fn draw_property_value<T: Display + FromStr + ToByteArray>(
         _ => {
             state
                 .ui
-                .input_text(id, &mut text)
+                .input_text(format!("{}##{}", name, id), &mut text)
                 .enter_returns_true(true)
                 .build();
         }
@@ -689,7 +708,7 @@ fn draw_property_value<T: Display + FromStr + ToByteArray>(
     if let Ok(t) = text.parse::<T>() {
         if previous_text != text {
             tile.clone().set(name, t);
-
+            window.changed = true;
             window.request_quadtree_update();
         }
     }
