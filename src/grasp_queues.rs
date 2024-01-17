@@ -1,16 +1,14 @@
 use grasp_proc_macros::GraspQueue;
 use itertools::Itertools;
 use mosaic::{
-    capabilities::{
-        process::ProcessCapability, ArchetypeSubject, CollageImportCapability, StringCapability,
-    },
+    capabilities::ArchetypeSubject,
     internals::{pars, void, ComponentValuesBuilderSetter, MosaicIO, Tile, TileFieldEmptyQuery},
     iterators::{
         component_selectors::ComponentSelectors, tile_deletion::TileDeletion,
         tile_getters::TileGetters,
     },
 };
-use std::{fs, vec::IntoIter};
+use std::vec::IntoIter;
 
 use crate::{
     core::{
@@ -18,7 +16,6 @@ use crate::{
         queues::{self, dequeue, GraspQueue},
     },
     editor_state::foundation::GraspEditorState,
-    utilities::Label,
 };
 
 #[derive(GraspQueue)]
@@ -78,11 +75,8 @@ impl GraspEditorState {
 
     fn process_new_window_queue(&mut self) {
         while let Some(request) = queues::dequeue(NewWindowRequestQueue, &self.editor_mosaic) {
-            // TODO: reconnect collage, but with reconstruction into other mosaic
-            if let Some(_collage) = request.to_collage() {
-                self.new_window(None);
-                request.iter().delete();
-            }
+            self.new_window(None);
+            request.iter().delete();
         }
     }
 
@@ -133,6 +127,7 @@ impl<'a> TileFieldEmptyQuery for Multiplicity<'a> {
 }
 
 impl GraspEditorState {
+    #[allow(dead_code)]
     fn validate_against_template(
         &self,
         template: &Tile,
@@ -186,7 +181,7 @@ impl GraspEditorState {
                 self.editor_mosaic.new_object(
                     "Error",
                     pars()
-                        .set("message", err.as_str().as_bytes())
+                        .set("message", err)
                         .set("target", instance.id as u64)
                         .set("window", window_index)
                         .ok(),
@@ -241,9 +236,7 @@ impl GraspEditorState {
                                 "Multiplicity wrong for arrows going {} tile #{}",
                                 if is_outgoing { "from" } else { "into" },
                                 template.id
-                            )
-                            .as_str()
-                            .as_bytes(),
+                            ),
                         )
                         .set("target", instance.id as u64)
                         .set("window", window_index)
@@ -276,88 +269,88 @@ impl GraspEditorState {
 
     fn process_window_transformer_queue(&mut self) {
         while let Some(request) = dequeue(WindowTransformerQueue, &self.editor_mosaic) {
-            let transformer_id = request.get("transform").as_u64() as usize;
-            let window_index = request.get("window_index").as_u64() as usize;
+            let _transformer_id = request.get("transform").as_u64() as usize;
+            let _window_index = request.get("window_index").as_u64() as usize;
 
             request.iter().delete();
 
-            self.editor_mosaic
-                .get_all()
-                .include_component("Error")
-                .filter(|t| t.get("window").as_u64() as usize == window_index)
-                .delete();
+            // self.editor_mosaic
+            //     .get_all()
+            //     .include_component("Error")
+            //     .filter(|t| t.get("window").as_u64() as usize == window_index)
+            //     .delete();
 
-            if let Some(window) = self
-                .window_list
-                .windows
-                .iter()
-                .find(|w| w.window_tile.id == window_index)
-            {
-                let instance = window.editor_data.selected.first().unwrap();
+            // if let Some(window) = self
+            //     .window_list
+            //     .windows
+            //     .iter()
+            //     .find(|w| w.window_tile.id == window_index)
+            // {
+            //     let instance = window.editor_data.selected.first().unwrap();
 
-                if let Some(transformer_template) = window.transformer_mosaic.get(transformer_id) {
-                    let fn_name = transformer_template
-                        .get_component("Transformer")
-                        .unwrap()
-                        .get("self")
-                        .as_s32()
-                        .to_string();
+            //     if let Some(transformer_template) = window.transformer_mosaic.get(transformer_id) {
+            //         let fn_name = transformer_template
+            //             .get_component("Transformer")
+            //             .unwrap()
+            //             .get("self")
+            //             .as_s32()
+            //             .to_string();
 
-                    if let Some(func) = self.transformer_functions.get(&fn_name) {
-                        let error_count = self.validate_against_template(
-                            &transformer_template,
-                            instance,
-                            &fn_name,
-                            window_index as u64,
-                            &mut vec![],
-                        );
+            //         if let Some(func) = self.transformer_functions.get(&fn_name) {
+            //             let error_count = self.validate_against_template(
+            //                 &transformer_template,
+            //                 instance,
+            //                 &fn_name,
+            //                 window_index as u64,
+            //                 &mut vec![],
+            //             );
 
-                        if error_count > 0 {
-                            continue;
-                        }
+            //             if error_count > 0 {
+            //                 continue;
+            //             }
 
-                        let mut args = transformer_template
-                            .iter()
-                            .get_arrows_from()
-                            .get_targets()
-                            .map(|t| Label(&t).query())
-                            .collect_vec();
+            //             let mut args = transformer_template
+            //                 .iter()
+            //                 .get_arrows_from()
+            //                 .get_targets()
+            //                 .map(|t| Label(&t).query())
+            //                 .collect_vec();
 
-                        args.extend(
-                            transformer_template
-                                .iter()
-                                .get_arrows_into()
-                                .get_sources()
-                                .map(|t| Label(&t).query()),
-                        );
+            //             args.extend(
+            //                 transformer_template
+            //                     .iter()
+            //                     .get_arrows_into()
+            //                     .get_sources()
+            //                     .map(|t| Label(&t).query()),
+            //             );
 
-                        let proc_tile = window
-                            .document_mosaic
-                            .create_process(
-                                &fn_name,
-                                args.iter().map(|s| s.as_str()).collect_vec().as_slice(),
-                            )
-                            .unwrap();
+            //             let proc_tile = window
+            //                 .document_mosaic
+            //                 .create_process(
+            //                     &fn_name,
+            //                     args.iter().map(|s| s.as_str()).collect_vec().as_slice(),
+            //                 )
+            //                 .unwrap();
 
-                        println!(
-                            "Passing parameter {} = {}",
-                            args.first().unwrap(),
-                            instance.id
-                        );
-                        window
-                            .document_mosaic
-                            .pass_process_parameter(&proc_tile, args.first().unwrap(), instance)
-                            .unwrap();
+            //             println!(
+            //                 "Passing parameter {} = {}",
+            //                 args.first().unwrap(),
+            //                 instance.id
+            //             );
+            //             window
+            //                 .document_mosaic
+            //                 .pass_process_parameter(&proc_tile, args.first().unwrap(), instance)
+            //                 .unwrap();
 
-                        let result = (func)(&proc_tile);
-                        fs::write(
-                            "MyEnum.cs",
-                            &window.document_mosaic.get_string_value(&result).unwrap(),
-                        )
-                        .unwrap();
-                    }
-                }
-            }
+            //             let result = (func)(&proc_tile);
+            //             fs::write(
+            //                 "MyEnum.cs",
+            //                 &window.document_mosaic.get_string_value(&result).unwrap(),
+            //             )
+            //             .unwrap();
+            //         }
+            //     }
+            // }
         }
     }
 }

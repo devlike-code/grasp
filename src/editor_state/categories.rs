@@ -1,13 +1,8 @@
-#[derive(Default, Debug, Clone)]
-pub struct ComponentEntry {
-    pub name: String,
-    pub display: String,
-    pub hidden: bool,
-}
+use serde::{Deserialize, Serialize};
 
-#[derive(Default, Debug, Clone)]
+#[derive(Default, Debug, Clone, Deserialize, Serialize)]
 pub struct ComponentCategory {
     pub name: String,
-    pub components: Vec<ComponentEntry>,
+    pub components: Vec<String>,
     pub hidden: bool,
 }

@@ -59,6 +59,7 @@ impl GraspEditorState {
         }
     }
 
+    #[allow(dead_code)]
     fn generate_svg(graph: &mut VisualGraph, name: &str) {
         let mut svg = SVGWriter::new();
         graph.do_it(false, false, false, &mut svg);

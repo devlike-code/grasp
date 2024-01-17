@@ -10,27 +10,18 @@ use mosaic::{
     capabilities::{ArchetypeSubject, QueueCapability, QueueTile},
     internals::{
         pars, void, ComponentValuesBuilderSetter, Mosaic, MosaicCRUD, MosaicIO,
-        MosaicTypelevelCRUD, Tile, TileFieldEmptyQuery, S32,
+        MosaicTypelevelCRUD, Tile, S32,
     },
-    iterators::{
-        component_selectors::ComponentSelectors, tile_deletion::TileDeletion,
-        tile_getters::TileGetters,
-    },
+    iterators::{component_selectors::ComponentSelectors, tile_deletion::TileDeletion},
 };
 use quadtree_rs::Quadtree;
 
 use crate::{
     core::math::Rect2,
-    editor_state::{
-        categories::ComponentEntry,
-        helpers::{DisplayName, RequireWindowFocus},
-        windows::GraspEditorWindow,
-    },
+    editor_state::{helpers::RequireWindowFocus, windows::GraspEditorWindow},
     editor_state_machine::EditorState,
     grasp_editor_window_list::GraspEditorWindowList,
     grasp_render,
-    transformers::generate_enum,
-    utilities::Label,
 };
 
 use super::{categories::ComponentCategory, network::Networked, view::ComponentRenderer};
@@ -55,9 +46,6 @@ pub struct GraspEditorState {
 
 impl GraspEditorState {
     fn load_transformers(&mut self) {
-        self.transformer_functions
-            .insert("generate_enum".to_string(), Box::new(generate_enum));
-
         fs::read_dir("env\\transformers")
             .unwrap()
             .for_each(|file_entry| {
@@ -109,9 +97,6 @@ impl GraspEditorState {
 
         let named_focus_window_request_queue = editor_mosaic.make_queue();
         named_focus_window_request_queue.add_component("NamedFocusWindowRequestQueue", void());
-
-        // let types = editor_mosaic.component_registry.component_definitions.lock().unwrap();
-        // dbg!(types);
 
         let mut instance = Self {
             component_renderers: HashMap::new(),
@@ -202,121 +187,40 @@ impl GraspEditorState {
         component_mosaic: &Arc<Mosaic>,
         editor_mosaic: &Arc<Mosaic>,
         target_mosaic: &Arc<Mosaic>,
-        file: PathBuf,
-    ) -> Vec<ComponentCategory> {
-        let mut component_categories = vec![];
-        let loader_mosaic = Mosaic::new();
-        loader_mosaic.new_type("Node: unit;").unwrap();
-        loader_mosaic.new_type("Arrow: unit;").unwrap();
-        loader_mosaic.new_type("Label: s32;").unwrap();
-
-        loader_mosaic.new_type("Hidden: unit;").unwrap();
-        loader_mosaic.new_type("DisplayName: s32;").unwrap();
-
-        loader_mosaic.load(&fs::read(file).unwrap()).unwrap();
-
-        let categories = loader_mosaic.get_all().filter(|t| {
-            t.is_object() && t.iter().get_arrows_into().len() == 0 && t.match_archetype(&["Label"])
-        });
-
-        categories.for_each(|menu| {
-            let mut category = ComponentCategory {
-                name: Label(&menu).query(),
-                ..Default::default()
-            };
-
-            if menu.match_archetype(&["Hidden"]) {
-                category.hidden = true;
-            }
-
-            let items = menu.iter().get_arrows_from().get_targets();
-
-            for item in items {
-                let component_name = Label(&item).query();
-                assert_eq!(item.mosaic, loader_mosaic);
-
-                let mut component_entry = ComponentEntry {
-                    name: component_name.clone(),
-                    display: component_name.clone(),
-                    hidden: false,
-                };
-
-                if item.match_archetype(&["Hidden"]) {
-                    component_entry.hidden = true;
-                }
-
-                if let Some(display) = DisplayName(&item).query() {
-                    component_entry.display = display;
-                }
-
-                category.components.push(component_entry);
-
-                let mut fields = vec![];
-
-                let mut current_field = item
-                    .iter()
-                    .get_arrows_from()
-                    .find(|t| t.iter().get_arrows_into().len() == 0);
-
-                while current_field.is_some() {
-                    let field = current_field.as_ref().unwrap();
-                    let field_name = Label(field).query();
-                    let field_datatype = Label(&field.target()).query();
-                    fields.push((field_name, field_datatype));
-                    current_field = field.iter().get_arrows_from().get_targets().next();
-                }
-
-                let formatted = if fields.is_empty() {
-                    format!("{}: unit;", component_name)
-                } else if fields.len() == 1 && fields.first().as_ref().unwrap().0.as_str() == "self"
-                    || fields.first().as_ref().unwrap().0.as_str().is_empty()
-                {
-                    let (_, field_datatype) = fields.first().unwrap();
-                    format!("{}: {};", component_name, field_datatype)
-                } else {
-                    let field_struct = fields
-                        .iter()
-                        .map(|(a, b)| format!("{}: {}", a, b))
-                        .join(", ");
-                    format!("{}: {{ {} }};", component_name, field_struct)
-                };
-
-                target_mosaic.new_type(&formatted).unwrap();
-                editor_mosaic.new_type(&formatted).unwrap();
-            }
-
-            component_categories.push(category);
-        });
-
-        component_categories.iter().for_each(|cat| {
+        categories: &Vec<ComponentCategory>,
+    ) {
+        for category in categories {
             component_mosaic
                 .get_all()
                 .include_component("ComponentCategory")
-                .filter(|t| t.get("name").as_s32().to_string() == cat.name)
+                .filter(|t| t.get("name").as_s32().to_string() == category.name)
                 .delete();
 
             let cat_tile = component_mosaic.new_object(
                 "ComponentCategory",
                 pars()
-                    .set("name", cat.name.as_str())
-                    .set("hidden", cat.hidden)
+                    .set("name", category.name.as_str())
+                    .set("hidden", category.hidden)
                     .ok(),
             );
 
-            cat.components.iter().for_each(|entry| {
+            for item in &category.components {
+                let component_name = item.split(':').collect_vec()[0];
+
+                target_mosaic.new_type(item).unwrap();
+                editor_mosaic.new_type(item).unwrap();
+
+                println!("{:?}", item);
                 component_mosaic.new_extension(
                     &cat_tile,
                     "ComponentEntry",
                     pars()
-                        .set("name", entry.name.as_str())
-                        .set("display", entry.display.as_str())
-                        .set("hidden", entry.hidden)
+                        .set("name", component_name)
+                        .set("definition", item.clone())
                         .ok(),
                 );
-            });
-        });
-
-        component_categories
+            }
+        }
     }
 
     pub fn prepare_mosaic(
@@ -324,25 +228,64 @@ impl GraspEditorState {
         editor_mosaic: &Arc<Mosaic>,
         mosaic: Arc<Mosaic>,
     ) -> (Arc<Mosaic>, Vec<ComponentCategory>) {
+        println!("Loading mosaic");
         assert_ne!(component_mosaic.id, editor_mosaic.id);
         component_mosaic
-            .new_type("ComponentEntry: { name: s32, display: s32, hidden: bool };")
+            .new_type("Error: { message: str, target: u64, window: u64 };")
             .unwrap();
+
         component_mosaic
             .new_type("ComponentCategory: { name: s32, hidden: bool };")
+            .unwrap();
+
+        component_mosaic
+            .new_type("ComponentEntry: { name: s32, definition: str };")
             .unwrap();
 
         let components: Vec<ComponentCategory> = fs::read_dir("env\\components")
             .unwrap()
             .flat_map(|file_entry| {
                 if let Ok(file) = file_entry {
-                    println!("Loading ComponentCategories{:?}", file);
-                    Self::load_mosaic_components_from_file(
-                        component_mosaic,
-                        editor_mosaic,
-                        &mosaic,
-                        file.path(),
-                    )
+                    if let Ok(contents) = fs::read_to_string(file.path()) {
+                        let parsing = ron::from_str::<Vec<ComponentCategory>>(contents.as_str());
+                        if let Ok(parsed) = parsing {
+                            Self::load_mosaic_components_from_file(
+                                component_mosaic,
+                                editor_mosaic,
+                                &mosaic,
+                                &parsed,
+                            );
+                            vec![]
+                        } else {
+                            println!("{:?}", parsing.clone().unwrap_err().to_string());
+                            editor_mosaic.new_object(
+                                "Error",
+                                pars()
+                                    .set("message", parsing.unwrap_err().to_string())
+                                    .set("target", 0)
+                                    .set("window", 0)
+                                    .ok(),
+                            );
+
+                            vec![]
+                        }
+                    } else {
+                        editor_mosaic.new_object(
+                            "Error",
+                            pars()
+                                .set(
+                                    "message",
+                                    format!(
+                                        "Couldn't open {} components configuration file.",
+                                        file.file_name().to_str().unwrap()
+                                    ),
+                                )
+                                .set("target", 0)
+                                .set("window", 0)
+                                .ok(),
+                        );
+                        vec![]
+                    }
                 } else {
                     vec![]
                 }

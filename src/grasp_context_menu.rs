@@ -64,11 +64,10 @@ impl GraspEditorWindow {
                             .get_dependents()
                             .include_component("ComponentEntry")
                         {
-                            if !item.get("hidden").as_bool()
-                                && s.ui.menu_item(item.get("display").as_s32().to_string())
-                            {
+                            let name = item.get("name").as_s32().to_string();
+                            if s.ui.menu_item(name.clone()) {
                                 for s in &self.editor_data.selected {
-                                    s.add_component(&item.get("name").as_s32().to_string(), void());
+                                    s.add_component(&name, void());
                                 }
 
                                 return true;
@@ -94,8 +93,6 @@ impl GraspEditorWindow {
                 let name = Label(&transformer).query();
 
                 if s.ui.menu_item(name.clone()) {
-                    // println!("Started {:?} process with {:?} function", name, fn_name);
-
                     let request = self.editor_mosaic.new_object(
                         "WindowTransformerRequest",
                         pars()

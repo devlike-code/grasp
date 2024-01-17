@@ -1,14 +1,11 @@
 use std::{env, fmt::Display, fs, str::FromStr, sync::Arc};
 
-use imgui::{Condition, ImString, MouseButton, StyleColor, TreeNodeFlags, WindowFlags};
+use imgui::{Condition, ImString, MouseButton, StyleColor, TreeNodeToken, WindowFlags};
 use itertools::Itertools;
 use log::error;
 use mosaic::{
     capabilities::{ArchetypeSubject, QueueCapability},
-    internals::{
-        void, Datatype, FromByteArray, MosaicCRUD, MosaicIO, Tile, TileFieldSetter, ToByteArray,
-        Value,
-    },
+    internals::{void, Datatype, MosaicCRUD, MosaicIO, Tile, TileFieldSetter, ToByteArray, Value},
     iterators::{
         component_selectors::ComponentSelectors, tile_deletion::TileDeletion,
         tile_filters::TileFilters,
@@ -18,7 +15,7 @@ use mosaic::{
 use crate::{
     core::{
         gui::{docking::GuiViewport, windowing::gui_set_window_focus},
-        math::{bezier::gui_draw_bezier_arrow, Rect2, Vec2},
+        math::{Rect2, Vec2},
         queues,
     },
     editor_state_machine::EditorState,
@@ -222,7 +219,7 @@ impl GraspEditorState {
                 s.ui.text(format!("{}", error.get("target").as_u64()));
                 s.ui.next_column();
 
-                s.ui.text(&String::from_utf8(error.get("message").as_s128()).unwrap());
+                s.ui.text(&error.get("message").as_str());
                 s.ui.next_column();
             }
         }
@@ -274,6 +271,17 @@ impl GraspEditorState {
     }
 
     fn show_properties(&mut self, s: &GuiState) {
+        fn tree<'a, S: AsRef<str>>(
+            s: &'a GuiState,
+            t: &'a S,
+            bullet: bool,
+        ) -> Option<TreeNodeToken<'a>> {
+            s.ui.tree_node_config(t.as_ref())
+                .default_open(true)
+                .bullet(bullet)
+                .push()
+        }
+
         let viewport = GuiViewport::get_main_viewport();
         if let Some(w) =
             s.ui.window(ImString::new("Properties"))
@@ -286,139 +294,156 @@ impl GraspEditorState {
                 selected = selected.into_iter().unique().collect_vec();
 
                 if !selected.is_empty() {
-                    for o in selected {
-                        let header_color = s.ui.push_style_color(
-                            imgui::StyleColor::Header,
-                            [34.0 / 255.0, 43.0 / 255.0, 90.0 / 255.0, 1.0],
-                        );
-                        if s.ui.collapsing_header(
-                            format!("ID: {}##{}-header", o.id, o.id),
-                            TreeNodeFlags::DEFAULT_OPEN,
+                    for selected_tile in selected {
+                        if let Some(_node_token) = tree(
+                            s,
+                            &format!("ID: {}##{}-header", selected_tile.id, selected_tile.id),
+                            false,
                         ) {
-                            header_color.end();
-                            s.ui.indent();
-
-                            for (part, tiles) in &o
+                            for (part, tiles) in &selected_tile
                                 .get_full_archetype()
                                 .into_iter()
                                 .sorted_by(|a, b| (a.1.first().cmp(&b.1.first())))
                                 .collect_vec()
                             {
-                                for tile in tiles.iter().sorted_by(|a, b| a.id.cmp(&b.id)) {
-                                    let subheader_color = s.ui.push_style_color(
-                                        imgui::StyleColor::Header,
-                                        [66.0 / 255.0, 64.0 / 255.0, 123.0 / 255.0, 1.0],
-                                    );
+                                for part_tile in tiles.iter().sorted_by(|a, b| a.id.cmp(&b.id)) {
                                     if let Some(renderer) =
                                         self.component_renderers.get(&part.as_str().into())
                                     {
-                                        if s.ui.collapsing_header(
-                                            format!("{} [ID: {}]", part, tile.id),
-                                            TreeNodeFlags::DEFAULT_OPEN,
-                                        ) {
-                                            subheader_color.end();
-                                            renderer(s, focused_window, tile.clone());
-                                        }
-                                    } else if s.ui.collapsing_header(
-                                        format!("{} [ID: {}]", part, tile.id),
-                                        TreeNodeFlags::DEFAULT_OPEN,
-                                    ) {
-                                        let is_locked =
-                                            self.locked_components.contains(&tile.component);
-                                        let is_header_covered = s.ui.is_item_hovered();
-                                        let is_header_clicked =
-                                            s.ui.is_item_clicked_with_button(MouseButton::Right);
-
-                                        if !is_locked && is_header_covered && is_header_clicked {
-                                            self.queued_component_delete = Some(tile.id);
-                                            s.ui.open_popup(ImString::new("Component Menu"));
-                                        }
-
-                                        subheader_color.end();
-                                        draw_default_property_renderer(
+                                        if let Some(_subnode_token) = tree(
                                             s,
-                                            focused_window,
-                                            tile.clone(),
-                                        );
+                                            &format!("{} [ID: {}]", part, part_tile.id),
+                                            false,
+                                        ) {
+                                            renderer(s, focused_window, part_tile.clone());
+                                        }
+                                    } else {
+                                        let is_bullet = {
+                                            let comp = focused_window
+                                                .document_mosaic
+                                                .component_registry
+                                                .get_component_type(part_tile.component)
+                                                .unwrap();
+
+                                            let fields = comp.get_fields();
+                                            fields.len() == 1
+                                                && fields.first().unwrap().datatype
+                                                    == Datatype::UNIT
+                                        };
+
+                                        if let Some(_subnode_token) = tree(
+                                            s,
+                                            &format!("{} [ID: {}]", part, part_tile.id),
+                                            is_bullet,
+                                        ) {
+                                            let is_locked = self
+                                                .locked_components
+                                                .contains(&part_tile.component);
+                                            let is_header_covered = s.ui.is_item_hovered();
+                                            let is_header_clicked = s
+                                                .ui
+                                                .is_item_clicked_with_button(MouseButton::Right);
+
+                                            if !is_locked && is_header_covered && is_header_clicked
+                                            {
+                                                self.queued_component_delete = Some(part_tile.id);
+                                                s.ui.open_popup(ImString::new("Component Menu"));
+                                            }
+
+                                            draw_default_property_renderer(
+                                                s,
+                                                focused_window,
+                                                part_tile.clone(),
+                                            );
+                                        }
                                     }
                                 }
                             }
-                            s.ui.unindent();
                         }
 
                         s.ui.spacing();
                         s.ui.spacing();
                         s.ui.separator();
                     }
-                } else if s.ui.collapsing_header("Meta", TreeNodeFlags::empty()) {
-                    for o in focused_window
-                        .document_mosaic
-                        .get_all()
-                        .filter_objects()
-                        .exclude_component("Node")
-                    {
-                        let header_color = s.ui.push_style_color(
-                            imgui::StyleColor::Header,
-                            [34.0 / 255.0, 43.0 / 255.0, 90.0 / 255.0, 1.0],
-                        );
-                        if s.ui.collapsing_header(
-                            format!("ID: {}##{}-header", o.id, o.id),
-                            TreeNodeFlags::DEFAULT_OPEN,
-                        ) {
-                            header_color.end();
-                            s.ui.indent();
+                } else {
+                    let is_bullet = {
+                        focused_window
+                            .document_mosaic
+                            .get_all()
+                            .filter_objects()
+                            .exclude_component("Node")
+                            .len()
+                            == 0
+                    };
 
-                            for (part, tiles) in &o
-                                .get_full_archetype()
-                                .into_iter()
-                                .sorted_by(|a, b| (a.1.first().cmp(&b.1.first())))
-                                .collect_vec()
+                    if let Some(_subnode_token) = tree(s, &"Meta", is_bullet) {
+                        for o in focused_window
+                            .document_mosaic
+                            .get_all()
+                            .filter_objects()
+                            .exclude_component("Node")
+                        {
+                            let header_color = s.ui.push_style_color(
+                                imgui::StyleColor::Header,
+                                [34.0 / 255.0, 43.0 / 255.0, 90.0 / 255.0, 1.0],
+                            );
+                            if let Some(_subnode_token) =
+                                tree(s, &format!("ID: {}##{}-header", o.id, o.id), false)
                             {
-                                for tile in tiles.iter().sorted_by(|a, b| a.id.cmp(&b.id)) {
-                                    let subheader_color = s.ui.push_style_color(
-                                        imgui::StyleColor::Header,
-                                        [66.0 / 255.0, 64.0 / 255.0, 123.0 / 255.0, 1.0],
-                                    );
-                                    if let Some(renderer) =
-                                        self.component_renderers.get(&part.as_str().into())
-                                    {
-                                        if s.ui.collapsing_header(
-                                            format!("{} [ID: {}]", part, tile.id),
-                                            TreeNodeFlags::DEFAULT_OPEN,
-                                        ) {
-                                            subheader_color.end();
-                                            renderer(s, focused_window, tile.clone());
-                                        }
-                                    } else if s.ui.collapsing_header(
-                                        format!("{} [ID: {}]", part, tile.id),
-                                        TreeNodeFlags::DEFAULT_OPEN,
-                                    ) {
-                                        let is_locked =
-                                            self.locked_components.contains(&tile.component);
-                                        let is_header_covered = s.ui.is_item_hovered();
-                                        let is_header_clicked =
-                                            s.ui.is_item_clicked_with_button(MouseButton::Right);
+                                header_color.end();
 
-                                        if !is_locked && is_header_covered && is_header_clicked {
-                                            self.queued_component_delete = Some(tile.id);
-                                            s.ui.open_popup(ImString::new("Component Menu"));
-                                        }
-
-                                        subheader_color.end();
-                                        draw_default_property_renderer(
-                                            s,
-                                            focused_window,
-                                            tile.clone(),
+                                for (part, tiles) in &o
+                                    .get_full_archetype()
+                                    .into_iter()
+                                    .sorted_by(|a, b| (a.1.first().cmp(&b.1.first())))
+                                    .collect_vec()
+                                {
+                                    for tile in tiles.iter().sorted_by(|a, b| a.id.cmp(&b.id)) {
+                                        let subheader_color = s.ui.push_style_color(
+                                            imgui::StyleColor::Header,
+                                            [66.0 / 255.0, 64.0 / 255.0, 123.0 / 255.0, 1.0],
                                         );
+                                        if let Some(renderer) =
+                                            self.component_renderers.get(&part.as_str().into())
+                                        {
+                                            if let Some(_subnode_token) = tree(
+                                                s,
+                                                &format!("{} [ID: {}]", part, tile.id),
+                                                false,
+                                            ) {
+                                                subheader_color.end();
+                                                renderer(s, focused_window, tile.clone());
+                                            }
+                                        } else if let Some(_subnode_token) =
+                                            tree(s, &format!("{} [ID: {}]", part, tile.id), false)
+                                        {
+                                            let is_locked =
+                                                self.locked_components.contains(&tile.component);
+                                            let is_header_covered = s.ui.is_item_hovered();
+                                            let is_header_clicked = s
+                                                .ui
+                                                .is_item_clicked_with_button(MouseButton::Right);
+
+                                            if !is_locked && is_header_covered && is_header_clicked
+                                            {
+                                                self.queued_component_delete = Some(tile.id);
+                                                s.ui.open_popup(ImString::new("Component Menu"));
+                                            }
+
+                                            draw_default_property_renderer(
+                                                s,
+                                                focused_window,
+                                                tile.clone(),
+                                            );
+                                        }
                                     }
                                 }
                             }
-                            s.ui.unindent();
-                        }
 
-                        s.ui.spacing();
-                        s.ui.spacing();
-                        s.ui.separator();
+                            s.ui.spacing();
+                            s.ui.spacing();
+                            s.ui.separator();
+                        }
                     }
                 }
 
@@ -578,9 +603,7 @@ fn draw_default_property_renderer(ui: &GuiState, tab: &mut GraspEditorWindow, d:
             Value::F32(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
             Value::F64(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
             Value::S32(v) => draw_property_value(ui, tab, &d, name.as_str(), v.to_string()),
-            Value::S128(v) => {
-                draw_property_value(ui, tab, &d, name.as_str(), String::from_byte_array(&v))
-            }
+            Value::STR(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
 
             Value::BOOL(v) => {
                 let mut b = v;
@@ -626,10 +649,6 @@ fn draw_property_value<T: Display + FromStr + ToByteArray>(
     state.ui.next_column();
     state.ui.set_next_item_width(-1.0);
 
-    let color = state.ui.push_style_color(
-        StyleColor::FrameBg,
-        [98.0 / 255.0, 86.0 / 255.0, 160.0 / 255.0, 1.0],
-    );
     match datatype {
         Datatype::S32 => {
             state
@@ -643,7 +662,7 @@ fn draw_property_value<T: Display + FromStr + ToByteArray>(
             }
         }
 
-        Datatype::S128 => {
+        Datatype::STR => {
             state
                 .ui
                 .input_text_multiline(
@@ -653,10 +672,6 @@ fn draw_property_value<T: Display + FromStr + ToByteArray>(
                 )
                 .enter_returns_true(true)
                 .build();
-
-            if text.len() >= 128 {
-                text = text[0..128].to_string();
-            }
         }
 
         _ => {
@@ -667,7 +682,7 @@ fn draw_property_value<T: Display + FromStr + ToByteArray>(
                 .build();
         }
     };
-    color.end();
+
     state
         .ui
         .columns(1, format!("##{}.{}-c1", tile.id, name), false);

@@ -4,6 +4,7 @@ use imgui::sys::cty::c_char;
 pub mod docking;
 pub mod imgui_keys;
 pub mod windowing;
+pub mod components;
 
 pub fn calc_text_size<T: AsRef<str>>(text: T) -> [f32; 2] {
     calc_text_size_with_opts(text, false, -1.0)

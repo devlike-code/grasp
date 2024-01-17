@@ -1,0 +1,127 @@
+[
+    ComponentCategory(
+        name: "Core",
+        display: "Core",
+        hidden: true,
+        components: [
+            "void: unit;",
+            "Error: { message: str, target: u64, window: u64 };",
+            "ComponentEntry: { name: s32, definition: str };",
+            "ComponentCategory: { name: s32, hidden: bool };",
+        ]
+    ),
+
+    ComponentCategory(
+        name: "Core.Editor",
+        display: "Core.Editor",
+        hidden: true,
+        components: [
+            "Node: unit;",
+            "Arrow: unit;",
+            "EditorState: unit;",
+            "Label: s32;",
+            "Position: { x: f32, y: f32 };",
+            "Offset: { x: f32, y: f32 };",
+        ]
+   ),
+
+    ComponentCategory(
+        name: "Core.Editor.Queues",
+        display: "Core.Editor.Queues",
+        hidden: true,
+        components: [
+            "WindowTransformerQueue: unit;",
+            "NewWindowRequestQueue: unit;",
+            "QuadtreeUpdateRequestQueue: unit;",
+            "ToastRequestQueue: unit;",
+            "EditorWindowQueue: unit;",
+            "CloseWindowRequestQueue: unit;",
+            "NamedFocusWindowRequestQueue: unit;",
+        ]
+    ),
+
+    ComponentCategory(
+        name: "Core.Editor.Requests",
+        display: "Core.Editor.Requests",
+        hidden: true,
+        components: [
+            "CloseWindowRequest: unit;",
+            "DirectWindowRequest: unit;",
+            "FocusWindowRequest: unit;",
+            "QuadtreeUpdateRequest: unit;",
+            "ToastRequest: str;",
+            "NewWindowRequest: str;",
+            "NamedFocusWindowRequest: str;",
+            "WindowTransformerRequest: { transform: u64, window_index: u64 };",
+        ]
+    ),
+
+    ComponentCategory(
+        name: "Core.Group",
+        display: "Groups",
+        hidden: false,
+        components: [
+            "Group: str;",
+            "GroupOwner: str;",
+        ]
+    ),
+
+    ComponentCategory(
+        name: "Core.Selection",
+        display: "Selection",
+        hidden: false,
+        components: [
+            "Selection: u64;",
+            "SelectionOwner: unit;",
+        ]
+    ),
+
+    ComponentCategory(
+        name: "Core.Queue",
+        display: "Queue",
+        hidden: false,
+        components: [
+            "Queue: unit;",
+            "Enqueued: unit;",
+            "QueueSentinel: unit;",
+            "ToQueueSentinel: unit;",
+        ]
+    ),
+
+    ComponentCategory(
+        name: "Core.Tuple",
+        display: "Tuple",
+        hidden: false,
+        components: [
+            "Tuple: unit;",
+            "TupleOwner: unit;",
+            "TupleFirst: unit;",
+            "TupleSecond: unit;",
+        ]
+    ),
+
+    ComponentCategory(
+        name: "Core.Validation",
+        display: "Validation",
+        hidden: false,
+        components: [
+            "HasComponent: str;",
+            "NonEmptyLabel: unit;",
+            "NoArrowsInto: unit;",
+            "NoArrowsFrom: unit;",
+        ]
+    ),
+
+    ComponentCategory(
+        name: "Core.Process",
+        display: "Processes",
+        hidden: false,
+        components: [
+            "Process: str;",
+            "ProcessParameter: str;",
+            "ParameterBinding: str;",
+            "ProcessResult: unit;",
+            "ResultBinding: unit;",
+        ]
+    )
+]
