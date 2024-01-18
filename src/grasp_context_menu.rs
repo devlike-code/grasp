@@ -8,7 +8,7 @@ use mosaic::{
 };
 
 use crate::{
-    core::{math::Vec2, queues},
+    core::{math::Vec2, structures::grasp_queues},
     editor_state::windows::GraspEditorWindow,
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
     grasp_queues::{CloseWindowRequestQueue, WindowTransformerQueue},
@@ -101,7 +101,7 @@ impl GraspEditorWindow {
                             .ok(),
                     );
 
-                    queues::enqueue(WindowTransformerQueue, request);
+                    grasp_queues::enqueue(WindowTransformerQueue, request);
 
                     return true;
                 }
@@ -127,7 +127,7 @@ impl GraspEditorWindow {
 
             if s.ui.menu_item("Close") {
                 let request = editor_mosaic.new_object("CloseWindowRequest", void());
-                queues::enqueue(CloseWindowRequestQueue, request);
+                grasp_queues::enqueue(CloseWindowRequestQueue, request);
                 menu_token.end();
                 return true;
             }

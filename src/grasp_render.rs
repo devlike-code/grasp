@@ -21,6 +21,7 @@ use itertools::Itertools;
 use mosaic::capabilities::ArchetypeSubject;
 use mosaic::internals::Tile;
 use mosaic::internals::TileFieldEmptyQuery;
+use mosaic::internals::S32;
 use mosaic::internals::{MosaicIO, TileFieldSetter};
 use mosaic::iterators::component_selectors::ComponentSelectors;
 use mosaic::iterators::tile_getters::TileGetters;
@@ -80,16 +81,17 @@ fn default_renderer_draw_object(
                     .input_text(format!("##{}-self", tile.id), text)
                     .auto_select_all(true)
                     .enter_returns_true(true)
-                    .build()
+                    .build() 
                 {
                     if text.len() >= 32 {
                         *text = text[0..32].to_string();
                     }
 
-                    if let Ok(t) = text.parse::<String>() {
+                    if let Ok(t) = text.parse::<S32>() {
                         if window.editor_data.previous_text != *text {
                             if let Some(mut label) = tile.clone().get_component("Label") {
                                 label.set("self", t);
+                                window.changed = true;
                                 editor_mosaic.request_quadtree_update();
                             } else {
                                 cancel = false;
@@ -188,10 +190,12 @@ fn default_renderer_draw_arrow(
                         *text = text[0..32].to_string();
                     }
 
-                    if let Ok(t) = text.parse::<String>() {
+                    if let Ok(t) = text.parse::<S32>() {
                         if window.editor_data.previous_text != *text {
                             if let Some(mut label) = tile.clone().get_component("Label") {
+                                println!("SETTING S32!");
                                 label.set("self", t);
+                                window.changed = true;
                                 editor_mosaic.request_quadtree_update();
                             } else {
                                 cancel = false;

@@ -1,4 +1,4 @@
 pub mod gui;
 pub mod has_mosaic;
 pub mod math;
-pub mod queues;
+pub mod structures;

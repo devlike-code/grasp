@@ -13,7 +13,7 @@ use std::vec::IntoIter;
 use crate::{
     core::{
         gui::windowing::gui_set_window_focus,
-        queues::{self, dequeue, GraspQueue},
+        structures::grasp_queues::{self, dequeue, GraspQueue},
     },
     editor_state::foundation::GraspEditorState,
 };
@@ -56,7 +56,8 @@ impl GraspEditorState {
     }
 
     fn process_named_focus_window_queue(&mut self) {
-        while let Some(request) = queues::dequeue(NamedFocusWindowRequestQueue, &self.editor_mosaic)
+        while let Some(request) =
+            grasp_queues::dequeue(NamedFocusWindowRequestQueue, &self.editor_mosaic)
         {
             let data = request.get("self").as_s32();
 
@@ -74,14 +75,17 @@ impl GraspEditorState {
     }
 
     fn process_new_window_queue(&mut self) {
-        while let Some(request) = queues::dequeue(NewWindowRequestQueue, &self.editor_mosaic) {
+        while let Some(request) = grasp_queues::dequeue(NewWindowRequestQueue, &self.editor_mosaic)
+        {
             self.new_window(None);
             request.iter().delete();
         }
     }
 
     fn process_close_window_queue(&mut self) {
-        while let Some(request) = queues::dequeue(CloseWindowRequestQueue, &self.editor_mosaic) {
+        while let Some(request) =
+            grasp_queues::dequeue(CloseWindowRequestQueue, &self.editor_mosaic)
+        {
             self.close_window(self.window_list.get_focused().unwrap().window_tile.clone());
             request.iter().delete();
         }
@@ -91,7 +95,7 @@ impl GraspEditorState {
         while let Some(request) = dequeue(QuadtreeUpdateRequestQueue, &self.editor_mosaic) {
             let all_window_queues = self.iter_all_windows();
             for window_queue in all_window_queues {
-                queues::enqueue_direct(
+                grasp_queues::enqueue_direct(
                     window_queue,
                     self.editor_mosaic
                         .new_object("QuadtreeUpdateRequest", void()),

@@ -16,7 +16,7 @@ use crate::{
     core::{
         gui::{docking::GuiViewport, windowing::gui_set_window_focus},
         math::{Rect2, Vec2},
-        queues,
+        structures::grasp_queues,
     },
     editor_state_machine::EditorState,
     grasp_queues::CloseWindowRequestQueue,
@@ -176,12 +176,12 @@ impl GraspEditorState {
 
                     if title_bar_rect.contains(s.ui.io().mouse_pos.into())
                         && s.ui.is_mouse_clicked(imgui::MouseButton::Middle)
-                        && queues::is_empty(CloseWindowRequestQueue, &self.editor_mosaic)
+                        && grasp_queues::is_empty(CloseWindowRequestQueue, &self.editor_mosaic)
                     {
                         let request = window
                             .editor_mosaic
                             .new_object("CloseWindowRequest", void());
-                        queues::enqueue(CloseWindowRequestQueue, request);
+                        grasp_queues::enqueue(CloseWindowRequestQueue, request);
                     }
                 });
 

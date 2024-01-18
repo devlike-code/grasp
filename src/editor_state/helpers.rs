@@ -6,7 +6,7 @@ use mosaic::{
 };
 
 use crate::{
-    core::{has_mosaic::HasMosaic, queues},
+    core::{has_mosaic::HasMosaic, structures::grasp_queues},
     grasp_queues::{NamedFocusWindowRequestQueue, QuadtreeUpdateRequestQueue},
 };
 
@@ -28,14 +28,14 @@ impl<'a> TileFieldEmptyQuery for DisplayName<'a> {
 
 pub trait RequireWindowFocus: HasMosaic {
     fn require_window_focus(&self, window: Tile) {
-        queues::enqueue_direct(
+        grasp_queues::enqueue_direct(
             window,
             self.get_mosaic().new_object("FocusWindowRequest", void()),
         );
     }
 
     fn require_named_window_focus(&self, name: &str) {
-        queues::enqueue(
+        grasp_queues::enqueue(
             NamedFocusWindowRequestQueue,
             self.get_mosaic()
                 .new_object("NamedFocusWindowRequest", par(name)),
@@ -57,7 +57,7 @@ pub trait QuadtreeUpdateCapability {
 
 impl QuadtreeUpdateCapability for Arc<Mosaic> {
     fn request_quadtree_update(&self) {
-        queues::enqueue(
+        grasp_queues::enqueue(
             QuadtreeUpdateRequestQueue,
             self.new_object("QuadtreeUpdateRequest", void()),
         );

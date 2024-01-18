@@ -113,15 +113,33 @@
     ),
 
     ComponentCategory(
-        name: "Core.Process",
-        display: "Processes",
+        name: "Core.Procedures",
+        display: "Procedures",
         hidden: false,
         components: [
-            "Process: str;",
-            "ProcessParameter: str;",
-            "ParameterBinding: str;",
-            "ProcessResult: unit;",
-            "ResultBinding: unit;",
+            "Procedure: str;",
+            "ProcedureArgument: s32;",
+            "ProcedureResult: s32;",
+        ]
+    ),
+
+    ComponentCategory(
+        name: "Core.PatternMatching",
+        display: "Pattern Matching",
+        hidden: false,
+        components: [
+            "PatternMatchCandidate: s32;",
+            "PatternMatchBinding: s32;",
+        ]
+    )
+
+    ComponentCategory(
+        name: "Core.Data",
+        display: "Data Structures",
+        hidden: false,
+        components: [
+            "List: unit;",
+            "Pair: { first: u64, second: u64 };",
         ]
     )
 ]

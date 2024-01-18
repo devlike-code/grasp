@@ -13,6 +13,7 @@ mod grasp_queues;
 mod grasp_render;
 mod grasp_transitions;
 mod grasp_update;
+mod querying;
 mod seq;
 mod transformers;
 mod utilities;
