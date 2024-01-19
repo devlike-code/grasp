@@ -90,13 +90,13 @@ impl GraspEditorWindow {
                 .get_targets();
 
             for transformer in transformers {
-                let name = Label(&transformer).query();
+                let name = transformer.get("self").as_s32().to_string();
 
                 if s.ui.menu_item(name.clone()) {
                     let request = self.editor_mosaic.new_object(
                         "WindowTransformerRequest",
                         pars()
-                            .set("transform", transformer.id as u64)
+                            .set("transform", name.as_str())
                             .set("window_index", self.window_tile.id as u64)
                             .ok(),
                     );

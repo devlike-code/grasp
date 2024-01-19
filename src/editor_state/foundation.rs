@@ -9,7 +9,7 @@ use itertools::Itertools;
 use mosaic::{
     capabilities::{ArchetypeSubject, QueueCapability, QueueTile},
     internals::{
-        pars, void, ComponentValuesBuilderSetter, Mosaic, MosaicCRUD, MosaicIO,
+        par, pars, void, ComponentValuesBuilderSetter, EntityId, Mosaic, MosaicCRUD, MosaicIO,
         MosaicTypelevelCRUD, Tile, S32,
     },
     iterators::{component_selectors::ComponentSelectors, tile_deletion::TileDeletion},
@@ -22,6 +22,7 @@ use crate::{
     editor_state_machine::EditorState,
     grasp_editor_window_list::GraspEditorWindowList,
     grasp_render,
+    transformers::finite_state_transformer,
 };
 
 use super::{
@@ -30,7 +31,7 @@ use super::{
     view::{two_float_property_xy_renderer, ComponentRenderer},
 };
 
-pub type TransformerFn = Box<dyn Fn(&Tile) -> Tile + 'static>;
+pub type TransformerFn = Box<dyn Fn(&Tile, &Tile) + 'static>;
 
 #[allow(dead_code)]
 pub struct GraspEditorState {
@@ -49,20 +50,28 @@ pub struct GraspEditorState {
 }
 
 impl GraspEditorState {
+    fn add_transformer(&mut self, name: &str, f: TransformerFn) {
+        self.transformer_functions.insert(name.to_string(), f);
+
+        self.transformer_mosaic.new_object("Transformer", par(name));
+    }
+
     fn load_transformers(&mut self) {
-        fs::read_dir("env\\transformers")
-            .unwrap()
-            .for_each(|file_entry| {
-                if let Ok(file) = file_entry {
-                    println!("Loading Transformers {:?}", file);
-                    GraspEditorState::load_mosaic_transformers_from_file(
-                        &self.component_mosaic,
-                        &self.editor_mosaic,
-                        &self.transformer_mosaic,
-                        file.path(),
-                    )
-                }
-            });
+        self.add_transformer("FSM", Box::new(finite_state_transformer));
+
+        // fs::read_dir("env\\transformers")
+        //     .unwrap()
+        //     .for_each(|file_entry| {
+        //         if let Ok(file) = file_entry {
+        //             println!("Loading Transformers {:?}", file);
+        //             GraspEditorState::load_mosaic_transformers_from_file(
+        //                 &self.component_mosaic,
+        //                 &self.editor_mosaic,
+        //                 &self.transformer_mosaic,
+        //                 file.path(),
+        //             )
+        //         }
+        //     });
     }
 
     pub fn new() -> Self {
