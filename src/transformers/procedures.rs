@@ -2,8 +2,8 @@ use std::{collections::HashMap, sync::Arc};
 
 use mosaic::{
     internals::{
-        par, pars, ComponentValuesBuilderSetter, Mosaic, MosaicCRUD, MosaicIO, MosaicTypelevelCRUD,
-        Tile,
+        par, pars, void, ComponentValuesBuilderSetter, Mosaic, MosaicCRUD, MosaicIO,
+        MosaicTypelevelCRUD, Tile,
     },
     iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
 };
@@ -13,12 +13,18 @@ pub trait Procedure {
     fn add_argument(&self, proc: &Tile, name: &str, tile: &Tile);
     fn get_argument(&self, proc: &Tile, name: &str) -> Option<Tile>;
     fn get_arguments(&self, proc: &Tile) -> HashMap<String, Tile>;
-    fn add_result(&self, proc: &Tile, name: &str, result: &Tile);
-    fn get_results(&self, proc: &Tile) -> HashMap<String, Tile>;
+    fn add_result(&self, proc: &Tile, result: &Tile);
+    fn get_results(&self, proc: &Tile) -> Vec<Tile>;
     fn result_count(&self, proc: &Tile) -> usize;
 }
 
 pub struct ProcedureTile(pub Tile);
+
+impl AsRef<Tile> for ProcedureTile {
+    fn as_ref(&self) -> &Tile {
+        &self.0
+    }
+}
 
 impl ProcedureTile {
     pub fn add_argument(&self, name: &str, tile: &Tile) {
@@ -33,11 +39,11 @@ impl ProcedureTile {
         self.0.mosaic.get_arguments(&self.0)
     }
 
-    pub fn add_result(&self, name: &str, result: &Tile) {
-        self.0.mosaic.add_result(&self.0, name, result);
+    pub fn add_result<T: AsRef<Tile>>(&self, result: T) {
+        self.0.mosaic.add_result(&self.0, result.as_ref());
     }
 
-    pub fn get_results(&self) -> HashMap<String, Tile> {
+    pub fn get_results(&self) -> Vec<Tile> {
         self.0.mosaic.get_results(&self.0)
     }
 
@@ -51,7 +57,7 @@ impl Procedure for Arc<Mosaic> {
         self.new_type("Procedure: str;").unwrap();
         self.new_type("ProcedureArgument: { name: s32, value: u64 };")
             .unwrap();
-        self.new_type("ProcedureResult: s32;").unwrap();
+        self.new_type("ProcedureResult: unit;").unwrap();
 
         ProcedureTile(self.new_object("Procedure", par(name.to_string())))
     }
@@ -94,19 +100,19 @@ impl Procedure for Arc<Mosaic> {
         args
     }
 
-    fn add_result(&self, proc: &Tile, name: &str, result: &Tile) {
-        println!("Adding result: {:?} -> {:?}", name, result);
-        proc.arrow_to(result, "ProcedureResult", par(name));
+    fn add_result(&self, proc: &Tile, result: &Tile) {
+        println!("Adding result: {:?}", result);
+        proc.arrow_to(result, "ProcedureResult", void());
     }
 
-    fn get_results(&self, proc: &Tile) -> HashMap<String, Tile> {
-        let mut res = HashMap::new();
+    fn get_results(&self, proc: &Tile) -> Vec<Tile> {
+        let mut res = vec![];
         for arrow in proc
             .iter()
             .get_arrows()
             .include_component("ProcedureResult")
         {
-            res.insert(arrow.get("self").as_s32().to_string(), arrow.target());
+            res.push(arrow.target());
         }
 
         res

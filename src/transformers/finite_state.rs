@@ -131,50 +131,10 @@ pub fn finite_state_transformer(initial_state: &Tile, window: &Tile) {
     }
 }
 
-trait FSM {
+pub trait FSM {
     type State;
     type Transition: Copy + Clone;
 
     fn get_current_state(&self) -> Self::State;
     fn react_to(&self, trigger: Self::Transition) -> Option<Self::State>;
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum PlayerState {
-    C,
-    A,
-    D,
-    B,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum PlayerTransition {
-    f,
-    g,
-    h,
-}
-
-pub struct PlayerFSM {
-    state: PlayerState,
-}
-
-impl FSM for PlayerFSM {
-    type State = PlayerState;
-    type Transition = PlayerTransition;
-
-    fn get_current_state(&self) -> Self::State {
-        self.state
-    }
-
-    fn react_to(&self, trigger: Self::Transition) -> Option<Self::State> {
-        match (self.state, trigger) {
-            (PlayerState::C, PlayerTransition::f) => Some(PlayerState::D),
-            (PlayerState::A, PlayerTransition::g) => Some(PlayerState::B),
-            (PlayerState::A, PlayerTransition::h) => Some(PlayerState::C),
-            (PlayerState::A, PlayerTransition::f) => Some(PlayerState::D),
-            (PlayerState::B, PlayerTransition::f) => Some(PlayerState::C),
-            (PlayerState::B, PlayerTransition::h) => Some(PlayerState::D),
-            _ => None,
-        }
-    }
 }
