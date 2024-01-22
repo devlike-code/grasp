@@ -122,7 +122,6 @@ impl GraspEditorState {
                             window.sense(s, front_window_id, caught_events);
                         }
                     }
-                    println!("SENSE DONE");
 
                     if title_bar_rect.contains(s.ui.io().mouse_pos.into())
                         && s.ui.is_mouse_double_clicked(imgui::MouseButton::Left)

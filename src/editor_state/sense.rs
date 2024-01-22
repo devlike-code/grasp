@@ -88,7 +88,6 @@ impl GraspEditorWindow {
             }
         }
 
-        println!("SENSE START");
         if caught_events.contains(&hash_input("all")) {
             return;
         }
