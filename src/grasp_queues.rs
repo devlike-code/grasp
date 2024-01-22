@@ -59,7 +59,7 @@ impl GraspEditorState {
         while let Some(request) =
             grasp_queues::dequeue(NamedFocusWindowRequestQueue, &self.editor_mosaic)
         {
-            let data = request.get("self").as_s32();
+            let data = request.get("self").as_str();
 
             if let Some(pos) = self
                 .window_list

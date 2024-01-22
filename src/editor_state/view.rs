@@ -122,6 +122,7 @@ impl GraspEditorState {
                             window.sense(s, front_window_id, caught_events);
                         }
                     }
+                    println!("SENSE DONE");
 
                     if title_bar_rect.contains(s.ui.io().mouse_pos.into())
                         && s.ui.is_mouse_double_clicked(imgui::MouseButton::Left)
@@ -682,7 +683,7 @@ fn draw_property_value<T: Display + FromStr + ToByteArray>(
                 .ui
                 .input_text_multiline(
                     format!("{}##{}", name, id),
-                    &mut window.editor_data.text,
+                    &mut text,
                     [rect[0], rect[1].min(150.0)],
                 )
                 .enter_returns_true(true)

@@ -65,9 +65,11 @@ impl GraspEditorWindow {
                             .include_component("ComponentEntry")
                         {
                             let name = item.get("name").as_s32().to_string();
+
                             if s.ui.menu_item(name.clone()) {
                                 for s in &self.editor_data.selected {
                                     s.add_component(&name, void());
+                                    self.changed = true;
                                 }
 
                                 return true;

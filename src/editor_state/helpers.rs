@@ -38,7 +38,7 @@ pub trait RequireWindowFocus: HasMosaic {
         grasp_queues::enqueue(
             NamedFocusWindowRequestQueue,
             self.get_mosaic()
-                .new_object("NamedFocusWindowRequest", par(name)),
+                .new_object("NamedFocusWindowRequest", par(name.to_string())),
         );
     }
 }

@@ -34,8 +34,7 @@
             "WindowTransformerQueue: unit;",
             "NewWindowRequestQueue: unit;",
             "QuadtreeUpdateRequestQueue: unit;",
-            "ToastRequestQueue: unit;",
-            "EditorWindowQueue: unit;",
+           "EditorWindowQueue: unit;",
             "CloseWindowRequestQueue: unit;",
             "NamedFocusWindowRequestQueue: unit;",
         ]
@@ -49,21 +48,9 @@
             "CloseWindowRequest: unit;",
             "DirectWindowRequest: unit;",
             "FocusWindowRequest: unit;",
-            "QuadtreeUpdateRequest: unit;",
-            "ToastRequest: str;",
-            "NewWindowRequest: str;",
+            "QuadtreeUpdateRequest: unit;",           
             "NamedFocusWindowRequest: str;",
             "WindowTransformerRequest: { transform: s32, window_index: u64 };",
-        ]
-    ),
-
-    ComponentCategory(
-        name: "Core.Group",
-        display: "Groups",
-        hidden: false,
-        components: [
-            "Group: str;",
-            "GroupOwner: str;",
         ]
     ),
 
