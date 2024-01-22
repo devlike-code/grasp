@@ -22,23 +22,25 @@ use crate::{
     editor_state_machine::EditorState,
     grasp_editor_window_list::GraspEditorWindowList,
     grasp_render,
-    transformers::finite_state_transformer,
+    transformers::{finite_state_transformer, select},
 };
 
 use super::{
     categories::ComponentCategory,
     network::Networked,
+    selection::selection_renderer,
     view::{two_float_property_xy_renderer, ComponentRenderer},
 };
 
-pub type TransformerFn = Box<dyn Fn(&Tile, &Tile) + 'static>;
+pub type TransformerFn = Box<dyn Fn(&[Tile], &Tile) + 'static>;
 
 #[allow(dead_code)]
 pub struct GraspEditorState {
     pub editor_mosaic: Arc<Mosaic>,
     pub component_mosaic: Arc<Mosaic>,
     pub transformer_mosaic: Arc<Mosaic>,
-    pub component_renderers: HashMap<S32, ComponentRenderer>,
+    pub component_entity_renderers: HashMap<S32, ComponentRenderer>,
+    pub component_property_renderers: HashMap<S32, ComponentRenderer>,
     pub window_list: GraspEditorWindowList,
     pub editor_state_tile: Tile,
     pub new_tab_request_queue: QueueTile,
@@ -57,21 +59,8 @@ impl GraspEditorState {
     }
 
     fn load_transformers(&mut self) {
+        self.add_transformer("Make Selection", Box::new(select));
         self.add_transformer("FSM", Box::new(finite_state_transformer));
-
-        // fs::read_dir("env\\transformers")
-        //     .unwrap()
-        //     .for_each(|file_entry| {
-        //         if let Ok(file) = file_entry {
-        //             println!("Loading Transformers {:?}", file);
-        //             GraspEditorState::load_mosaic_transformers_from_file(
-        //                 &self.component_mosaic,
-        //                 &self.editor_mosaic,
-        //                 &self.transformer_mosaic,
-        //                 file.path(),
-        //             )
-        //         }
-        //     });
     }
 
     pub fn new() -> Self {
@@ -112,7 +101,8 @@ impl GraspEditorState {
         named_focus_window_request_queue.add_component("NamedFocusWindowRequestQueue", void());
 
         let mut instance = Self {
-            component_renderers: HashMap::new(),
+            component_entity_renderers: HashMap::new(),
+            component_property_renderers: HashMap::new(),
             editor_state_tile,
             new_tab_request_queue: new_window_request_queue,
             refresh_quadtree_queue,
@@ -132,10 +122,14 @@ impl GraspEditorState {
         };
 
         instance
-            .component_renderers
+            .component_entity_renderers
+            .insert("Selection".into(), Box::new(selection_renderer));
+
+        instance
+            .component_property_renderers
             .insert("Position".into(), Box::new(two_float_property_xy_renderer));
         instance
-            .component_renderers
+            .component_property_renderers
             .insert("Offset".into(), Box::new(two_float_property_xy_renderer));
 
         instance.initialize_networked();

@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::f32::consts;
 
 use crate::core::gui::windowing::gui_draw_image;
@@ -5,6 +6,7 @@ use crate::core::math::bezier::gui_draw_bezier;
 use crate::core::math::bezier::gui_draw_bezier_arrow;
 use crate::core::math::Vec2;
 use crate::editor_state::helpers::QuadtreeUpdateCapability;
+use crate::editor_state::view::ComponentRenderer;
 use crate::editor_state::windows::GraspEditorWindow;
 use crate::editor_state_machine::EditorState;
 use crate::editor_state_machine::EditorStateTrigger::*;
@@ -26,9 +28,10 @@ use mosaic::internals::TileFieldEmptyQuery;
 use mosaic::internals::S32;
 use mosaic::internals::{MosaicIO, TileFieldSetter};
 use mosaic::iterators::component_selectors::ComponentSelectors;
+use mosaic::iterators::tile_filters::TileFilters;
 use mosaic::iterators::tile_getters::TileGetters;
 
-pub type GraspRenderer = fn(&mut GraspEditorWindow, &GuiState);
+pub type GraspRenderer = fn(&mut GraspEditorWindow, &GuiState, &HashMap<S32, ComponentRenderer>);
 
 fn gui_set_cursor_pos(x: f32, y: f32) {
     unsafe {
@@ -229,8 +232,25 @@ fn default_renderer_draw_arrow(
     }
 }
 
-pub fn default_renderer_draw(window: &mut GraspEditorWindow, s: &GuiState) {
+pub fn default_renderer_draw(
+    window: &mut GraspEditorWindow,
+    s: &GuiState,
+    component_renderers: &HashMap<S32, ComponentRenderer>, // TODO: kill more
+) {
     let mut painter = s.ui.get_window_draw_list();
+
+    let meta = window
+        .document_mosaic
+        .get_all()
+        .filter_objects()
+        .exclude_component("Position")
+        .collect_vec();
+
+    for obj in &meta {
+        if let Some(renderer) = component_renderers.get(&obj.component) {
+            renderer(s, window, obj.clone());
+        }
+    }
 
     let arrows = window
         .document_mosaic

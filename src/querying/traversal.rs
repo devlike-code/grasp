@@ -112,21 +112,42 @@ impl TraversalOperator<'_> {
             .into_iter()
     }
 
+    pub fn get_self_loops(&self, tile: &Tile) -> IntoIter<Tile> {
+        self.filter_traversal(
+            tile.clone()
+                .into_iter()
+                .get_arrows_from()
+                .filter(|a| a.is_loop())
+                .unique(),
+        )
+        .into_iter()
+    }
+
     pub fn in_degree(&self, tile: &Tile) -> usize {
         self.filter_traversal(tile.clone().into_iter().get_arrows_into())
             .len()
     }
 
     pub fn get_forward_neighbors(&self, tile: &Tile) -> IntoIter<Tile> {
-        self.filter_traversal(tile.clone().into_iter().get_arrows_from())
-            .into_iter()
-            .get_targets()
+        self.filter_traversal(
+            tile.clone()
+                .into_iter()
+                .get_arrows_from()
+                .filter(|a| !a.is_loop()),
+        )
+        .into_iter()
+        .get_targets()
     }
 
     pub fn get_backward_neighbors(&self, tile: &Tile) -> IntoIter<Tile> {
-        self.filter_traversal(tile.clone().into_iter().get_arrows_into())
-            .into_iter()
-            .get_sources()
+        self.filter_traversal(
+            tile.clone()
+                .into_iter()
+                .get_arrows_into()
+                .filter(|a| !a.is_loop()),
+        )
+        .into_iter()
+        .get_sources()
     }
 
     pub fn get_neighbors(&self, tile: &Tile) -> IntoIter<Tile> {

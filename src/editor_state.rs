@@ -3,6 +3,7 @@ pub mod file_operations;
 pub mod foundation;
 pub mod helpers;
 pub mod network;
+mod selection;
 mod sense;
 pub mod snapshot;
 pub mod view;

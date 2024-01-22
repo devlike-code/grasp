@@ -19,7 +19,8 @@ fn make_enum(name: &str, members: &[String]) -> String {
     )
 }
 
-pub fn finite_state_transformer(initial_state: &Tile, window: &Tile) {
+pub fn finite_state_transformer(initial_state: &[Tile], window: &Tile) {
+    let initial_state = initial_state.first().unwrap();
     let document = Arc::clone(&initial_state.mosaic);
     let mut result = vec![];
 

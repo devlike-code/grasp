@@ -170,7 +170,8 @@ impl GraspEditorState {
                         }
                     }
 
-                    (window.renderer)(window, s);
+                    (window.renderer)(window, s, &self.component_entity_renderers);
+
                     window.draw_debug(s);
                     window.update_context_menu(front_window_id, s);
                     window.context_popup(s);
@@ -320,7 +321,7 @@ impl GraspEditorState {
                             {
                                 for part_tile in tiles.iter().sorted_by(|a, b| a.id.cmp(&b.id)) {
                                     if let Some(renderer) =
-                                        self.component_renderers.get(&part.as_str().into())
+                                        self.component_property_renderers.get(&part.as_str().into())
                                     {
                                         if let Some(_subnode_token) =
                                             tree(s, &part.to_string(), false)
@@ -412,8 +413,9 @@ impl GraspEditorState {
                                                 imgui::StyleColor::Header,
                                                 [66.0 / 255.0, 64.0 / 255.0, 123.0 / 255.0, 1.0],
                                             );
-                                            if let Some(renderer) =
-                                                self.component_renderers.get(&part.as_str().into())
+                                            if let Some(renderer) = self
+                                                .component_property_renderers
+                                                .get(&part.as_str().into())
                                             {
                                                 if let Some(_subnode_token) =
                                                     tree(s, &part.to_string(), false)

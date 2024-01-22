@@ -290,9 +290,8 @@ impl GraspEditorState {
                     .filter(|t| t.get("window").as_u64() as usize == window_index)
                     .delete();
 
-                let instance = window.editor_data.selected.first().unwrap();
                 if let Some(transformer) = self.transformer_functions.get(&transformer) {
-                    transformer(instance, &window.window_tile);
+                    transformer(&window.editor_data.selected, &window.window_tile);
                 }
             }
         }
