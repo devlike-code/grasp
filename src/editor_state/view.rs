@@ -1,6 +1,8 @@
 use std::{env, fmt::Display, fs, str::FromStr, sync::Arc};
 
-use imgui::{Condition, ImString, MouseButton, StyleColor, TreeNodeToken, WindowFlags};
+use imgui::{
+    Condition, DrawListMut, ImString, MouseButton, StyleColor, TreeNodeToken, WindowFlags,
+};
 use itertools::Itertools;
 use log::error;
 use mosaic::{
@@ -19,6 +21,7 @@ use crate::{
         structures::grasp_queues,
     },
     editor_state_machine::EditorState,
+    grasp_common::GraspEditorData,
     grasp_queues::CloseWindowRequestQueue,
     GuiState,
 };
@@ -31,7 +34,11 @@ use super::{
     windows::GraspEditorWindow,
 };
 
-pub type ComponentRenderer = Box<dyn Fn(&GuiState, &mut GraspEditorWindow, Tile) + Send + Sync>;
+pub type ComponentRenderer =
+    Box<dyn Fn(&GuiState, &mut GraspEditorWindow, Tile, &mut DrawListMut<'_>) + Send + Sync>;
+
+pub type ComponentPropertyRenderer =
+    Box<dyn Fn(&GuiState, &mut GraspEditorWindow, Tile) + Send + Sync>;
 
 impl GraspEditorState {
     pub fn show(&mut self, s: &GuiState) {

@@ -29,7 +29,7 @@ use super::{
     categories::ComponentCategory,
     network::Networked,
     selection::selection_renderer,
-    view::{two_float_property_xy_renderer, ComponentRenderer},
+    view::{two_float_property_xy_renderer, ComponentPropertyRenderer, ComponentRenderer},
 };
 
 pub type TransformerFn = Box<dyn Fn(&[Tile], &Tile) + 'static>;
@@ -40,7 +40,7 @@ pub struct GraspEditorState {
     pub component_mosaic: Arc<Mosaic>,
     pub transformer_mosaic: Arc<Mosaic>,
     pub component_entity_renderers: HashMap<S32, ComponentRenderer>,
-    pub component_property_renderers: HashMap<S32, ComponentRenderer>,
+    pub component_property_renderers: HashMap<S32, ComponentPropertyRenderer>,
     pub window_list: GraspEditorWindowList,
     pub editor_state_tile: Tile,
     pub new_tab_request_queue: QueueTile,
@@ -123,7 +123,7 @@ impl GraspEditorState {
 
         instance
             .component_entity_renderers
-            .insert("Selection".into(), Box::new(selection_renderer));
+            .insert("SelectionOwner".into(), Box::new(selection_renderer));
 
         instance
             .component_property_renderers

@@ -61,6 +61,7 @@
         hidden: false,
         components: [
             "Selection: u64;",
+            "Selected: u64;",
             "SelectionOwner: unit;",
         ]
     ),

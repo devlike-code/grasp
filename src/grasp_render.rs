@@ -235,7 +235,7 @@ fn default_renderer_draw_arrow(
 pub fn default_renderer_draw(
     window: &mut GraspEditorWindow,
     s: &GuiState,
-    component_renderers: &HashMap<S32, ComponentRenderer>, // TODO: kill more
+    component_renderers: &HashMap<S32, ComponentRenderer>,
 ) {
     let mut painter = s.ui.get_window_draw_list();
 
@@ -248,7 +248,7 @@ pub fn default_renderer_draw(
 
     for obj in &meta {
         if let Some(renderer) = component_renderers.get(&obj.component) {
-            renderer(s, window, obj.clone());
+            renderer(s, window, obj.clone(), &mut painter);
         }
     }
 
