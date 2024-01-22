@@ -1,6 +1,7 @@
 use std::f32::consts;
 
 use crate::core::gui::windowing::gui_draw_image;
+use crate::core::math::bezier::gui_draw_bezier;
 use crate::core::math::bezier::gui_draw_bezier_arrow;
 use crate::core::math::Vec2;
 use crate::editor_state::helpers::QuadtreeUpdateCapability;
@@ -13,6 +14,7 @@ use crate::grasp_transitions::query_position_recursive;
 
 use crate::utilities::Label;
 use crate::utilities::Offset;
+use crate::utilities::SelfLoop;
 use crate::GuiState;
 use imgui::sys::ImVec2;
 use imgui::DrawListMut;
@@ -81,7 +83,7 @@ fn default_renderer_draw_object(
                     .input_text(format!("##{}-self", tile.id), text)
                     .auto_select_all(true)
                     .enter_returns_true(true)
-                    .build() 
+                    .build()
                 {
                     if text.len() >= 32 {
                         *text = text[0..32].to_string();
@@ -238,22 +240,47 @@ pub fn default_renderer_draw(window: &mut GraspEditorWindow, s: &GuiState) {
 
     for arrow in &arrows {
         let target = arrow.target();
+        let mut offset = Offset(arrow).query();
+        let loop_width = SelfLoop(arrow).query();
         let p1 = window.get_position_with_offset_and_pan(query_position_recursive(&arrow.source()));
-        let p2 = window.get_position_with_offset_and_pan(query_position_recursive(&target));
 
-        let offset = Offset(arrow).query();
-        let arrow_end_offset = if target.is_object() { 15.0f32 } else { 11.0f32 };
+        if arrow.is_loop() {
+            if offset.len() <= 1.0 {
+                offset = Vec2::new(1.0, 1.0);
+            }
 
-        let mid = p1.lerp(p2, 0.5) + offset;
+            let p2 = p1 + offset;
+            let mid = p1.lerp(p2, 0.75);
+            let dp = p1 - p2;
+            let perp = Vec2::new(dp.y, -dp.x);
+            let d = loop_width + offset.len().sqrt();
+            let mid1 = mid + (d / dp.len()) * perp;
+            let mid2 = mid - (d / dp.len()) * perp;
 
-        gui_draw_bezier_arrow(
-            &mut painter,
-            [p1, mid, p2],
-            2.0,
-            32,
-            window.rect.min(),
-            arrow_end_offset,
-        );
+            gui_draw_bezier(&mut painter, [p1, mid1, p2], 2.0, 32);
+
+            gui_draw_bezier_arrow(
+                &mut painter,
+                [p2, mid2, p1],
+                2.0,
+                32,
+                window.rect.min(),
+                10.0,
+            );
+        } else {
+            let p2 = window.get_position_with_offset_and_pan(query_position_recursive(&target));
+            let arrow_end_offset = if target.is_object() { 15.0f32 } else { 11.0f32 };
+            let mid = p1.lerp(p2, 0.5) + offset;
+
+            gui_draw_bezier_arrow(
+                &mut painter,
+                [p1, mid, p2],
+                2.0,
+                32,
+                window.rect.min(),
+                arrow_end_offset,
+            );
+        }
     }
 
     for arrow in &arrows {

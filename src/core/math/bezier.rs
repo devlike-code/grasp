@@ -84,6 +84,28 @@ pub fn gui_draw_bezier_arrow(
     );
 }
 
+pub fn gui_draw_bezier(
+    draw_list: &mut DrawListMut<'_>,
+    points: [Vec2; 3],
+    thickness: f32,
+    quality: u32,
+) {
+    let ctrlp = gui_bezier_control_point(points[0], points[1], points[2]);
+
+    let mut ps = vec![];
+    let dq = 1.0 / quality as f32;
+    for i in 0..=quality {
+        let p = gui_bezier_get_point(points[0], ctrlp, points[2], dq * i as f32);
+        ps.push([p.x, p.y]);
+    }
+
+    draw_list
+        .add_polyline(ps, ImColor32::WHITE)
+        .thickness(thickness)
+        .filled(false)
+        .build();
+}
+
 pub fn gui_draw_bezier_with_end_arrow(
     draw_list: &mut DrawListMut<'_>,
     points: [Vec2; 3],

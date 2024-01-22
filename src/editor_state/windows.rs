@@ -206,10 +206,22 @@ impl GraspEditorWindow {
             ],
         );
 
-        arr.add_component(
-            "Offset",
-            vec![("x".into(), Value::F32(0.0)), ("y".into(), Value::F32(0.0))],
-        );
+        if arr.is_loop() {
+            arr.add_component(
+                "Offset",
+                vec![
+                    ("x".into(), Value::F32(20.0)),
+                    ("y".into(), Value::F32(20.0)),
+                ],
+            );
+
+            arr.add_component("SelfLoop", vec![("self".into(), Value::F32(10.0))]);
+        } else {
+            arr.add_component(
+                "Offset",
+                vec![("x".into(), Value::F32(0.0)), ("y".into(), Value::F32(0.0))],
+            );
+        }
 
         let label_tile = arr.add_component("Label", par(""));
         label_tile.add_component(
