@@ -9,7 +9,7 @@ use itertools::Itertools;
 use mosaic::{
     capabilities::{ArchetypeSubject, QueueCapability, QueueTile},
     internals::{
-        par, pars, void, ComponentValuesBuilderSetter, EntityId, Mosaic, MosaicCRUD, MosaicIO,
+        par, pars, void, ComponentValuesBuilderSetter, Mosaic, MosaicCRUD, MosaicIO,
         MosaicTypelevelCRUD, Tile, S32,
     },
     iterators::{component_selectors::ComponentSelectors, tile_deletion::TileDeletion},
@@ -135,66 +135,6 @@ impl GraspEditorState {
         instance.initialize_networked();
         instance.load_transformers();
         instance
-    }
-
-    fn load_mosaic_transformers_from_file(
-        _component_mosaic: &Arc<Mosaic>,
-        _editor_mosaic: &Arc<Mosaic>,
-        transformer_mosaic: &Arc<Mosaic>,
-        file: PathBuf,
-    ) {
-        transformer_mosaic.load(&fs::read(file).unwrap()).unwrap();
-
-        //let mut transformers = vec![];
-        // let loader_mosaic = Mosaic::new();
-        // let (loader_mosaic, _) =
-        //     Self::prepare_mosaic(component_mosaic, editor_mosaic, loader_mosaic);
-
-        // loader_mosaic.new_type("Node: unit;").unwrap();
-        // loader_mosaic.new_type("Arrow: unit;").unwrap();
-        // loader_mosaic.new_type("Label: s32;").unwrap();
-
-        // loader_mosaic.new_type("Hidden: unit;").unwrap();
-        // loader_mosaic.new_type("DisplayName: s32;").unwrap();
-
-        // loader_mosaic.load(&fs::read(file).unwrap()).unwrap();
-
-        // let trans_vec = loader_mosaic
-        //     .get_all()
-        //     .filter_map(|t| {
-        //         if t.is_object()
-        //             && t.iter().get_arrows_into().len() == 0
-        //             && t.match_archetype(&["Label"])
-        //             && t.match_archetype(&["DisplayName"])
-        //         {
-        //             Some(t)
-        //         } else {
-        //             None
-        //         }
-        //     })
-        //     .map(|t| {
-        //         let trans_tile_iter = loader_mosaic
-        //             .get_all()
-        //             .include_component("Transformers")
-        //             .next();
-
-        //         if let Some(trans_tile) = trans_tile_iter {
-        //             trans_vec.iter().for_each(|entry| {
-        //                 editor_mosaic.new_extension(
-        //                     &trans_tile,
-        //                     "Transformer",
-        //                     pars()
-        //                         .set("fn_name", entry.fn_name.as_str())
-        //                         .set("display", entry.display.as_str())
-        //                         // .set("hidden", entry.hidden)
-        //                         .ok(),
-        //                 );
-        //             });
-        //         }
-        //     })
-        //     .collect_vec();
-
-        // trans_vec
     }
 
     fn load_mosaic_components_from_file(

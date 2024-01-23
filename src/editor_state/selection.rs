@@ -2,11 +2,15 @@ use std::vec::IntoIter;
 
 use imgui::{DrawListMut, ImColor32};
 use mosaic::{
-    capabilities::SelectionCapability,
+    capabilities::{ArchetypeSubject, SelectionCapability},
     internals::{Tile, TileFieldEmptyQuery},
 };
 
-use crate::{core::math::Vec2, grasp_common::GraspEditorData, utilities::Pos, GuiState};
+use crate::{
+    core::math::{Rect2, Vec2},
+    utilities::Pos,
+    GuiState,
+};
 
 use super::windows::GraspEditorWindow;
 
@@ -26,39 +30,34 @@ impl SelectionTile {
     pub fn iter(&self) -> IntoIter<Tile> {
         self.0.mosaic.get_selection(&self.0)
     }
+
+    pub fn rectangle(&self) -> Rect2 {
+        if let Some(rect) = self.0.get_component("Rectangle") {
+            Rect2 {
+                x: rect.get("x").as_f32(),
+                y: rect.get("y").as_f32(),
+                width: rect.get("width").as_f32(),
+                height: rect.get("height").as_f32(),
+            }
+        } else {
+            Rect2::default()
+        }
+    }
 }
 
 pub fn selection_renderer(
-    s: &GuiState,
+    _s: &GuiState,
     window: &mut GraspEditorWindow,
     input: Tile,
     painter: &mut DrawListMut<'_>,
 ) {
     let selection = SelectionTile::from_tile(input);
-    let mut min = Vec2::new(10000.0, 10000.0);
-    let mut max = Vec2::new(-10000.0, -10000.0);
-
-    for selected in selection.iter() {
-        let pos = window.get_position_with_offset_and_pan(Pos(&selected).query());
-
-        if pos.x < min.x {
-            min.x = pos.x;
-        }
-        if pos.y < min.y {
-            min.y = pos.y;
-        }
-
-        if pos.x > max.x {
-            max.x = pos.x;
-        }
-        if pos.y > max.y {
-            max.y = pos.y;
-        }
-    }
-
+    let rect = selection.rectangle();
+    let min = window.get_position_with_offset_and_pan(rect.min());
+    let max = window.get_position_with_offset_and_pan(rect.max());
     painter.add_rect_filled_multicolor(
-        [min.x - 50.0, min.y - 50.0],
-        [max.x + 50.0, max.y + 50.0],
+        [min.x, min.y],
+        [max.x, max.y],
         ImColor32::from_rgba(77, 102, 128, 10),
         ImColor32::from_rgba(102, 77, 128, 10),
         ImColor32::from_rgba(77, 128, 102, 10),
@@ -67,8 +66,8 @@ pub fn selection_renderer(
 
     painter
         .add_rect(
-            [min.x - 50.0, min.y - 50.0],
-            [max.x + 50.0, max.y + 50.0],
+            [min.x, min.y],
+            [max.x, max.y],
             ImColor32::from_rgba(255, 255, 255, 25),
         )
         .build();

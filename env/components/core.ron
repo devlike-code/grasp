@@ -63,6 +63,7 @@
             "Selection: u64;",
             "Selected: u64;",
             "SelectionOwner: unit;",
+            "Rectangle: { x: f32, y: f32, width: f32, height: f32 };",
         ]
     ),
 

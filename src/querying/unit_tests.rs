@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod query_utility_tests {
-    use crate::querying::querying::{take_arrows, targets_from, tiles, MosaicCollage};
+    use crate::querying::collage::{take_arrows, targets_from, tiles, MosaicCollage};
 
     use itertools::Itertools;
     use mosaic::internals::{void, Mosaic, MosaicCRUD, MosaicIO};

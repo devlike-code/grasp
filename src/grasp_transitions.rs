@@ -13,7 +13,7 @@ use crate::{
     },
     editor_state::windows::GraspEditorWindow,
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
-    utilities::{Offset, Pos},
+    utilities::{Offset, Pos, Rect},
 };
 
 impl StateMachine for GraspEditorWindow {
@@ -148,37 +148,6 @@ impl StateMachine for GraspEditorWindow {
 }
 
 impl GraspEditorWindow {
-    // pub fn generate_rects_for_bezier(qb: QuadraticBezierShape) -> Vec<Rect2> {
-    //     //  let samples = qb.flatten(Some(0.1));
-
-    //     let mut samples = vec![];
-
-    //     // samples.push(qb.sample(0.0));
-    //     // for i in 1..21 {
-    //     //     samples.push(qb.sample(i as f32 / 20.0));
-    //     // }
-
-    //     let mut rects = vec![];
-
-    //     #[allow(clippy::comparison_chain)]
-    //     if samples.len() > 2 {
-    //         for i in (0..samples.len()).step_by(2) {
-    //             if i + 2 < samples.len() {
-    //                 let rect = Rect2::from_two_pos(samples[i], samples[i + 2]);
-    //                 rects.push(rect);
-    //             }
-    //             if i + 3 < samples.len() {
-    //                 let rect = Rect2::from_two_pos(samples[i + 1], samples[i + 3]);
-    //                 rects.push(rect);
-    //             }
-    //         }
-    //     } else if samples.len() == 2 {
-    //         let rect = Rect2::from_two_pos(samples[0], samples[1]);
-    //         rects.push(rect);
-    //     }
-    //     rects
-    // }
-
     pub fn update_selected_positions_by(&mut self, dp: Vec2) {
         for tile in &mut self.editor_data.selected {
             let component_name = if tile.is_object() {
@@ -187,10 +156,11 @@ impl GraspEditorWindow {
                 "Offset"
             };
 
-            let mut selected_pos_component = tile.get_component(component_name).unwrap();
-            if let (Value::F32(x), Value::F32(y)) = selected_pos_component.get_by(("x", "y")) {
-                selected_pos_component.set("x", x + dp.x);
-                selected_pos_component.set("y", y + dp.y);
+            if let Some(mut selected_pos_component) = tile.get_component(component_name) {
+                if let (Value::F32(x), Value::F32(y)) = selected_pos_component.get_by(("x", "y")) {
+                    selected_pos_component.set("x", x + dp.x);
+                    selected_pos_component.set("y", y + dp.y);
+                }
             }
         }
     }
@@ -204,6 +174,13 @@ impl GraspEditorWindow {
             let offset = Offset(arrow).query();
             mid + offset
         }
+
+        let rects = self
+            .document_mosaic
+            .get_all()
+            .include_component("Rectangle")
+            .get_targets()
+            .collect_vec();
 
         let selected = self
             .document_mosaic
@@ -250,6 +227,15 @@ impl GraspEditorWindow {
                 if let Some(area_id) = quadtree.insert(region, tile.id) {
                     self.object_to_area.lock().unwrap().insert(tile.id, area_id);
                 }
+            }
+        }
+
+        for tile in &rects {
+            let rect = Rect(tile).query();
+            let region = self.build_label_area(rect);
+            let mut quadtree = self.quadtree.lock().unwrap();
+            if let Some(area_id) = quadtree.insert(region, tile.id) {
+                self.object_to_area.lock().unwrap().insert(tile.id, area_id);
             }
         }
     }

@@ -71,7 +71,7 @@ impl PairCapability<EntityId> for Arc<Mosaic> {
 
 impl PairCapability<Tile> for Arc<Mosaic> {
     fn make_pair(&self, fst: &Tile, snd: &Tile) -> PairTile {
-        Self::make_pair(&self, &fst.id, &snd.id)
+        Self::make_pair(self, &fst.id, &snd.id)
     }
 
     fn get_first(&self, pair: &Tile) -> Tile {

@@ -49,11 +49,7 @@ pub enum Collage {
 }
 
 pub trait MosaicCollage {
-    fn apply_collage(
-        &self,
-        mq: &Box<Collage>,
-        tiles: Option<Vec<Tile>>,
-    ) -> std::vec::IntoIter<Tile>;
+    fn apply_collage(&self, mq: &Collage, tiles: Option<Vec<Tile>>) -> std::vec::IntoIter<Tile>;
 }
 
 pub fn tiles() -> Box<Collage> {
@@ -108,11 +104,7 @@ use crate::querying::traversal::Traverse;
 
 use super::traversal::Traversal;
 impl MosaicCollage for Arc<Mosaic> {
-    fn apply_collage(
-        &self,
-        mq: &Box<Collage>,
-        tiles: Option<Vec<Tile>>,
-    ) -> std::vec::IntoIter<Tile> {
+    fn apply_collage(&self, mq: &Collage, tiles: Option<Vec<Tile>>) -> std::vec::IntoIter<Tile> {
         let traversal: Traversal = tiles.unwrap_or(self.get_all().collect_vec()).into();
         mq.query(Arc::clone(self), traversal)
     }

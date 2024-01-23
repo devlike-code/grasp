@@ -1,4 +1,5 @@
 use crate::core::math::vec2::Vec2;
+use crate::core::math::Rect2;
 use itertools::Itertools;
 use mosaic::internals::{EntityId, Mosaic, MosaicIO};
 use mosaic::{
@@ -9,6 +10,7 @@ use quadtree_rs::entry::Entry;
 use std::sync::Arc;
 
 pub struct Pos<'a>(pub &'a Tile);
+pub struct Rect<'a>(pub &'a Tile);
 pub struct Offset<'a>(pub &'a Tile);
 pub struct SelfLoop<'a>(pub &'a Tile);
 
@@ -18,6 +20,21 @@ impl<'a> TileFieldEmptyQuery for Pos<'a> {
         if let Some(pos_component) = self.0.get_component("Position") {
             if let (Value::F32(x), Value::F32(y)) = pos_component.get_by(("x", "y")) {
                 return Vec2::new(x, y);
+            }
+        }
+
+        Default::default()
+    }
+}
+
+impl<'a> TileFieldEmptyQuery for Rect<'a> {
+    type Output = Rect2;
+    fn query(&self) -> Self::Output {
+        if let Some(pos_component) = self.0.get_component("Rectangle") {
+            if let (Value::F32(x), Value::F32(y), Value::F32(width), Value::F32(height)) =
+                pos_component.get_by(("x", "y", "width", "height"))
+            {
+                return Rect2::from_pos_size(Vec2::new(x, y), Vec2::new(width, height));
             }
         }
 

@@ -4,11 +4,10 @@ use array_tool::vec::Uniq;
 use itertools::Itertools;
 use mosaic::{
     capabilities::ArchetypeSubject,
-    internals::{EntityId, MosaicIO, Tile},
+    internals::{MosaicIO, Tile},
     iterators::tile_filters::TileFilters,
 };
 
-use crate::core::has_mosaic::HasMosaic;
 use crate::core::structures::errors::ErrorCapability;
 
 fn make_enum(name: &str, members: &[String]) -> String {
