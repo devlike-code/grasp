@@ -75,7 +75,8 @@ impl GraspEditorState {
 
         self.show_errors(s);
 
-        if !caught_events.contains(&hash_input("double click left"))
+        if self.pending_close_window_request.is_none()
+            && !caught_events.contains(&hash_input("double click left"))
             && s.ui.is_mouse_double_clicked(imgui::MouseButton::Left)
         {
             self.open_files();
@@ -125,7 +126,7 @@ impl GraspEditorState {
                             && s.ui.is_mouse_clicked(imgui::MouseButton::Left)
                         {
                             window.title_bar_drag = true;
-                        } else {
+                        } else if self.pending_close_window_request.is_none() {
                             window.sense(s, front_window_id, caught_events);
                         }
                     }
