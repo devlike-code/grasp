@@ -133,6 +133,7 @@ pub fn gui_draw_bezier_with_end_arrow(
         [tip.x - window_pos.x, tip.y - window_pos.y],
         angle,
         1.0,
+        None,
     );
 
     draw_list

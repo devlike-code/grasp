@@ -55,15 +55,20 @@ pub struct GuiDockspace {
     pub id: u32,
 }
 
-pub fn new_id<S: AsRef<str>>(s: S) -> u32 {
+pub fn gui_str<S: AsRef<str>>(s: S) -> *const i8 {
     unsafe {
         let mut buffer = vec![];
 
         buffer.extend(s.as_ref().as_bytes());
         buffer.push(b'\0');
 
-        let name = buffer.as_ptr() as *const _;
+        buffer.as_ptr() as *const _
+    }
+}
 
+pub fn new_id<S: AsRef<str>>(s: S) -> u32 {
+    unsafe {
+        let name = gui_str(s);
         imgui::sys::igGetID_Str(name)
     }
 }

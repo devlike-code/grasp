@@ -35,9 +35,10 @@
             "WindowTransformerQueue: unit;",
             "NewWindowRequestQueue: unit;",
             "QuadtreeUpdateRequestQueue: unit;",
-           "EditorWindowQueue: unit;",
+            "EditorWindowQueue: unit;",
             "CloseWindowRequestQueue: unit;",
             "NamedFocusWindowRequestQueue: unit;",
+            "WindowRenameRequestQueue: unit;",
         ]
     ),
 
@@ -51,6 +52,7 @@
             "FocusWindowRequest: unit;",
             "QuadtreeUpdateRequest: unit;",           
             "NamedFocusWindowRequest: str;",
+            "WindowRenameRequest: { id: u64, index: u64, name: s32 };",
             "WindowTransformerRequest: { transform: s32, window_index: u64 };",
         ]
     ),
@@ -132,6 +134,15 @@
             "List: unit;",
             "ListElement: u64;",
             "Pair: { first: u64, second: u64 };",
+        ]
+    ),
+
+    ComponentCategory(
+        name: "Core.Flourish",
+        display: "Flourish",
+        hidden: false,
+        components: [
+            "Color: { r: f32, g: f32, b: f32, a: f32 };",
         ]
     ),
 

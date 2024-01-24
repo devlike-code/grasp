@@ -15,24 +15,42 @@ use mosaic::{
     iterators::{component_selectors::ComponentSelectors, tile_deletion::TileDeletion},
 };
 use quadtree_rs::Quadtree;
+use select::deselect;
 
 use crate::{
-    core::math::Rect2,
+    core::{gui::components::setup_component_renderers, math::Rect2},
     editor_state::{helpers::RequireWindowFocus, windows::GraspEditorWindow},
     editor_state_machine::EditorState,
     grasp_editor_window_list::GraspEditorWindowList,
     grasp_render,
     transformers::{finite_state_transformer, select},
+    GuiState,
 };
 
 use super::{
     categories::ComponentCategory,
     network::Networked,
     selection::selection_renderer,
-    view::{two_float_property_xy_renderer, ComponentPropertyRenderer, ComponentRenderer},
+    view::{
+        color_property_renderer, two_float_property_xy_renderer, ComponentPropertyRenderer,
+        ComponentRenderer,
+    },
 };
 
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
+pub enum TransformerState {
+    Running,
+    Cancelled,
+    Valid,
+}
+
+pub type TransformerInputValidationFn = Box<dyn Fn(&GuiState) -> TransformerState + 'static>;
 pub type TransformerFn = Box<dyn Fn(&[Tile], &Tile) + 'static>;
+
+pub struct Transformer {
+    pub input_validation: Option<TransformerInputValidationFn>,
+    pub transform_function: TransformerFn,
+}
 
 #[allow(dead_code)]
 pub struct GraspEditorState {
@@ -48,19 +66,31 @@ pub struct GraspEditorState {
     pub locked_components: Vec<S32>,
     pub show_tabview: bool,
     pub queued_component_delete: Option<usize>,
-    pub transformer_functions: HashMap<String, TransformerFn>,
+    pub transformer_functions: HashMap<String, Transformer>,
 }
 
 impl GraspEditorState {
-    fn add_transformer(&mut self, name: &str, f: TransformerFn) {
-        self.transformer_functions.insert(name.to_string(), f);
+    fn add_transformer(
+        &mut self,
+        name: &str,
+        iv: Option<TransformerInputValidationFn>,
+        f: TransformerFn,
+    ) {
+        self.transformer_functions.insert(
+            name.to_string(),
+            Transformer {
+                input_validation: iv,
+                transform_function: f,
+            },
+        );
 
         self.transformer_mosaic.new_object("Transformer", par(name));
     }
 
     fn load_transformers(&mut self) {
-        self.add_transformer("Make Selection", Box::new(select));
-        self.add_transformer("FSM", Box::new(finite_state_transformer));
+        self.add_transformer("[Selection] Create", None, Box::new(select));
+        self.add_transformer("[Selection] Delete", None, Box::new(deselect));
+        self.add_transformer("[FSM] Compile", None, Box::new(finite_state_transformer));
     }
 
     pub fn new() -> Self {
@@ -90,6 +120,9 @@ impl GraspEditorState {
 
         let new_window_request_queue = editor_mosaic.make_queue();
         new_window_request_queue.add_component("NewWindowRequestQueue", void());
+
+        let new_window_request_queue = editor_mosaic.make_queue();
+        new_window_request_queue.add_component("WindowRenameRequestQueue", void());
 
         let refresh_quadtree_queue = editor_mosaic.make_queue();
         refresh_quadtree_queue.add_component("QuadtreeUpdateRequestQueue", void());
@@ -121,16 +154,7 @@ impl GraspEditorState {
             transformer_functions: HashMap::new(),
         };
 
-        instance
-            .component_entity_renderers
-            .insert("SelectionOwner".into(), Box::new(selection_renderer));
-
-        instance
-            .component_property_renderers
-            .insert("Position".into(), Box::new(two_float_property_xy_renderer));
-        instance
-            .component_property_renderers
-            .insert("Offset".into(), Box::new(two_float_property_xy_renderer));
+        setup_component_renderers(&mut instance);
 
         instance.initialize_networked();
         instance.load_transformers();

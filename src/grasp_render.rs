@@ -15,8 +15,8 @@ use crate::editor_state_machine::StateMachine;
 use crate::grasp_transitions::query_position_recursive;
 
 use crate::utilities::Label;
-use crate::utilities::Offset;
-use crate::utilities::SelfLoop;
+use crate::utilities::OffsetQuery;
+use crate::utilities::SelfLoopQuery;
 use crate::GuiState;
 use imgui::sys::ImVec2;
 use imgui::DrawListMut;
@@ -61,13 +61,14 @@ fn default_renderer_draw_object(
         [pos.x - window.rect.x, pos.y - window.rect.y],
         0.0,
         1.0,
+        None,
     );
 
     let mut cancel: bool = true;
     let mut trigger_end_drag = true;
     let offset = tile
         .get_component("Label")
-        .map(|l| Offset(&l).query())
+        .map(|l| OffsetQuery(&l).query())
         .unwrap_or_default();
 
     if window.state == EditorState::PropertyChanging
@@ -156,13 +157,17 @@ fn default_renderer_draw_arrow(
     let angle = angle_between_points(p, q);
 
     let mouse: Vec2 = s.ui.io().mouse_pos.into();
-    if mouse.distance(pos) < 20.0 {
+    if mouse.distance(pos) < 20.0
+        || window.editor_data.selected.contains(tile)
+        || tile.get_component("Selected").is_some()
+    {
         gui_draw_image(
             image,
             [20.0, 20.0],
             [pos.x - window.rect.x, pos.y - window.rect.y],
             angle,
             1.0,
+            None,
         );
     }
 
@@ -170,7 +175,7 @@ fn default_renderer_draw_arrow(
     let mut trigger_end_drag = true;
     let offset = tile
         .get_component("Label")
-        .map(|l| Offset(&l).query())
+        .map(|l| OffsetQuery(&l).query())
         .unwrap_or_default();
 
     if window.state == EditorState::PropertyChanging
@@ -198,7 +203,6 @@ fn default_renderer_draw_arrow(
                     if let Ok(t) = text.parse::<S32>() {
                         if window.editor_data.previous_text != *text {
                             if let Some(mut label) = tile.clone().get_component("Label") {
-                                println!("SETTING S32!");
                                 label.set("self", t);
                                 window.changed = true;
                                 editor_mosaic.request_quadtree_update();
@@ -260,9 +264,10 @@ pub fn default_renderer_draw(
 
     for arrow in &arrows {
         let target = arrow.target();
-        let mut offset = Offset(arrow).query();
-        let loop_width = SelfLoop(arrow).query();
+        let mut offset = OffsetQuery(arrow).query();
+        let loop_width = SelfLoopQuery(arrow).query();
         let p1 = window.get_position_with_offset_and_pan(query_position_recursive(&arrow.source()));
+        let arrow_end_offset = if target.is_object() { 15.0f32 } else { 11.0f32 };
 
         if arrow.is_loop() {
             if offset.len() <= 1.0 {
@@ -285,11 +290,10 @@ pub fn default_renderer_draw(
                 2.0,
                 32,
                 window.rect.min(),
-                10.0,
+                arrow_end_offset,
             );
         } else {
             let p2 = window.get_position_with_offset_and_pan(query_position_recursive(&target));
-            let arrow_end_offset = if target.is_object() { 15.0f32 } else { 11.0f32 };
             let mid = p1.lerp(p2, 0.5) + offset;
 
             gui_draw_bezier_arrow(
@@ -306,7 +310,7 @@ pub fn default_renderer_draw(
     for arrow in &arrows {
         let p1 = window.get_position_with_offset_and_pan(query_position_recursive(&arrow.source()));
         let p2 = window.get_position_with_offset_and_pan(query_position_recursive(&arrow.target()));
-        let offset = Offset(arrow).query();
+        let offset = OffsetQuery(arrow).query();
 
         let mid = p1.lerp(p2, 0.5) + offset;
         default_renderer_draw_arrow(arrow, mid, window, &painter, s);

@@ -1,5 +1,7 @@
 use crate::core::math::vec2::Vec2;
 use crate::core::math::Rect2;
+use imgui::sys::ImVec4;
+use imgui::ImColor32;
 use itertools::Itertools;
 use mosaic::internals::{EntityId, Mosaic, MosaicIO};
 use mosaic::{
@@ -9,12 +11,13 @@ use mosaic::{
 use quadtree_rs::entry::Entry;
 use std::sync::Arc;
 
-pub struct Pos<'a>(pub &'a Tile);
-pub struct Rect<'a>(pub &'a Tile);
-pub struct Offset<'a>(pub &'a Tile);
-pub struct SelfLoop<'a>(pub &'a Tile);
+pub struct PosQuery<'a>(pub &'a Tile);
+pub struct ColorQuery<'a>(pub &'a Tile);
+pub struct RectQuery<'a>(pub &'a Tile);
+pub struct OffsetQuery<'a>(pub &'a Tile);
+pub struct SelfLoopQuery<'a>(pub &'a Tile);
 
-impl<'a> TileFieldEmptyQuery for Pos<'a> {
+impl<'a> TileFieldEmptyQuery for PosQuery<'a> {
     type Output = Vec2;
     fn query(&self) -> Self::Output {
         if let Some(pos_component) = self.0.get_component("Position") {
@@ -27,7 +30,22 @@ impl<'a> TileFieldEmptyQuery for Pos<'a> {
     }
 }
 
-impl<'a> TileFieldEmptyQuery for Rect<'a> {
+impl<'a> TileFieldEmptyQuery for ColorQuery<'a> {
+    type Output = ImVec4;
+    fn query(&self) -> Self::Output {
+        if let Some(color_component) = self.0.get_component("Color") {
+            if let (Value::F32(r), Value::F32(g), Value::F32(b), Value::F32(a)) =
+                color_component.get_by(("r", "g", "b", "a"))
+            {
+                return ImVec4::new(r, g, b, a);
+            }
+        }
+
+        Default::default()
+    }
+}
+
+impl<'a> TileFieldEmptyQuery for RectQuery<'a> {
     type Output = Rect2;
     fn query(&self) -> Self::Output {
         if let Some(pos_component) = self.0.get_component("Rectangle") {
@@ -42,7 +60,7 @@ impl<'a> TileFieldEmptyQuery for Rect<'a> {
     }
 }
 
-impl<'a> TileFieldEmptyQuery for Offset<'a> {
+impl<'a> TileFieldEmptyQuery for OffsetQuery<'a> {
     type Output = Vec2;
     fn query(&self) -> Self::Output {
         if let Some(offset_component) = self.0.get_component("Offset") {
@@ -55,7 +73,7 @@ impl<'a> TileFieldEmptyQuery for Offset<'a> {
     }
 }
 
-impl<'a> TileFieldEmptyQuery for SelfLoop<'a> {
+impl<'a> TileFieldEmptyQuery for SelfLoopQuery<'a> {
     type Output = f32;
     fn query(&self) -> Self::Output {
         if let Some(offset_component) = self.0.get_component("SelfLoop") {

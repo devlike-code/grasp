@@ -9,7 +9,7 @@ use std::{
 
 use imgui::{
     sys::{igGetWindowDrawList, igImMax, igImMin, igImRotate, ImVec2, ImVec4},
-    ConfigFlags, ImString, Ui, WindowFlags,
+    ConfigFlags, ImColor32, ImString, Ui, WindowFlags,
 };
 use lazy_static::lazy_static;
 use log::info;
@@ -146,7 +146,14 @@ fn gui_rotate_end(rot_id: usize, rad: f32) {
     }
 }
 
-pub fn gui_draw_image(name: &str, size: [f32; 2], pos: [f32; 2], rot: f32, opacity: f32) {
+pub fn gui_draw_image(
+    name: &str,
+    size: [f32; 2],
+    pos: [f32; 2],
+    rot: f32,
+    opacity: f32,
+    tint: Option<ImVec4>,
+) {
     unsafe {
         let local_pos = ImVec2::new(pos[0] - size[0] / 2.0, pos[1] - size[1] / 2.0);
         imgui::sys::igSetCursorPos(local_pos);
@@ -157,7 +164,7 @@ pub fn gui_draw_image(name: &str, size: [f32; 2], pos: [f32; 2], rot: f32, opaci
             ImVec2::new(size[0], size[1]),
             ImVec2::new(0.0, 0.0),
             ImVec2::new(1.0, 1.0),
-            ImVec4::new(1.0, 1.0, 1.0, opacity),
+            tint.unwrap_or(ImVec4::new(1.0, 1.0, 1.0, opacity)),
             ImVec4::new(0.0, 0.0, 0.0, 0.0),
         );
         gui_rotate_end(rot_id, rot);
@@ -219,6 +226,8 @@ pub fn run_main_forever<F: FnMut(&Ui, &mut bool)>(mut update: F) {
     load_image_asset("arrow", "assets//arrow.png");
     load_image_asset("[arrow]", "assets//selected-arrow.png");
     load_image_asset("arrowhead", "assets//arrowhead.png");
+    load_image_asset("selection", "assets//selection-color.png");
+    load_image_asset("selection-arrow", "assets//selection-color-arrow.png");
 
     'running: loop {
         use sdl2::event::Event;

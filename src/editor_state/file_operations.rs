@@ -1,6 +1,8 @@
 use std::{env, fs};
 
-use mosaic::internals::MosaicIO;
+use mosaic::internals::{pars, ComponentValuesBuilderSetter, MosaicIO};
+
+use crate::{core::structures::grasp_queues, grasp_queues::WindowRenameRequestQueue};
 
 use super::{foundation::GraspEditorState, windows::GraspEditorWindow};
 
@@ -34,6 +36,7 @@ impl SaveFileCapability for GraspEditorWindow {
         } else {
             let document = self.document_mosaic.save();
             fs::write(self.path.clone().unwrap(), document).unwrap();
+
             self.changed = false;
         }
     }
@@ -46,7 +49,18 @@ impl SaveFileCapability for GraspEditorWindow {
             .save_file()
         {
             fs::write(file.clone(), document).unwrap();
-            self.path = Some(file);
+            grasp_queues::enqueue(
+                WindowRenameRequestQueue,
+                self.editor_mosaic.new_object(
+                    "WindowRenameRequest",
+                    pars()
+                        .set("id", self.window_tile.id as u64)
+                        .set("index", self.window_list_index as u64)
+                        .set("name", file.file_name().unwrap().to_str().unwrap())
+                        .ok(),
+                ),
+            );
+            self.path = Some(file.clone());
             self.changed = false;
         }
     }

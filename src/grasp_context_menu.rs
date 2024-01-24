@@ -89,6 +89,11 @@ impl GraspEditorWindow {
                 .transformer_mosaic
                 .get_all()
                 .include_component("Transformer")
+                .sorted_by(|a, b| {
+                    let ta = a.get("self").as_s32().to_string();
+                    let tb = b.get("self").as_s32().to_string();
+                    ta.cmp(&tb)
+                })
                 .get_targets();
 
             for transformer in transformers {
@@ -103,6 +108,7 @@ impl GraspEditorWindow {
                             .ok(),
                     );
 
+                    self.trigger(EditorStateTrigger::TransformerSelected);
                     grasp_queues::enqueue(WindowTransformerQueue, request);
 
                     return true;

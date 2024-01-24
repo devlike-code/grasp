@@ -38,4 +38,18 @@ impl GraspEditorWindowList {
     pub fn get_focused_mut(&mut self) -> Option<&mut GraspEditorWindow> {
         self.windows.front_mut()
     }
+
+    pub fn get_by_id(&mut self, id: usize) -> Option<&GraspEditorWindow> {
+        self.windows
+            .iter()
+            .filter(|w| w.window_tile.id == id)
+            .next()
+    }
+
+    pub fn get_by_id_mut(&mut self, id: usize) -> Option<&mut GraspEditorWindow> {
+        self.windows
+            .iter_mut()
+            .filter(|w| w.window_tile.id == id)
+            .next()
+    }
 }

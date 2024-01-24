@@ -2,19 +2,33 @@ use std::sync::Arc;
 
 use mosaic::{
     capabilities::{ArchetypeSubject, SelectionCapability},
-    internals::{par, pars, ComponentValuesBuilderSetter, Tile, TileFieldEmptyQuery},
+    internals::{par, MosaicIO, Tile, TileFieldEmptyQuery},
 };
 
-use crate::{
-    core::math::Vec2,
-    editor_state::{helpers::QuadtreeUpdateCapability, selection::SelectionTile},
-    utilities::Pos,
-};
+use crate::{core::math::Vec2, editor_state::selection::SelectionTile, utilities::PosQuery};
+
+pub fn find_selection_owner(selected_tile: &Tile) -> Option<SelectionTile> {
+    selected_tile
+        .get_component("Selected")
+        .and_then(|t| selected_tile.mosaic.get(t.get("self").as_u64() as usize))
+        .map(SelectionTile::from_tile)
+}
+
+pub fn deselect(initial_state: &[Tile], _window: &Tile) {
+    for selected in initial_state {
+        if let Some(previous_selection) = find_selection_owner(selected) {
+            previous_selection.remove(selected);
+        }
+    }
+}
 
 pub fn select(initial_state: &[Tile], window: &Tile) {
     if let Some(node) = initial_state.first() {
         let mosaic = Arc::clone(&node.mosaic);
         let selection = mosaic.make_selection(initial_state);
+
+        deselect(initial_state, window);
+
         for selected in initial_state {
             selected.add_component("Selected", par(selection.id as u64));
         }
@@ -24,7 +38,7 @@ pub fn select(initial_state: &[Tile], window: &Tile) {
         let mut max = Vec2::new(-10000.0, -10000.0);
 
         for selected in selection.iter() {
-            let pos = Pos(&selected).query();
+            let pos = PosQuery(&selected).query();
 
             if pos.x < min.x {
                 min.x = pos.x;
@@ -40,17 +54,5 @@ pub fn select(initial_state: &[Tile], window: &Tile) {
                 max.y = pos.y;
             }
         }
-
-        selection.0.add_component(
-            "Rectangle",
-            pars()
-                .set("x", min.x - 50.0)
-                .set("y", min.y - 50.0)
-                .set("width", max.x - min.x + 2.0 * 50.0)
-                .set("height", max.y - min.y + 2.0 * 50.0)
-                .ok(),
-        );
-
-        window.mosaic.request_quadtree_update();
     }
 }

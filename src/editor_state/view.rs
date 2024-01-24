@@ -1,7 +1,7 @@
 use std::{env, fmt::Display, fs, str::FromStr, sync::Arc};
 
 use imgui::{
-    Condition, DrawListMut, ImString, MouseButton, StyleColor, TreeNodeToken, WindowFlags,
+    sys, Condition, DrawListMut, ImString, MouseButton, StyleColor, TreeNodeToken, WindowFlags,
 };
 use itertools::Itertools;
 use log::error;
@@ -16,13 +16,17 @@ use mosaic::{
 
 use crate::{
     core::{
-        gui::{docking::GuiViewport, windowing::gui_set_window_focus},
+        gui::{
+            docking::{gui_str, GuiViewport},
+            windowing::gui_set_window_focus,
+        },
         math::{Rect2, Vec2},
         structures::grasp_queues,
     },
     editor_state_machine::EditorState,
     grasp_common::GraspEditorData,
     grasp_queues::CloseWindowRequestQueue,
+    transformers::find_selection_owner,
     GuiState,
 };
 
@@ -289,6 +293,23 @@ impl GraspEditorState {
     }
 
     fn show_properties(&mut self, s: &GuiState) {
+        fn component_popup(
+            queued_component_delete: &Option<usize>,
+            focused: &mut GraspEditorWindow,
+            s: &GuiState,
+        ) {
+            if let Some(token) = s.ui.begin_popup("component-menu") {
+                println!("BEGIN POPUP");
+                if s.ui.menu_item("Delete") {
+                    if let Some(tile) = queued_component_delete {
+                        focused.document_mosaic.delete_tile(*tile);
+                    }
+                }
+
+                token.end();
+            }
+        }
+
         fn tree<'a, S: AsRef<str>>(
             s: &'a GuiState,
             t: &'a S,
@@ -355,14 +376,21 @@ impl GraspEditorState {
                                                 .locked_components
                                                 .contains(&part_tile.component);
                                             let is_header_covered = s.ui.is_item_hovered();
-                                            let is_header_clicked = s
-                                                .ui
-                                                .is_item_clicked_with_button(MouseButton::Right);
+                                            let is_header_clicked =
+                                                s.ui.is_mouse_clicked(MouseButton::Right);
+
+                                            component_popup(
+                                                &self.queued_component_delete,
+                                                focused_window,
+                                                s,
+                                            );
 
                                             if !is_locked && is_header_covered && is_header_clicked
                                             {
                                                 self.queued_component_delete = Some(part_tile.id);
-                                                s.ui.open_popup(ImString::new("Component Menu"));
+
+                                                s.ui.open_popup("component-menu");
+                                                println!("COMPONENT MENU OPENED!");
                                             }
 
                                             draw_default_property_renderer(
@@ -446,9 +474,7 @@ impl GraspEditorState {
                                                     && is_header_clicked
                                                 {
                                                     self.queued_component_delete = Some(tile.id);
-                                                    s.ui.open_popup(ImString::new(
-                                                        "Component Menu",
-                                                    ));
+                                                    s.ui.open_popup("component-menu");
                                                 }
 
                                                 draw_default_property_renderer(
@@ -468,18 +494,8 @@ impl GraspEditorState {
                         }
                     }
                 }
-
-                s.ui.popup(ImString::new("Component Menu"), || {
-                    if s.ui.menu_item(ImString::new("Delete")) {
-                        if let Some(tile) = self.queued_component_delete {
-                            if let Some(window) = self.window_list.get_focused() {
-                                window.document_mosaic.delete_tile(tile);
-                                self.queued_component_delete = None;
-                            }
-                        }
-                    }
-                });
             }
+
             w.end();
         }
     }
@@ -588,8 +604,8 @@ impl GraspEditorState {
     }
 }
 
-pub fn two_float_property_xy_renderer(ui: &GuiState, tab: &mut GraspEditorWindow, tile: Tile) {
-    let mosaic = &tab.document_mosaic;
+pub fn two_float_property_xy_renderer(ui: &GuiState, window: &mut GraspEditorWindow, tile: Tile) {
+    let mosaic = &window.document_mosaic;
     let _comp = mosaic
         .component_registry
         .get_component_type(tile.component)
@@ -604,13 +620,54 @@ pub fn two_float_property_xy_renderer(ui: &GuiState, tab: &mut GraspEditorWindow
     {
         tile.clone().set("x", x);
         tile.clone().set("y", y);
-        tab.changed = true;
-        tab.request_quadtree_update();
+        window.changed = true;
+        window.request_quadtree_update();
     }
 }
 
-fn draw_default_property_renderer(ui: &GuiState, tab: &mut GraspEditorWindow, d: Tile) {
-    let mosaic = &tab.document_mosaic;
+pub fn color_property_renderer(ui: &GuiState, window: &mut GraspEditorWindow, tile: Tile) {
+    println!("^^ COLOR PROPERTY RENDERER: {}", tile.id);
+    let r = tile.get("r").as_f32();
+    println!("THIS IS NOT HAPPENING");
+    let g = tile.get("g").as_f32();
+    let b = tile.get("b").as_f32();
+    let a = tile.get("a").as_f32();
+
+    let mut input = [r, g, b, a];
+    ui.color_picker4("Color", &mut input);
+
+    let mut tile = tile.clone();
+    tile.set("r", input[0]);
+    tile.set("g", input[1]);
+    tile.set("b", input[2]);
+    tile.set("a", input[3]);
+}
+
+pub fn selection_property_renderer(ui: &GuiState, window: &mut GraspEditorWindow, tile: Tile) {
+    println!("^^ SELECTION PROPERTY RENDERER: {}", tile.id);
+    if let Some(color) = tile.get_component("Color") {
+        assert!(tile.mosaic.is_tile_valid(&color));
+        println!("{:?}", color.mosaic.data_storage.lock().unwrap());
+        //println!("{:?}", color.get_full_archetype());
+        //println!("{} {}", color.source(), color.target());
+        color_property_renderer(ui, window, color);
+    } else {
+        ui.text("No color");
+    }
+}
+
+pub fn selected_property_renderer(ui: &GuiState, window: &mut GraspEditorWindow, tile: Tile) {
+    println!("^^ SELECTED PROPERTY RENDERER: {}", tile.id);
+    if let Some(selection_owner) = find_selection_owner(&tile) {
+        ui.text(format!("Selection owner: {:?}", selection_owner.0));
+        selection_property_renderer(ui, window, selection_owner.0);
+    } else {
+        ui.text("Something is very wrong");
+    }
+}
+
+fn draw_default_property_renderer(ui: &GuiState, window: &mut GraspEditorWindow, d: Tile) {
+    let mosaic = &window.document_mosaic;
     let comp = mosaic
         .component_registry
         .get_component_type(d.component)
@@ -635,18 +692,18 @@ fn draw_default_property_renderer(ui: &GuiState, tab: &mut GraspEditorWindow, d:
 
         match value {
             Value::UNIT => {}
-            Value::I8(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
-            Value::I16(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
-            Value::I32(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
-            Value::I64(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
-            Value::U8(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
-            Value::U16(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
-            Value::U32(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
-            Value::U64(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
-            Value::F32(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
-            Value::F64(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
-            Value::S32(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
-            Value::STR(v) => draw_property_value(ui, tab, &d, name.as_str(), v),
+            Value::I8(v) => draw_property_value(ui, window, &d, name.as_str(), v),
+            Value::I16(v) => draw_property_value(ui, window, &d, name.as_str(), v),
+            Value::I32(v) => draw_property_value(ui, window, &d, name.as_str(), v),
+            Value::I64(v) => draw_property_value(ui, window, &d, name.as_str(), v),
+            Value::U8(v) => draw_property_value(ui, window, &d, name.as_str(), v),
+            Value::U16(v) => draw_property_value(ui, window, &d, name.as_str(), v),
+            Value::U32(v) => draw_property_value(ui, window, &d, name.as_str(), v),
+            Value::U64(v) => draw_property_value(ui, window, &d, name.as_str(), v),
+            Value::F32(v) => draw_property_value(ui, window, &d, name.as_str(), v),
+            Value::F64(v) => draw_property_value(ui, window, &d, name.as_str(), v),
+            Value::S32(v) => draw_property_value(ui, window, &d, name.as_str(), v),
+            Value::STR(v) => draw_property_value(ui, window, &d, name.as_str(), v),
 
             Value::BOOL(v) => {
                 let mut b = v;

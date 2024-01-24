@@ -59,8 +59,8 @@ async fn main() {
             grasp_editor_state.update_snapshot_all("SNAPSHOT");
         }
 
-        grasp_editor_state.process_requests();
         let gui = GuiState::new(ui);
+        grasp_editor_state.process_requests(&gui);
         grasp_editor_state.show(&gui);
 
         //        ui.show_demo_window(&mut true);

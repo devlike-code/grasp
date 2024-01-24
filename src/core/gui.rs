@@ -1,17 +1,16 @@
 #![allow(dead_code)]
 
 use imgui::sys::cty::c_char;
+pub mod components;
 pub mod docking;
 pub mod imgui_keys;
 pub mod windowing;
-pub mod components;
 
 pub fn calc_text_size<T: AsRef<str>>(text: T) -> [f32; 2] {
     calc_text_size_with_opts(text, false, -1.0)
 }
 
-
-pub fn calc_text_size_with_opts<T: AsRef<str>>(    
+pub fn calc_text_size_with_opts<T: AsRef<str>>(
     text: T,
     hide_text_after_double_hash: bool,
     wrap_width: f32,

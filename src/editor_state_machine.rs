@@ -9,6 +9,7 @@ pub enum EditorState {
     WindowResizing,
     PropertyChanging,
     ContextMenu,
+    TransformerWorking,
 }
 
 impl EditorState {
@@ -42,6 +43,10 @@ pub enum EditorStateTrigger {
 
     ClickToContextMenu,
     ExitContextMenu,
+
+    TransformerSelected,
+    TransformerCancelled,
+    TransformerDone,
 }
 
 pub trait StateMachine {

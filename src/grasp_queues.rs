@@ -15,7 +15,9 @@ use crate::{
         gui::windowing::gui_set_window_focus,
         structures::grasp_queues::{self, dequeue, GraspQueue},
     },
-    editor_state::foundation::GraspEditorState,
+    editor_state::foundation::{GraspEditorState, TransformerState},
+    editor_state_machine::{EditorStateTrigger, StateMachine},
+    GuiState,
 };
 
 #[derive(GraspQueue)]
@@ -36,6 +38,9 @@ pub struct WindowMessageInboxQueue(Tile);
 #[derive(GraspQueue)]
 pub struct WindowTransformerQueue;
 
+#[derive(GraspQueue)]
+pub struct WindowRenameRequestQueue;
+
 impl GraspEditorState {
     fn iter_all_windows(&self) -> IntoIter<Tile> {
         //each window tile has arrow "DirectWindowRequest" pointing to "Queue" tile that has descriptor "EditorWindowQueue" attached, and descriptors
@@ -47,12 +52,38 @@ impl GraspEditorState {
     }
 
     //processing all queues on Editor level
-    pub fn process_requests(&mut self) {
+    pub fn process_requests(&mut self, ui: &GuiState) {
+        self.process_rename_window_queue();
         self.process_named_focus_window_queue();
         self.process_new_window_queue();
         self.process_quadtree_queue();
         self.process_close_window_queue();
-        self.process_window_transformer_queue();
+        self.process_window_transformer_queue(ui);
+    }
+
+    fn process_rename_window_queue(&mut self) {
+        while let Some(request) =
+            grasp_queues::dequeue(WindowRenameRequestQueue, &self.editor_mosaic)
+        {
+            let id = request.get("id").as_u64() as usize;
+            let index = request.get("index").as_u64();
+            let name = format!("[{}] {}", index, request.get("name").as_s32().to_string());
+
+            if let Some(window) = self.window_list.get_by_id(id) {
+                let old_name = window.name.clone();
+                self.window_list.named_windows.iter_mut().for_each(|w| {
+                    if *w == old_name {
+                        *w = name.clone();
+                    }
+                });
+            }
+
+            if let Some(window) = self.window_list.get_by_id_mut(id) {
+                window.name = name;
+            }
+
+            request.iter().delete();
+        }
     }
 
     fn process_named_focus_window_queue(&mut self) {
@@ -271,7 +302,7 @@ impl GraspEditorState {
         error_count
     }
 
-    fn process_window_transformer_queue(&mut self) {
+    fn process_window_transformer_queue(&mut self, ui: &GuiState) {
         while let Some(request) = dequeue(WindowTransformerQueue, &self.editor_mosaic) {
             let transformer = request.get("transform").as_s32().to_string();
             let window_index = request.get("window_index").as_u64() as usize;
@@ -291,7 +322,32 @@ impl GraspEditorState {
                     .delete();
 
                 if let Some(transformer) = self.transformer_functions.get(&transformer) {
-                    transformer(&window.editor_data.selected, &window.window_tile);
+                    if let Some(validation) = &transformer.input_validation {
+                        let validated = validation(ui);
+                        if validated == TransformerState::Valid {
+                            (transformer.transform_function)(
+                                &window.editor_data.selected,
+                                &window.window_tile,
+                            );
+
+                            if let Some(w) = self.window_list.get_by_id_mut(window_index) {
+                                w.trigger(EditorStateTrigger::TransformerDone)
+                            }
+                        } else if validated == TransformerState::Cancelled {
+                            if let Some(w) = self.window_list.get_by_id_mut(window_index) {
+                                w.trigger(EditorStateTrigger::TransformerCancelled)
+                            }
+                        }
+                    } else {
+                        (transformer.transform_function)(
+                            &window.editor_data.selected,
+                            &window.window_tile,
+                        );
+
+                        if let Some(w) = self.window_list.get_by_id_mut(window_index) {
+                            w.trigger(EditorStateTrigger::TransformerDone)
+                        }
+                    }
                 }
             }
         }

@@ -13,7 +13,7 @@ use crate::{
     },
     editor_state::windows::GraspEditorWindow,
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
-    utilities::{Offset, Pos, Rect},
+    utilities::{OffsetQuery, PosQuery, RectQuery},
 };
 
 impl StateMachine for GraspEditorWindow {
@@ -28,8 +28,23 @@ impl StateMachine for GraspEditorWindow {
                 }
                 Some(EditorState::Idle)
             }
+            (EditorState::ContextMenu, EditorStateTrigger::TransformerSelected) => {
+                Some(EditorState::TransformerWorking)
+            }
             (EditorState::ContextMenu, _) => None,
             (_, EditorStateTrigger::ClickToContextMenu) => Some(EditorState::ContextMenu),
+
+            (EditorState::Idle, EditorStateTrigger::TransformerSelected) => {
+                Some(EditorState::TransformerWorking)
+            }
+            (EditorState::TransformerWorking, EditorStateTrigger::TransformerDone) => {
+                Some(EditorState::Idle)
+            }
+            (EditorState::TransformerWorking, EditorStateTrigger::TransformerCancelled) => {
+                // TODO: cleanup
+                Some(EditorState::Idle)
+            }
+
             (_, EditorStateTrigger::DblClickToCreate) => {
                 self.create_new_object(
                     self.editor_data.cursor - self.editor_data.window_offset - self.editor_data.pan,
@@ -171,7 +186,7 @@ impl GraspEditorWindow {
             let end_pos = query_position_recursive(&arrow.target());
             let mid = start_pos.lerp(end_pos, 0.5);
             //Arrow offset
-            let offset = Offset(arrow).query();
+            let offset = OffsetQuery(arrow).query();
             mid + offset
         }
 
@@ -192,7 +207,7 @@ impl GraspEditorWindow {
         self.quadtree.lock().unwrap().reset();
 
         for tile in &selected {
-            let mut selected_pos = Pos(tile).query();
+            let mut selected_pos = PosQuery(tile).query();
 
             if tile.is_arrow() {
                 selected_pos = find_arrow_pos(tile);
@@ -202,7 +217,7 @@ impl GraspEditorWindow {
                 let size = calc_text_size(label.get("self").as_s32().to_string());
 
                 if let Some(offset) = label.get_component("Offset") {
-                    let off = Offset(&offset).query();
+                    let off = OffsetQuery(&offset).query();
                     let label_region = self.build_label_area(Rect2 {
                         x: selected_pos.x + off.x,
                         y: selected_pos.y + off.y,
@@ -231,7 +246,7 @@ impl GraspEditorWindow {
         }
 
         for tile in &rects {
-            let rect = Rect(tile).query();
+            let rect = RectQuery(tile).query();
             let region = self.build_label_area(rect);
             let mut quadtree = self.quadtree.lock().unwrap();
             if let Some(area_id) = quadtree.insert(region, tile.id) {
@@ -242,8 +257,8 @@ impl GraspEditorWindow {
 }
 
 pub fn query_position_recursive(tile: &Tile) -> Vec2 {
-    let pos = Pos(tile).query();
-    let offset = Offset(tile).query();
+    let pos = PosQuery(tile).query();
+    let offset = OffsetQuery(tile).query();
     if tile.is_arrow() {
         let src = query_position_recursive(&tile.source());
         let tgt = query_position_recursive(&tile.target());

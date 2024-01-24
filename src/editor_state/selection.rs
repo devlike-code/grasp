@@ -4,11 +4,19 @@ use imgui::{DrawListMut, ImColor32};
 use mosaic::{
     capabilities::{ArchetypeSubject, SelectionCapability},
     internals::{Tile, TileFieldEmptyQuery},
+    iterators::{
+        component_selectors::ComponentSelectors, tile_deletion::TileDeletion,
+        tile_getters::TileGetters,
+    },
 };
 
 use crate::{
-    core::math::{Rect2, Vec2},
-    utilities::Pos,
+    core::{
+        gui::windowing::gui_draw_image,
+        math::{Rect2, Vec2},
+    },
+    grasp_transitions::query_position_recursive,
+    utilities::{ColorQuery, OffsetQuery, PosQuery},
     GuiState,
 };
 
@@ -43,6 +51,21 @@ impl SelectionTile {
             Rect2::default()
         }
     }
+
+    pub fn remove(&self, child: &Tile) {
+        self.0
+            .iter()
+            .get_extensions()
+            .include_component("Selection")
+            .filter(|t| t.get("self").as_u64() as usize == child.id)
+            .delete();
+        child.remove_components("Selected");
+    }
+
+    pub fn delete(&self) {
+        let _ = self.iter().map(|t| t.remove_components("Selected"));
+        self.0.iter().delete();
+    }
 }
 
 pub fn selection_renderer(
@@ -52,36 +75,35 @@ pub fn selection_renderer(
     painter: &mut DrawListMut<'_>,
 ) {
     let selection = SelectionTile::from_tile(input);
-    let rect = selection.rectangle();
-    let min = window.get_position_with_offset_and_pan(rect.min());
-    let max = window.get_position_with_offset_and_pan(rect.max());
-    painter.add_rect_filled_multicolor(
-        [min.x, min.y],
-        [max.x, max.y],
-        ImColor32::from_rgba(77, 102, 128, 10),
-        ImColor32::from_rgba(102, 77, 128, 10),
-        ImColor32::from_rgba(77, 128, 102, 10),
-        ImColor32::from_rgba(102, 128, 77, 10),
-    );
-
-    painter
-        .add_rect(
-            [min.x, min.y],
-            [max.x, max.y],
-            ImColor32::from_rgba(255, 255, 255, 25),
-        )
-        .build();
-
+    let color = ColorQuery(&selection.0).query();
     for selected in selection.iter() {
-        let pos = window.get_position_with_offset_and_pan(Pos(&selected).query());
+        let mut pos = window.get_position_with_offset_and_pan(PosQuery(&selected).query());
+        if selected.is_arrow() {
+            let p1 = window
+                .get_position_with_offset_and_pan(query_position_recursive(&selected.source()));
+            let p2 = window
+                .get_position_with_offset_and_pan(query_position_recursive(&selected.target()));
+            let offset = OffsetQuery(&selected).query();
+            let mid = p1.lerp(p2, 0.5) + offset;
+            pos = mid;
+        }
 
-        painter
-            .add_circle([pos.x, pos.y], 20.0, ImColor32::WHITE)
-            .build();
+        gui_draw_image(
+            if selected.is_arrow() {
+                "selection-arrow"
+            } else {
+                "selection"
+            },
+            [30.0, 30.0],
+            [pos.x - window.rect.x, pos.y - window.rect.y],
+            0.0,
+            1.0,
+            Some(color),
+        );
 
         painter.add_text(
-            [pos.x + 8.0, pos.y + 8.0],
-            ImColor32::WHITE,
+            [pos.x - 25.0, pos.y - 25.0],
+            ImColor32::from_rgba_f32s(color.x, color.y, color.z, color.w),
             format!("{}", selection.0.id),
         );
     }

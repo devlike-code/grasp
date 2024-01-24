@@ -79,6 +79,8 @@ impl GraspEditorWindow {
             EditorState::WindowResizing => {}
 
             EditorState::ContextMenu => {}
+
+            EditorState::TransformerWorking => {}
         }
     }
 }
