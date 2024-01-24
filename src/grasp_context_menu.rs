@@ -3,7 +3,7 @@ use std::sync::Arc;
 use itertools::Itertools;
 use mosaic::{
     capabilities::ArchetypeSubject,
-    internals::{pars, void, ComponentValuesBuilderSetter, MosaicIO, TileFieldEmptyQuery},
+    internals::{pars, void, ComponentValuesBuilderSetter, MosaicIO},
     iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
 };
 
@@ -12,7 +12,6 @@ use crate::{
     editor_state::windows::GraspEditorWindow,
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
     grasp_queues::{CloseWindowRequestQueue, WindowTransformerQueue},
-    utilities::Label,
     GuiState,
 };
 

@@ -56,14 +56,12 @@ pub struct GuiDockspace {
 }
 
 pub fn gui_str<S: AsRef<str>>(s: S) -> *const i8 {
-    unsafe {
-        let mut buffer = vec![];
+    let mut buffer = vec![];
 
-        buffer.extend(s.as_ref().as_bytes());
-        buffer.push(b'\0');
+    buffer.extend(s.as_ref().as_bytes());
+    buffer.push(b'\0');
 
-        buffer.as_ptr() as *const _
-    }
+    buffer.as_ptr() as *const _
 }
 
 pub fn new_id<S: AsRef<str>>(s: S) -> u32 {

@@ -1,7 +1,6 @@
 use crate::core::math::vec2::Vec2;
 use crate::core::math::Rect2;
 use imgui::sys::ImVec4;
-use imgui::ImColor32;
 use itertools::Itertools;
 use mosaic::internals::{EntityId, Mosaic, MosaicIO};
 use mosaic::{

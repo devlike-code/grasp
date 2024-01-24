@@ -40,16 +40,10 @@ impl GraspEditorWindowList {
     }
 
     pub fn get_by_id(&mut self, id: usize) -> Option<&GraspEditorWindow> {
-        self.windows
-            .iter()
-            .filter(|w| w.window_tile.id == id)
-            .next()
+        self.windows.iter().find(|w| w.window_tile.id == id)
     }
 
     pub fn get_by_id_mut(&mut self, id: usize) -> Option<&mut GraspEditorWindow> {
-        self.windows
-            .iter_mut()
-            .filter(|w| w.window_tile.id == id)
-            .next()
+        self.windows.iter_mut().find(|w| w.window_tile.id == id)
     }
 }

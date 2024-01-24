@@ -9,7 +9,7 @@ use std::{
 
 use imgui::{
     sys::{igGetWindowDrawList, igImMax, igImMin, igImRotate, ImVec2, ImVec4},
-    ConfigFlags, ImColor32, ImString, Ui, WindowFlags,
+    ConfigFlags, ImString, Ui, WindowFlags,
 };
 use lazy_static::lazy_static;
 use log::info;

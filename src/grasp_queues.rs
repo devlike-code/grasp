@@ -67,7 +67,7 @@ impl GraspEditorState {
         {
             let id = request.get("id").as_u64() as usize;
             let index = request.get("index").as_u64();
-            let name = format!("[{}] {}", index, request.get("name").as_s32().to_string());
+            let name = format!("[{}] {}", index, request.get("name").as_s32());
 
             if let Some(window) = self.window_list.get_by_id(id) {
                 let old_name = window.name.clone();
@@ -92,12 +92,7 @@ impl GraspEditorState {
         {
             let data = request.get("self").as_str();
 
-            if let Some(pos) = self
-                .window_list
-                .windows
-                .iter()
-                .position(|w| w.name == data.to_string())
-            {
+            if let Some(pos) = self.window_list.windows.iter().position(|w| w.name == data) {
                 let window = self.window_list.windows.remove(pos).unwrap();
                 self.window_list.windows.push_front(window);
                 gui_set_window_focus(&data.to_string());

@@ -131,6 +131,7 @@ pub fn finite_state_transformer(initial_state: &[Tile], window: &Tile) {
     }
 }
 
+#[allow(clippy::upper_case_acronyms)]
 pub trait FSM {
     type State;
     type Transition: Copy + Clone;

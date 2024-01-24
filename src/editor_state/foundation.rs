@@ -30,15 +30,12 @@ use crate::{
 use super::{
     categories::ComponentCategory,
     network::Networked,
-    selection::selection_renderer,
-    view::{
-        color_property_renderer, two_float_property_xy_renderer, ComponentPropertyRenderer,
-        ComponentRenderer,
-    },
+    view::{ComponentPropertyRenderer, ComponentRenderer},
 };
 
 #[derive(PartialEq, Eq, PartialOrd, Ord)]
 pub enum TransformerState {
+    #[allow(dead_code)]
     Running,
     Cancelled,
     Valid,

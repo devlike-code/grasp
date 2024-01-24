@@ -1,7 +1,7 @@
 use std::{env, fmt::Display, fs, str::FromStr, sync::Arc};
 
 use imgui::{
-    sys, Condition, DrawListMut, ImString, MouseButton, StyleColor, TreeNodeToken, WindowFlags,
+    Condition, DrawListMut, ImString, MouseButton, StyleColor, TreeNodeToken, WindowFlags,
 };
 use itertools::Itertools;
 use log::error;
@@ -16,15 +16,11 @@ use mosaic::{
 
 use crate::{
     core::{
-        gui::{
-            docking::{gui_str, GuiViewport},
-            windowing::gui_set_window_focus,
-        },
+        gui::{docking::GuiViewport, windowing::gui_set_window_focus},
         math::{Rect2, Vec2},
         structures::grasp_queues,
     },
     editor_state_machine::EditorState,
-    grasp_common::GraspEditorData,
     grasp_queues::CloseWindowRequestQueue,
     transformers::find_selection_owner,
     GuiState,
@@ -625,7 +621,7 @@ pub fn two_float_property_xy_renderer(ui: &GuiState, window: &mut GraspEditorWin
     }
 }
 
-pub fn color_property_renderer(ui: &GuiState, window: &mut GraspEditorWindow, tile: Tile) {
+pub fn color_property_renderer(ui: &GuiState, _window: &mut GraspEditorWindow, tile: Tile) {
     println!("^^ COLOR PROPERTY RENDERER: {}", tile.id);
     let r = tile.get("r").as_f32();
     println!("THIS IS NOT HAPPENING");

@@ -11,10 +11,7 @@ use mosaic::{
 };
 
 use crate::{
-    core::{
-        gui::windowing::gui_draw_image,
-        math::{Rect2, Vec2},
-    },
+    core::gui::windowing::gui_draw_image,
     grasp_transitions::query_position_recursive,
     utilities::{ColorQuery, OffsetQuery, PosQuery},
     GuiState,
@@ -39,19 +36,6 @@ impl SelectionTile {
         self.0.mosaic.get_selection(&self.0)
     }
 
-    pub fn rectangle(&self) -> Rect2 {
-        if let Some(rect) = self.0.get_component("Rectangle") {
-            Rect2 {
-                x: rect.get("x").as_f32(),
-                y: rect.get("y").as_f32(),
-                width: rect.get("width").as_f32(),
-                height: rect.get("height").as_f32(),
-            }
-        } else {
-            Rect2::default()
-        }
-    }
-
     pub fn remove(&self, child: &Tile) {
         self.0
             .iter()
@@ -60,11 +44,6 @@ impl SelectionTile {
             .filter(|t| t.get("self").as_u64() as usize == child.id)
             .delete();
         child.remove_components("Selected");
-    }
-
-    pub fn delete(&self) {
-        let _ = self.iter().map(|t| t.remove_components("Selected"));
-        self.0.iter().delete();
     }
 }
 

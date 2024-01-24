@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 pub mod collage;
 pub mod traversal;
 mod unit_tests;

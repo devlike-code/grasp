@@ -28,7 +28,7 @@ pub enum Cut {
 }
 
 impl Cut {
-    pub fn into_u8(&self) -> u8 {
+    pub fn into_u8(self) -> u8 {
         match self {
             Cut::Include(_) => 0,
             Cut::Exclude(_) => 1,
@@ -43,7 +43,7 @@ impl Cut {
 #[derive(Debug)]
 pub enum Collage {
     Tiles,
-    CombineQueries(Vec<Box<Collage>>),
+    CombineQueries(Vec<Collage>),
     Pick(Pick, Box<Collage>),
     Cut(Cut, Box<Collage>),
 }
@@ -94,7 +94,7 @@ pub fn take_extensions(mq: Box<Collage>) -> Box<Collage> {
 pub fn take_objects(mq: Box<Collage>) -> Box<Collage> {
     Box::new(Collage::Cut(Cut::Objects, mq))
 }
-pub fn gather(mqs: Vec<Box<Collage>>) -> Box<Collage> {
+pub fn gather(mqs: Vec<Collage>) -> Box<Collage> {
     Box::new(Collage::CombineQueries(mqs))
 }
 
