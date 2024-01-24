@@ -112,23 +112,24 @@ impl GraspEditorState {
     }
 
     fn process_close_window_queue(&mut self, ui: &GuiState) {
-        if let Some(_token) = ui.begin_modal_popup("close-window") {
+        ui.set_next_item_width(320.0);
+        if let Some(_token) = ui.begin_modal_popup("Unsaved changes") {
             if let Some(request) = self.pending_close_window_request.clone() {
-                ui.text("Save before closing?");
-                if ui.button("Yes") {
+                ui.text("Changes were made but unsaved.");
+                if ui.button_with_size("Save", [100.0, 20.0]) {
                     self.save_file();
                     self.close_window(self.window_list.get_focused().unwrap().window_tile.clone());
                     request.iter().delete();
                     ui.close_current_popup();
                 }
-
-                if ui.button("No") {
+                ui.same_line();
+                if ui.button_with_size("Discard", [100.0, 20.0]) {
                     self.close_window(self.window_list.get_focused().unwrap().window_tile.clone());
                     request.iter().delete();
                     ui.close_current_popup();
                 }
-
-                if ui.button("Cancel") {
+                ui.same_line();
+                if ui.button_with_size("Cancel", [100.0, 20.0]) {
                     request.iter().delete();
                     ui.close_current_popup();
                 }
@@ -141,7 +142,7 @@ impl GraspEditorState {
             let window = self.window_list.get_focused().unwrap();
             if window.changed {
                 self.pending_close_window_request = Some(request);
-                ui.open_popup("close-window");
+                ui.open_popup("Unsaved changes");
             } else {
                 self.close_window(self.window_list.get_focused().unwrap().window_tile.clone());
                 request.iter().delete();
