@@ -15,7 +15,10 @@ use crate::{
         gui::windowing::gui_set_window_focus,
         structures::grasp_queues::{self, dequeue, GraspQueue},
     },
-    editor_state::foundation::{GraspEditorState, TransformerState},
+    editor_state::{
+        file_operations::SaveFileCapability,
+        foundation::{GraspEditorState, TransformerState},
+    },
     editor_state_machine::{EditorStateTrigger, StateMachine},
     GuiState,
 };
@@ -57,7 +60,7 @@ impl GraspEditorState {
         self.process_named_focus_window_queue();
         self.process_new_window_queue();
         self.process_quadtree_queue();
-        self.process_close_window_queue();
+        self.process_close_window_queue(ui);
         self.process_window_transformer_queue(ui);
     }
 
@@ -108,12 +111,41 @@ impl GraspEditorState {
         }
     }
 
-    fn process_close_window_queue(&mut self) {
+    fn process_close_window_queue(&mut self, ui: &GuiState) {
+        if let Some(_token) = ui.begin_modal_popup("close-window") {
+            if let Some(request) = self.pending_close_window_request.clone() {
+                ui.text("Save before closing?");
+                if ui.button("Yes") {
+                    self.save_file();
+                    self.close_window(self.window_list.get_focused().unwrap().window_tile.clone());
+                    request.iter().delete();
+                    ui.close_current_popup();
+                }
+
+                if ui.button("No") {
+                    self.close_window(self.window_list.get_focused().unwrap().window_tile.clone());
+                    request.iter().delete();
+                    ui.close_current_popup();
+                }
+
+                if ui.button("Cancel") {
+                    request.iter().delete();
+                    ui.close_current_popup();
+                }
+            }
+        }
+
         while let Some(request) =
             grasp_queues::dequeue(CloseWindowRequestQueue, &self.editor_mosaic)
         {
-            self.close_window(self.window_list.get_focused().unwrap().window_tile.clone());
-            request.iter().delete();
+            let window = self.window_list.get_focused().unwrap();
+            if window.changed {
+                self.pending_close_window_request = Some(request);
+                ui.open_popup("close-window");
+            } else {
+                self.close_window(self.window_list.get_focused().unwrap().window_tile.clone());
+                request.iter().delete();
+            }
         }
     }
 

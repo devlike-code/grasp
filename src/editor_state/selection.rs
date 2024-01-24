@@ -1,6 +1,6 @@
 use std::vec::IntoIter;
 
-use imgui::{DrawListMut, ImColor32};
+use imgui::DrawListMut;
 use mosaic::{
     capabilities::{ArchetypeSubject, SelectionCapability},
     internals::{Tile, TileFieldEmptyQuery},
@@ -51,7 +51,7 @@ pub fn selection_renderer(
     _s: &GuiState,
     window: &mut GraspEditorWindow,
     input: Tile,
-    painter: &mut DrawListMut<'_>,
+    _painter: &mut DrawListMut<'_>,
 ) {
     let selection = SelectionTile::from_tile(input);
     let color = ColorQuery(&selection.0).query();
@@ -80,10 +80,10 @@ pub fn selection_renderer(
             Some(color),
         );
 
-        painter.add_text(
-            [pos.x - 25.0, pos.y - 25.0],
-            ImColor32::from_rgba_f32s(color.x, color.y, color.z, color.w),
-            format!("{}", selection.0.id),
-        );
+        // painter.add_text(
+        //     [pos.x - 25.0, pos.y - 25.0],
+        //     ImColor32::from_rgba_f32s(color.x, color.y, color.z, color.w),
+        //     format!("{}", selection.0.id),
+        // );
     }
 }

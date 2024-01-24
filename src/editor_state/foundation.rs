@@ -64,6 +64,7 @@ pub struct GraspEditorState {
     pub show_tabview: bool,
     pub queued_component_delete: Option<usize>,
     pub transformer_functions: HashMap<String, Transformer>,
+    pub pending_close_window_request: Option<Tile>,
 }
 
 impl GraspEditorState {
@@ -149,6 +150,7 @@ impl GraspEditorState {
                 "Offset".into(),
             ],
             transformer_functions: HashMap::new(),
+            pending_close_window_request: None,
         };
 
         setup_component_renderers(&mut instance);
