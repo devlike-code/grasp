@@ -60,19 +60,6 @@ impl GraspEditorState {
 
         self.show_windows(s, &mut caught_events);
 
-        // let p1 = Vec2::new(50.0, 50.0);
-        // let p2 = Vec2::new(600.0, 500.0);
-        // let mid = p1.lerp(p2, 0.5);
-
-        // gui_draw_bezier_arrow(
-        //     &mut s.ui.get_foreground_draw_list(),
-        //     [p1, mid, p2],
-        //     2.0,
-        //     32,
-        //     Vec2::ZERO,
-        //     0.0,
-        // );
-
         self.show_errors(s);
 
         if self.pending_close_window_request.is_none()
