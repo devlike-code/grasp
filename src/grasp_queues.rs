@@ -1,4 +1,5 @@
 use grasp_proc_macros::GraspQueue;
+use imgui::sys::igSetNextWindowPos;
 use itertools::Itertools;
 use mosaic::{
     capabilities::ArchetypeSubject,
@@ -116,6 +117,7 @@ impl GraspEditorState {
 
         if let Some(_token) = ui
             .modal_popup_config("Unsaved changes")
+            .save_settings(false)
             .always_auto_resize(true)
             .collapsible(false)
             .begin_popup()
