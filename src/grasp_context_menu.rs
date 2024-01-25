@@ -12,6 +12,7 @@ use crate::{
     editor_state::windows::GraspEditorWindow,
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
     grasp_queues::{CloseWindowRequestQueue, WindowTransformerQueue},
+    transformers::TransformerUtilities,
     GuiState,
 };
 
@@ -98,7 +99,11 @@ impl GraspEditorWindow {
             for transformer in transformers {
                 let name = transformer.get("self").as_s32().to_string();
 
-                if s.ui.menu_item(name.clone()) {
+                if s.ui
+                    .menu_item_config(name.clone())
+                    .enabled(!self.editor_mosaic.is_transformer_pending())
+                    .build()
+                {
                     let request = self.editor_mosaic.new_object(
                         "WindowTransformerRequest",
                         pars()

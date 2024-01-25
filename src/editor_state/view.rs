@@ -62,12 +62,14 @@ impl GraspEditorState {
 
         self.show_errors(s);
 
-        if self.pending_close_window_request.is_none()
-            && !caught_events.contains(&hash_input("double click left"))
-            && s.ui.is_mouse_double_clicked(imgui::MouseButton::Left)
-        {
-            self.open_files();
-        }
+        // TODO: FIX LATER
+        // if self.pending_close_window_request.is_none()
+        //     && !caught_events.contains(&hash_input("double click left"))
+        //     && s.ui.is_mouse_double_clicked(imgui::MouseButton::Left)
+        //     && s.ui.get
+        // {
+        //     self.open_files();
+        // }
 
         caught_events.clear();
     }
@@ -336,7 +338,7 @@ impl GraspEditorState {
                             {
                                 for part_tile in tiles.iter().sorted_by(|a, b| a.id.cmp(&b.id)) {
                                     if let Some(renderer) =
-                                        self.component_property_renderers.get(&part.as_str().into())
+                                        self.component_property_renderers.get(part)
                                     {
                                         if let Some(_subnode_token) =
                                             tree(s, &part.to_string(), false)
@@ -435,9 +437,8 @@ impl GraspEditorState {
                                                 imgui::StyleColor::Header,
                                                 [66.0 / 255.0, 64.0 / 255.0, 123.0 / 255.0, 1.0],
                                             );
-                                            if let Some(renderer) = self
-                                                .component_property_renderers
-                                                .get(&part.as_str().into())
+                                            if let Some(renderer) =
+                                                self.component_property_renderers.get(part)
                                             {
                                                 if let Some(_subnode_token) =
                                                     tree(s, &part.to_string(), false)
@@ -614,9 +615,8 @@ pub fn two_float_property_xy_renderer(ui: &GuiState, window: &mut GraspEditorWin
 }
 
 pub fn color_property_renderer(ui: &GuiState, _window: &mut GraspEditorWindow, tile: Tile) {
-    println!("^^ COLOR PROPERTY RENDERER: {}", tile.id);
     let r = tile.get("r").as_f32();
-    println!("THIS IS NOT HAPPENING");
+
     let g = tile.get("g").as_f32();
     let b = tile.get("b").as_f32();
     let a = tile.get("a").as_f32();
@@ -632,12 +632,8 @@ pub fn color_property_renderer(ui: &GuiState, _window: &mut GraspEditorWindow, t
 }
 
 pub fn selection_property_renderer(ui: &GuiState, window: &mut GraspEditorWindow, tile: Tile) {
-    println!("^^ SELECTION PROPERTY RENDERER: {}", tile.id);
     if let Some(color) = tile.get_component("Color") {
         assert!(tile.mosaic.is_tile_valid(&color));
-        println!("{:?}", color.mosaic.data_storage.lock().unwrap());
-        //println!("{:?}", color.get_full_archetype());
-        //println!("{} {}", color.source(), color.target());
         color_property_renderer(ui, window, color);
     } else {
         ui.text("No color");
@@ -645,7 +641,6 @@ pub fn selection_property_renderer(ui: &GuiState, window: &mut GraspEditorWindow
 }
 
 pub fn selected_property_renderer(ui: &GuiState, window: &mut GraspEditorWindow, tile: Tile) {
-    println!("^^ SELECTED PROPERTY RENDERER: {}", tile.id);
     if let Some(selection_owner) = find_selection_owner(&tile) {
         ui.text(format!("Selection owner: {:?}", selection_owner.0));
         selection_property_renderer(ui, window, selection_owner.0);

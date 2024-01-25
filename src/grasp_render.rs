@@ -31,7 +31,7 @@ use mosaic::iterators::component_selectors::ComponentSelectors;
 use mosaic::iterators::tile_filters::TileFilters;
 use mosaic::iterators::tile_getters::TileGetters;
 
-pub type GraspRenderer = fn(&mut GraspEditorWindow, &GuiState, &HashMap<S32, ComponentRenderer>);
+pub type GraspRenderer = fn(&mut GraspEditorWindow, &GuiState, &HashMap<String, ComponentRenderer>);
 
 fn gui_set_cursor_pos(x: f32, y: f32) {
     unsafe {
@@ -239,7 +239,7 @@ fn default_renderer_draw_arrow(
 pub fn default_renderer_draw(
     window: &mut GraspEditorWindow,
     s: &GuiState,
-    component_renderers: &HashMap<S32, ComponentRenderer>,
+    component_renderers: &HashMap<String, ComponentRenderer>,
 ) {
     let mut painter = s.ui.get_window_draw_list();
 
@@ -251,8 +251,10 @@ pub fn default_renderer_draw(
         .collect_vec();
 
     for obj in &meta {
-        if let Some(renderer) = component_renderers.get(&obj.component) {
-            renderer(s, window, obj.clone(), &mut painter);
+        for (name, _tiles) in obj.get_full_archetype() {
+            if let Some(renderer) = component_renderers.get(&name) {
+                renderer(s, window, obj.clone(), &mut painter);
+            }
         }
     }
 

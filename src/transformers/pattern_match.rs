@@ -1,20 +1,25 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{borrow::Borrow, collections::HashMap, sync::Arc};
 
 use array_tool::vec::Intersect;
 use itertools::Itertools;
 
 use crate::{
-    core::structures::{pairs::PairCapability, ListCapability},
+    core::{
+        has_mosaic::HasMosaic,
+        structures::{pairs::PairCapability, ErrorCapability, ListCapability, ListTile, PairTile},
+    },
+    editor_state::{foundation::TransformerState, windows::GraspEditorWindow},
     querying::traversal::{TraversalOperator, Traverse},
+    GuiState,
 };
-use mosaic::iterators::tile_deletion::TileDeletion;
+use mosaic::iterators::{component_selectors::ComponentSelectors, tile_deletion::TileDeletion};
 use mosaic::{
     capabilities::SelectionCapability,
     internals::{void, EntityId, Mosaic, MosaicCRUD, MosaicIO, MosaicTypelevelCRUD, Tile},
 };
 use ordered_multimap::ListOrderedMultimap;
 
-use super::ProcedureTile;
+use super::{Procedure, ProcedureTile};
 
 #[derive(Default, Debug)]
 pub(crate) struct PatternMatchState {
@@ -431,3 +436,85 @@ mod pattern_match_tests {
         }
     }
 }
+
+pub fn pattern_match_validation(window: &GraspEditorWindow, ui: &GuiState) -> TransformerState {
+    ui.window("Pattern Match")
+        .build(|| {
+            let pick1 = window
+                .document_mosaic
+                .get_all()
+                .include_component("Pick1")
+                .next();
+            ui.text(format!(
+                "Pattern (pick #1): {}",
+                pick1
+                    .as_ref()
+                    .map(|t| t.id.to_string())
+                    .unwrap_or("Nothing".to_string())
+            ));
+            ui.spacing();
+            let pick2 = window
+                .document_mosaic
+                .get_all()
+                .include_component("Pick2")
+                .next();
+            ui.text(format!(
+                "Target (pick #2): {}",
+                pick2
+                    .as_ref()
+                    .map(|t| t.id.to_string())
+                    .unwrap_or("Nothing".to_string())
+            ));
+
+            ui.separator();
+            let token = if pick1.is_none() || pick2.is_none() {
+                Some(ui.begin_disabled(true))
+            } else {
+                None
+            };
+            if ui.button_with_size("Run", [100.0, 20.0]) {
+                let p = window.document_mosaic.make_procedure("PatternMatch");
+                p.add_argument("pattern", &pick1.unwrap().target());
+                p.add_argument("target", &pick2.unwrap().target());
+                match pattern_match(&p) {
+                    Ok(_) => {
+                        println!("PATTERN MATCH OK!");
+                        for result in p.get_results() {
+                            let list = ListTile::from_tile(result).unwrap();
+                            for binding in list.iter() {
+                                let bind = PairTile::from_tile(binding).unwrap();
+                                println!("{:?} -> {:?}", bind.get_first(), bind.get_second());
+                            }
+                            println!();
+                        }
+                    }
+                    Err(e) => {
+                        println!("PATTERN MATCH ERROR: {:?}!", e.to_string());
+                        window.editor_mosaic.make_error(
+                            &e.to_string(),
+                            Some(window.window_tile.clone()),
+                            Some(p.0),
+                        );
+                    }
+                }
+
+                if let Some(t) = token {
+                    t.end()
+                }
+                return TransformerState::Valid;
+            }
+            if let Some(t) = token {
+                t.end()
+            }
+
+            ui.same_line();
+            if ui.button_with_size("Cancel", [100.0, 20.0]) {
+                return TransformerState::Cancelled;
+            }
+
+            TransformerState::Running
+        })
+        .unwrap_or(TransformerState::Running)
+}
+
+pub fn pattern_match_tool(initial_state: &[Tile], _window: &Tile) {}

@@ -23,7 +23,9 @@ use crate::{
     editor_state_machine::EditorState,
     grasp_editor_window_list::GraspEditorWindowList,
     grasp_render,
-    transformers::{finite_state_transformer, select},
+    transformers::{
+        finite_state_transformer, pattern_match_tool, pattern_match_validation, select,
+    },
     GuiState,
 };
 
@@ -41,7 +43,8 @@ pub enum TransformerState {
     Valid,
 }
 
-pub type TransformerInputValidationFn = Box<dyn Fn(&GuiState) -> TransformerState + 'static>;
+pub type TransformerInputValidationFn =
+    Box<dyn Fn(&GraspEditorWindow, &GuiState) -> TransformerState + 'static>;
 pub type TransformerFn = Box<dyn Fn(&[Tile], &Tile) + 'static>;
 
 pub struct Transformer {
@@ -54,8 +57,8 @@ pub struct GraspEditorState {
     pub editor_mosaic: Arc<Mosaic>,
     pub component_mosaic: Arc<Mosaic>,
     pub transformer_mosaic: Arc<Mosaic>,
-    pub component_entity_renderers: HashMap<S32, ComponentRenderer>,
-    pub component_property_renderers: HashMap<S32, ComponentPropertyRenderer>,
+    pub component_entity_renderers: HashMap<String, ComponentRenderer>,
+    pub component_property_renderers: HashMap<String, ComponentPropertyRenderer>,
     pub window_list: GraspEditorWindowList,
     pub editor_state_tile: Tile,
     pub new_tab_request_queue: QueueTile,
@@ -65,6 +68,7 @@ pub struct GraspEditorState {
     pub queued_component_delete: Option<usize>,
     pub transformer_functions: HashMap<String, Transformer>,
     pub pending_close_window_request: Option<Tile>,
+    pub pending_transform_window_request: Option<Tile>,
 }
 
 impl GraspEditorState {
@@ -88,6 +92,11 @@ impl GraspEditorState {
     fn load_transformers(&mut self) {
         self.add_transformer("[Selection] Create", None, Box::new(select));
         self.add_transformer("[Selection] Delete", None, Box::new(deselect));
+        self.add_transformer(
+            "[Pattern] Match",
+            Some(Box::new(pattern_match_validation)),
+            Box::new(pattern_match_tool),
+        );
         self.add_transformer("[FSM] Compile", None, Box::new(finite_state_transformer));
     }
 
@@ -151,6 +160,7 @@ impl GraspEditorState {
             ],
             transformer_functions: HashMap::new(),
             pending_close_window_request: None,
+            pending_transform_window_request: None,
         };
 
         setup_component_renderers(&mut instance);

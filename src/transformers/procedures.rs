@@ -54,11 +54,6 @@ impl ProcedureTile {
 
 impl Procedure for Arc<Mosaic> {
     fn make_procedure(&self, name: &str) -> ProcedureTile {
-        self.new_type("Procedure: str;").unwrap();
-        self.new_type("ProcedureArgument: { name: s32, value: u64 };")
-            .unwrap();
-        self.new_type("ProcedureResult: unit;").unwrap();
-
         ProcedureTile(self.new_object("Procedure", par(name.to_string())))
     }
 

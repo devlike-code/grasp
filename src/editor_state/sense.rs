@@ -6,8 +6,12 @@ use std::{
 use imgui::Key;
 use itertools::Itertools;
 use mosaic::{
-    internals::{MosaicCRUD, MosaicIO, Tile, Value},
-    iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
+    capabilities::ArchetypeSubject,
+    internals::{void, MosaicCRUD, MosaicIO, Tile, Value},
+    iterators::{
+        component_selectors::ComponentSelectors, tile_deletion::TileDeletion,
+        tile_getters::TileGetters,
+    },
 };
 
 use crate::{
@@ -17,6 +21,7 @@ use crate::{
     },
     editor_state::helpers::RequireWindowFocus,
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
+    transformers::find_selection_owner,
     utilities::QuadTreeFetch,
     GuiState,
 };
@@ -149,6 +154,60 @@ impl GraspEditorWindow {
             self.editor_data.rect_delta = Some(rect_delta);
         } else {
             self.editor_data.rect_delta = Some(Vec2::ZERO);
+        }
+
+        for (key, value) in &[
+            (30_usize, "Pick1".to_string()), // Alpha1-5
+            (31_usize, "Pick2".to_string()),
+            (32_usize, "Pick3".to_string()),
+            (33_usize, "Pick4".to_string()),
+            (34_usize, "Pick5".to_string()),
+        ] {
+            if s.ui.io().keys_down[*key]
+                && s.ui.io().key_ctrl
+                && !self.editor_data.selected.is_empty()
+            {
+                if let Some(sel) = self
+                    .editor_data
+                    .selected
+                    .first()
+                    .unwrap()
+                    .get_component("Selected")
+                {
+                    if let Some(owner) = find_selection_owner(&sel) {
+                        if let Some(old) = self
+                            .document_mosaic
+                            .get_all()
+                            .include_component(value)
+                            .next()
+                        {
+                            if old.target() == owner.0 {
+                                return;
+                            }
+
+                            if let Some(old_desc) = self
+                                .document_mosaic
+                                .get_all()
+                                .include_component(value)
+                                .next()
+                            {
+                                old_desc.iter().delete();
+                            }
+                        }
+
+                        owner.0.add_component(value, void());
+                    }
+                }
+            }
+        }
+
+        if s.ui.is_key_pressed(Key::Escape) {
+            for pick in &["Pick1", "Pick2", "Pick3", "Pick4", "Pick5"] {
+                self.document_mosaic
+                    .get_all()
+                    .include_component(pick)
+                    .delete();
+            }
         }
 
         if s.ui.is_key_down(Key::Delete) && self.state == EditorState::Idle && is_focused {

@@ -24,6 +24,11 @@
             "Offset: { x: f32, y: f32 };",
             "SelfLoop: f32;",
             "Transformer: s32;",
+            "Pick1: unit;",
+            "Pick2: unit;",
+            "Pick3: unit;",
+            "Pick4: unit;",
+            "Pick5: unit;",
         ]
    ),
 
@@ -111,7 +116,7 @@
         hidden: false,
         components: [
             "Procedure: str;",
-            "ProcedureArgument: s32;",
+            "ProcedureArgument: { name: s32, value: u64 };",
             "ProcedureResult: unit;",
         ]
     ),

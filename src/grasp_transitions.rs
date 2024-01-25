@@ -13,6 +13,7 @@ use crate::{
     },
     editor_state::windows::GraspEditorWindow,
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
+    transformers::TransformerUtilities,
     utilities::{OffsetQuery, PosQuery, RectQuery},
 };
 
@@ -21,29 +22,30 @@ impl StateMachine for GraspEditorWindow {
     type State = EditorState;
 
     fn on_transition(&mut self, from: Self::State, trigger: Self::Trigger) -> Option<EditorState> {
+        let previous = if self.editor_mosaic.is_transformer_pending() {
+            Some(EditorState::TransformerWorking)
+        } else {
+            Some(EditorState::Idle)
+        };
+
         let result = match (from, trigger) {
             (EditorState::ContextMenu, EditorStateTrigger::ExitContextMenu) => {
                 if self.under_cursor().is_empty() {
                     self.editor_data.selected.clear();
                 }
-                Some(EditorState::Idle)
+
+                previous
             }
             (EditorState::ContextMenu, EditorStateTrigger::TransformerSelected) => {
                 Some(EditorState::TransformerWorking)
             }
             (EditorState::ContextMenu, _) => None,
             (_, EditorStateTrigger::ClickToContextMenu) => Some(EditorState::ContextMenu),
-
             (EditorState::Idle, EditorStateTrigger::TransformerSelected) => {
                 Some(EditorState::TransformerWorking)
             }
-            (EditorState::TransformerWorking, EditorStateTrigger::TransformerDone) => {
-                Some(EditorState::Idle)
-            }
-            (EditorState::TransformerWorking, EditorStateTrigger::TransformerCancelled) => {
-                // TODO: cleanup
-                Some(EditorState::Idle)
-            }
+            (EditorState::TransformerWorking, EditorStateTrigger::TransformerDone) => previous,
+            (EditorState::TransformerWorking, EditorStateTrigger::TransformerCancelled) => previous,
 
             (_, EditorStateTrigger::DblClickToCreate) => {
                 self.create_new_object(
@@ -52,18 +54,19 @@ impl StateMachine for GraspEditorWindow {
                 self.changed = true;
                 //all windows need to update their quadtrees
                 self.request_quadtree_update();
-                Some(EditorState::Idle)
+                previous
             }
             (_, EditorStateTrigger::DblClickToRename) => Some(EditorState::PropertyChanging),
             (_, EditorStateTrigger::MouseDownOverNode) => None,
-            (_, EditorStateTrigger::ClickToSelect) => Some(EditorState::Idle),
+            (_, EditorStateTrigger::ClickToSelect) => previous,
+
             (EditorState::Pan, EditorStateTrigger::ClickToDeselect) => {
                 self.request_quadtree_update();
-                Some(EditorState::Idle)
+                previous
             }
             (_, EditorStateTrigger::ClickToDeselect) => {
                 self.editor_data.selected.clear();
-                Some(EditorState::Idle)
+                previous
             }
             (_, EditorStateTrigger::DragToPan) => {
                 self.editor_data.previous_pan = self.editor_data.pan;
@@ -87,9 +90,9 @@ impl StateMachine for GraspEditorWindow {
             }
             (EditorState::Pan, EditorStateTrigger::EndDrag) => {
                 self.request_quadtree_update();
-                Some(EditorState::Idle)
+                previous
             }
-            (EditorState::WindowResizing, EditorStateTrigger::EndDrag) => Some(EditorState::Idle),
+            (EditorState::WindowResizing, EditorStateTrigger::EndDrag) => previous,
             (EditorState::Link, EditorStateTrigger::EndDrag) => {
                 if let Some(tile) = self.editor_data.link_end.take() {
                     let start = self.editor_data.selected.first().unwrap().clone();
@@ -117,18 +120,18 @@ impl StateMachine for GraspEditorWindow {
 
                 // all windows need to update their quadtrees
                 self.request_quadtree_update();
-                Some(EditorState::Idle)
+                previous
             }
             (EditorState::Move, EditorStateTrigger::EndDrag) => {
                 self.update_selected_positions_by(self.editor_data.cursor_delta);
                 self.changed = true;
                 self.request_quadtree_update();
-                Some(EditorState::Idle)
+                previous
             }
             (EditorState::Rect, EditorStateTrigger::EndDrag) => {
                 self.editor_data.rect_start_pos = None;
                 self.editor_data.rect_delta = None;
-                Some(EditorState::Idle)
+                previous
             }
             (EditorState::PropertyChanging, _) => {
                 self.editor_data.tile_changing = None;
@@ -136,7 +139,7 @@ impl StateMachine for GraspEditorWindow {
                 self.editor_data.previous_text.clear();
                 self.editor_data.text.clear();
                 self.changed = true;
-                Some(EditorState::Idle)
+                previous
             }
 
             (s, t) => {

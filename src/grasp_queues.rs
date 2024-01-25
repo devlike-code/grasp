@@ -1,5 +1,4 @@
 use grasp_proc_macros::GraspQueue;
-use imgui::sys::igSetNextWindowPos;
 use itertools::Itertools;
 use mosaic::{
     capabilities::ArchetypeSubject,
@@ -342,11 +341,67 @@ impl GraspEditorState {
     }
 
     fn process_window_transformer_queue(&mut self, ui: &GuiState) {
-        while let Some(request) = dequeue(WindowTransformerQueue, &self.editor_mosaic) {
+        if let Some(request) = &self.pending_transform_window_request {
             let transformer = request.get("transform").as_s32().to_string();
             let window_index = request.get("window_index").as_u64() as usize;
 
-            request.iter().delete();
+            while let Some(_request) = dequeue(WindowTransformerQueue, &self.editor_mosaic) {}
+
+            if let Some(window) = self
+                .window_list
+                .windows
+                .iter()
+                .find(|w| w.window_tile.id == window_index)
+            {
+                if let Some(transformer) = self.transformer_functions.get(&transformer) {
+                    if let Some(validation) = &transformer.input_validation {
+                        let validated = validation(window, ui);
+                        if validated == TransformerState::Valid {
+                            (transformer.transform_function)(
+                                &window.editor_data.selected,
+                                &window.window_tile,
+                            );
+
+                            if let Some(w) = self.window_list.get_by_id_mut(window_index) {
+                                self.pending_transform_window_request
+                                    .as_ref()
+                                    .unwrap()
+                                    .iter()
+                                    .delete();
+                                self.pending_transform_window_request = None;
+                                w.trigger(EditorStateTrigger::TransformerDone)
+                            }
+                        } else if validated == TransformerState::Cancelled {
+                            if let Some(w) = self.window_list.get_by_id_mut(window_index) {
+                                self.pending_transform_window_request
+                                    .as_ref()
+                                    .unwrap()
+                                    .iter()
+                                    .delete();
+                                self.pending_transform_window_request = None;
+                                w.trigger(EditorStateTrigger::TransformerCancelled)
+                            }
+                        }
+                    } else {
+                        (transformer.transform_function)(
+                            &window.editor_data.selected,
+                            &window.window_tile,
+                        );
+
+                        if let Some(w) = self.window_list.get_by_id_mut(window_index) {
+                            self.pending_transform_window_request
+                                .as_ref()
+                                .unwrap()
+                                .iter()
+                                .delete();
+                            self.pending_transform_window_request = None;
+                            w.trigger(EditorStateTrigger::TransformerDone)
+                        }
+                    }
+                }
+            }
+        } else if let Some(request) = dequeue(WindowTransformerQueue, &self.editor_mosaic) {
+            let window_index = request.get("window_index").as_u64() as usize;
 
             if let Some(window) = self
                 .window_list
@@ -360,34 +415,7 @@ impl GraspEditorState {
                     .filter(|t| t.get("window").as_u64() as usize == window_index)
                     .delete();
 
-                if let Some(transformer) = self.transformer_functions.get(&transformer) {
-                    if let Some(validation) = &transformer.input_validation {
-                        let validated = validation(ui);
-                        if validated == TransformerState::Valid {
-                            (transformer.transform_function)(
-                                &window.editor_data.selected,
-                                &window.window_tile,
-                            );
-
-                            if let Some(w) = self.window_list.get_by_id_mut(window_index) {
-                                w.trigger(EditorStateTrigger::TransformerDone)
-                            }
-                        } else if validated == TransformerState::Cancelled {
-                            if let Some(w) = self.window_list.get_by_id_mut(window_index) {
-                                w.trigger(EditorStateTrigger::TransformerCancelled)
-                            }
-                        }
-                    } else {
-                        (transformer.transform_function)(
-                            &window.editor_data.selected,
-                            &window.window_tile,
-                        );
-
-                        if let Some(w) = self.window_list.get_by_id_mut(window_index) {
-                            w.trigger(EditorStateTrigger::TransformerDone)
-                        }
-                    }
-                }
+                self.pending_transform_window_request = Some(request);
             }
         }
     }
