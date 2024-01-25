@@ -113,25 +113,34 @@ impl GraspEditorState {
 
     fn process_close_window_queue(&mut self, ui: &GuiState) {
         ui.set_next_item_width(320.0);
-        if let Some(_token) = ui.begin_modal_popup("Unsaved changes") {
+
+        if let Some(_token) = ui
+            .modal_popup_config("Unsaved changes")
+            .always_auto_resize(true)
+            .collapsible(false)
+            .begin_popup()
+        {
             if let Some(request) = self.pending_close_window_request.clone() {
                 ui.text("Changes were made but unsaved.");
                 if ui.button_with_size("Save", [100.0, 20.0]) {
                     self.save_file();
                     self.close_window(self.window_list.get_focused().unwrap().window_tile.clone());
                     request.iter().delete();
+                    self.pending_close_window_request = None;
                     ui.close_current_popup();
                 }
                 ui.same_line();
                 if ui.button_with_size("Discard", [100.0, 20.0]) {
                     self.close_window(self.window_list.get_focused().unwrap().window_tile.clone());
                     request.iter().delete();
+                    self.pending_close_window_request = None;
                     ui.close_current_popup();
                 }
                 ui.same_line();
                 if ui.button_with_size("Cancel", [100.0, 20.0]) {
                     request.iter().delete();
                     ui.close_current_popup();
+                    self.pending_close_window_request = None;
                 }
             }
         }

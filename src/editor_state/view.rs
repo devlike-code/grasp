@@ -167,10 +167,14 @@ impl GraspEditorState {
                     (window.renderer)(window, s, &self.component_entity_renderers);
 
                     window.draw_debug(s);
-                    window.update_context_menu(front_window_id, s);
-                    window.context_popup(s);
 
-                    if title_bar_rect.contains(s.ui.io().mouse_pos.into())
+                    if self.pending_close_window_request.is_none() {
+                        window.update_context_menu(front_window_id, s);
+                        window.context_popup(s);
+                    }
+
+                    if self.pending_close_window_request.is_none()
+                        && title_bar_rect.contains(s.ui.io().mouse_pos.into())
                         && s.ui.is_mouse_clicked(imgui::MouseButton::Middle)
                         && grasp_queues::is_empty(CloseWindowRequestQueue, &self.editor_mosaic)
                     {
