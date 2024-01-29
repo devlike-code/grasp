@@ -73,6 +73,10 @@ pub fn setup_component_renderers(instance: &mut GraspEditorState) {
         .insert("PairElement".to_string());
 
     instance
+        .hidden_property_renderers
+        .insert("PatternMatchElement".to_string());
+
+    instance
         .component_delete_reactions
         .insert("PairElement".into(), Box::new(on_pair_element_deleted));
 

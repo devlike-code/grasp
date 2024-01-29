@@ -605,16 +605,37 @@ pub fn pattern_match_property_renderer(s: &GuiState, window: &mut GraspEditorWin
         procedure_args_renderer(s, window, input.target());
         pattern_match_result_renderer(s, window, proc);
     } else {
-        panic!();
         window.delete_tiles(&[proc.0]);
     }
 }
 
-pub fn on_pattern_match_element_deleted(window: &mut GraspEditorWindow, comp: String, pm: &Tile) {
+pub fn on_pattern_match_element_deleted(window: &mut GraspEditorWindow, _comp: String, pm: &Tile) {
     if let Some(p) = pm.mosaic.get(pm.get("self").as_u64() as usize) {
         let proc = ProcedureTile(p);
 
+        for res in proc.get_results() {
+            if let Some(binding_list) = ListTile::from_tile(res.clone()) {
+                for binding in binding_list.iter() {
+                    if let Some(pair) = PairTile::from_tile(binding) {
+                        let _ = pair
+                            .get_first()
+                            .and_then(|m| m.get_component("PairElement"))
+                            .map(|m| m.iter().delete());
+                        let _ = pair
+                            .get_second()
+                            .and_then(|m| m.get_component("PairElement"))
+                            .map(|m| m.iter().delete());
+                        window.delete_tiles(&[pair.0]);
+                    }
+                }
+            }
+            window.delete_tiles(&[res]);
+        }
         window.delete_tiles(&[proc.0]);
+        pm.mosaic
+            .get_all()
+            .include_component("PatternMatchElement")
+            .delete();
     }
 }
 

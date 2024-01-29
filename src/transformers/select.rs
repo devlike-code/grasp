@@ -2,16 +2,15 @@ use std::sync::Arc;
 
 use mosaic::{
     capabilities::{ArchetypeSubject, SelectionCapability},
-    internals::{par, pars, ComponentValuesBuilderSetter, MosaicIO, Tile, TileFieldEmptyQuery},
+    internals::{par, MosaicIO, Tile, TileFieldEmptyQuery},
     iterators::tile_deletion::TileDeletion,
 };
 
 use crate::{
-    core::{math::Vec2, structures::enqueue},
+    core::math::Vec2,
     editor_state::{
         foundation::TransformerState, selection::SelectionTile, windows::GraspEditorWindow,
     },
-    grasp_queues::WindowTileDeleteReactionRequestQueue,
     utilities::PosQuery,
     GuiState,
 };

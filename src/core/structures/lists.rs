@@ -3,7 +3,7 @@ use std::{sync::Arc, vec::IntoIter};
 use itertools::Itertools;
 use mosaic::{
     capabilities::ArchetypeSubject,
-    internals::{par, void, Mosaic, MosaicCRUD, MosaicIO, MosaicTypelevelCRUD, Tile},
+    internals::{par, void, Mosaic, MosaicCRUD, MosaicIO, Tile},
     iterators::{
         component_selectors::ComponentSelectors, tile_deletion::TileDeletion,
         tile_getters::TileGetters,

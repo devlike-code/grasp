@@ -1,11 +1,9 @@
 use std::sync::Arc;
 
-use itertools::Itertools;
 use mosaic::{
     capabilities::ArchetypeSubject,
     internals::{
-        par, pars, ComponentValuesBuilderSetter, EntityId, Mosaic, MosaicCRUD, MosaicIO,
-        MosaicTypelevelCRUD, Tile,
+        par, pars, ComponentValuesBuilderSetter, EntityId, Mosaic, MosaicCRUD, MosaicIO, Tile,
     },
     iterators::tile_deletion::TileDeletion,
 };

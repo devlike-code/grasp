@@ -338,6 +338,10 @@ impl GraspEditorState {
                                 .sorted_by(|a, b| (a.1.first().cmp(&b.1.first())))
                                 .collect_vec()
                             {
+                                if self.hidden_property_renderers.contains(part) {
+                                    continue;
+                                }
+
                                 for part_tile in tiles.iter().sorted_by(|a, b| a.id.cmp(&b.id)) {
                                     if let Some(renderer) =
                                         self.component_property_renderers.get(part)
