@@ -4,7 +4,7 @@ use std::{
 };
 
 use array_tool::vec::Intersect;
-use imgui::TreeNodeFlags;
+use imgui::{DrawListMut, ImColor32, TreeNodeFlags};
 use itertools::Itertools;
 use log::warn;
 
@@ -14,7 +14,7 @@ use crate::{
     },
     editor_state::{foundation::TransformerState, windows::GraspEditorWindow},
     querying::traversal::{TraversalOperator, Traverse},
-    utilities::ColorQuery,
+    utilities::{ColorQuery, PosQuery},
     GuiState,
 };
 use mosaic::{
@@ -657,18 +657,105 @@ pub fn on_pattern_match_deleted(window: &mut GraspEditorWindow, comp: String, pm
 
 pub fn pattern_match_result_renderer(
     s: &GuiState,
-    _window: &mut GraspEditorWindow,
+    window: &mut GraspEditorWindow,
     proc: ProcedureTile,
 ) {
     if s.ui
         .collapsing_header("Results", TreeNodeFlags::DEFAULT_OPEN)
     {
-        for (i, _result) in proc.get_results().iter().enumerate() {
+        if s.ui.button_with_size("Clear Display", [150.0, 20.0]) {
+            window
+                .document_mosaic
+                .get_all()
+                .include_component("PatternMatchShow")
+                .delete();
+        }
+
+        for (i, result) in proc.get_results().iter().enumerate() {
             if s.ui
                 .button_with_size(format!("Result {}", i), [150.0, 20.0])
             {
-                // something happens on graph
+                window
+                    .document_mosaic
+                    .get_all()
+                    .include_component("PatternMatchShow")
+                    .delete();
+
+                window
+                    .document_mosaic
+                    .new_object("PatternMatchShow", par(result.id as u64));
             }
         }
+    }
+}
+
+pub fn pattern_match_renderer(
+    _s: &GuiState,
+    window: &mut GraspEditorWindow,
+    input: Tile,
+    painter: &mut DrawListMut<'_>,
+) {
+    if let Some(chosen_result) = window
+        .document_mosaic
+        .get_all()
+        .include_component("PatternMatchShow")
+        .next()
+    {
+        let id = chosen_result.get("self").as_u64() as usize;
+        if let Some(show) = window.document_mosaic.get(id) {
+            if let Some(list) = ListTile::from_tile(show) {
+                let mut bindings = list
+                    .iter()
+                    .flat_map(|binding| {
+                        if let Some(pair) = PairTile::from_tile(binding) {
+                            let fst = pair.get_first();
+                            let snd = pair.get_second();
+                            if fst.is_some() && snd.is_some() {
+                                Some((fst.unwrap(), snd.unwrap()))
+                            } else {
+                                None
+                            }
+                        } else {
+                            None
+                        }
+                    })
+                    .collect_vec();
+
+                bindings.sort_by_key(|a| a.0.clone());
+
+                let mut index = 1;
+                for (fst, snd) in &bindings {
+                    let fst = window.get_position_with_offset_and_pan(PosQuery(fst).query());
+                    let snd = window.get_position_with_offset_and_pan(PosQuery(snd).query());
+                    painter.add_text(
+                        [fst.x + 15.0, fst.y - 10.0],
+                        ImColor32::WHITE,
+                        format!("{}", index),
+                    );
+
+                    painter.add_text(
+                        [snd.x + 15.0, snd.y - 10.0],
+                        ImColor32::WHITE,
+                        format!("{}", index),
+                    );
+
+                    painter
+                        .add_line(
+                            [fst.x, fst.y],
+                            [snd.x, snd.y],
+                            ImColor32::from_rgba_f32s(0.5, 0.5, 1.0, 0.2),
+                        )
+                        .build();
+
+                    index += 1;
+                }
+            } else {
+                println!("Not a list");
+            }
+        } else {
+            println!("Id {} not found", id);
+        }
+    } else {
+        println!("No PatternMatchShow component");
     }
 }

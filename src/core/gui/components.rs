@@ -9,7 +9,7 @@ use crate::{
     },
     transformers::{
         on_pattern_match_deleted, on_pattern_match_element_deleted, on_selected_delete,
-        pattern_match_property_renderer,
+        pattern_match_property_renderer, pattern_match_renderer,
     },
 };
 
@@ -39,10 +39,6 @@ pub fn setup_component_renderers(instance: &mut GraspEditorState) {
     instance
         .hidden_property_renderers
         .insert("Selected".to_string());
-
-    instance
-        .hidden_property_renderers
-        .insert("SelectionOwner".to_string());
 
     instance
         .component_delete_reactions
@@ -81,6 +77,10 @@ pub fn setup_component_renderers(instance: &mut GraspEditorState) {
         .insert("PairElement".into(), Box::new(on_pair_element_deleted));
 
     instance
+        .hidden_property_renderers
+        .insert("PatternMatchShow".to_string());
+
+    instance
         .component_entity_renderers
         .insert("SelectionOwner".into(), Box::new(selection_renderer));
 
@@ -89,6 +89,10 @@ pub fn setup_component_renderers(instance: &mut GraspEditorState) {
             .component_entity_renderers
             .insert(format!("Pick{}", i), Box::new(pick_n_renderer(i)));
     }
+
+    instance
+        .component_entity_renderers
+        .insert("PatternMatch".into(), Box::new(pattern_match_renderer));
 
     instance.component_property_renderers.insert(
         "PatternMatch".into(),
