@@ -1,5 +1,5 @@
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     fs,
     path::PathBuf,
     sync::{Arc, Mutex},
@@ -58,6 +58,7 @@ pub struct GraspEditorState {
     pub component_mosaic: Arc<Mosaic>,
     pub transformer_mosaic: Arc<Mosaic>,
     pub component_entity_renderers: HashMap<String, ComponentRenderer>,
+    pub hidden_property_renderers: HashSet<String>,
     pub component_property_renderers: HashMap<String, ComponentPropertyRenderer>,
     pub window_list: GraspEditorWindowList,
     pub editor_state_tile: Tile,
@@ -159,6 +160,7 @@ impl GraspEditorState {
                 "Offset".into(),
             ],
             transformer_functions: HashMap::new(),
+            hidden_property_renderers: HashSet::new(),
             pending_close_window_request: None,
             pending_transform_window_request: None,
         };

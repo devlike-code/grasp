@@ -406,7 +406,7 @@ impl GraspEditorState {
                             .filter_objects()
                             .exclude_component("Node")
                             .len()
-                            == 0
+                            > 0
                     };
 
                     if is_meta_present {
@@ -421,9 +421,29 @@ impl GraspEditorState {
                                     imgui::StyleColor::Header,
                                     [34.0 / 255.0, 43.0 / 255.0, 90.0 / 255.0, 1.0],
                                 );
-                                if let Some(_subnode_token) =
-                                    tree(s, &format!("{}##{}-header", o.id, o.id), false)
+
+                                let mut any_visible = false;
+                                for (part, _tiles) in &o
+                                    .get_full_archetype()
+                                    .into_iter()
+                                    .sorted_by(|a, b| (a.1.first().cmp(&b.1.first())))
+                                    .collect_vec()
                                 {
+                                    if !self.hidden_property_renderers.contains(part) {
+                                        any_visible = true;
+                                        break;
+                                    }
+                                }
+
+                                if !any_visible {
+                                    continue;
+                                }
+
+                                if let Some(_subnode_token) = tree(
+                                    s,
+                                    &format!("[META] Entity {}##{}-header", o.id, o.id),
+                                    false,
+                                ) {
                                     header_color.end();
 
                                     for (part, tiles) in &o
@@ -433,17 +453,16 @@ impl GraspEditorState {
                                         .collect_vec()
                                     {
                                         for tile in tiles.iter().sorted_by(|a, b| a.id.cmp(&b.id)) {
-                                            let subheader_color = s.ui.push_style_color(
-                                                imgui::StyleColor::Header,
-                                                [66.0 / 255.0, 64.0 / 255.0, 123.0 / 255.0, 1.0],
-                                            );
+                                            if self.hidden_property_renderers.contains(part) {
+                                                continue;
+                                            }
+
                                             if let Some(renderer) =
                                                 self.component_property_renderers.get(part)
                                             {
                                                 if let Some(_subnode_token) =
                                                     tree(s, &part.to_string(), false)
                                                 {
-                                                    subheader_color.end();
                                                     renderer(s, focused_window, tile.clone());
                                                 }
                                             } else if let Some(_subnode_token) =

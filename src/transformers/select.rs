@@ -3,6 +3,7 @@ use std::sync::Arc;
 use mosaic::{
     capabilities::{ArchetypeSubject, SelectionCapability},
     internals::{par, MosaicIO, Tile, TileFieldEmptyQuery},
+    iterators::tile_deletion::TileDeletion,
 };
 
 use crate::{core::math::Vec2, editor_state::selection::SelectionTile, utilities::PosQuery};
@@ -18,6 +19,10 @@ pub fn deselect(initial_state: &[Tile], _window: &Tile) {
     for selected in initial_state {
         if let Some(previous_selection) = find_selection_owner(selected) {
             previous_selection.remove(selected);
+
+            if previous_selection.iter().len() == 0 {
+                previous_selection.0.iter().delete();
+            }
         }
     }
 }

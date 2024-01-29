@@ -1,12 +1,16 @@
 use std::{collections::HashMap, sync::Arc};
 
+use imgui::{DrawListMut, TreeNodeFlags};
+use itertools::Itertools;
 use mosaic::{
     internals::{
         par, pars, void, ComponentValuesBuilderSetter, Mosaic, MosaicCRUD, MosaicIO,
-        MosaicTypelevelCRUD, Tile,
+        MosaicTypelevelCRUD, Tile, TileFieldEmptyQuery,
     },
     iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
 };
+
+use crate::{editor_state::windows::GraspEditorWindow, utilities::ColorQuery, GuiState};
 
 pub trait Procedure {
     fn make_procedure(&self, name: &str) -> ProcedureTile;
@@ -27,6 +31,10 @@ impl AsRef<Tile> for ProcedureTile {
 }
 
 impl ProcedureTile {
+    fn get_name(&self) -> String {
+        self.0.get("self").as_str().to_string()
+    }
+
     pub fn add_argument(&self, name: &str, tile: &Tile) {
         self.0.mosaic.add_argument(&self.0, name, tile);
     }
@@ -84,7 +92,7 @@ impl Procedure for Arc<Mosaic> {
         for ext in proc
             .iter()
             .get_descriptors()
-            .include_component("ProcedureResult")
+            .include_component("ProcedureArgument")
         {
             args.insert(
                 ext.get("name").as_s32().to_string(),
@@ -117,5 +125,31 @@ impl Procedure for Arc<Mosaic> {
             .get_arrows()
             .include_component("ProcedureResult")
             .count()
+    }
+}
+
+pub fn procedure_renderer(s: &GuiState, _window: &mut GraspEditorWindow, input: Tile) {
+    let id = input.id;
+    let proc = ProcedureTile(input);
+    s.ui.text(proc.get_name());
+    if s.ui
+        .collapsing_header(format!("Arguments##{}-args", id), TreeNodeFlags::empty())
+    {
+        for (arg_name, tile) in proc.get_arguments().iter().sorted_by_key(|(a, _b)| *a) {
+            s.ui.text(format!("{}: ", arg_name));
+            s.ui.same_line();
+            let color = ColorQuery(tile).query();
+            s.ui.text(format!("Entity {}", tile.id));
+            s.ui.same_line();
+            s.ui.color_button("", [color.x, color.y, color.z, color.w]);
+        }
+    }
+    s.ui.separator();
+    if s.ui
+        .collapsing_header(format!("Results##{}-args", id), TreeNodeFlags::empty())
+    {
+        for tile in proc.get_results() {
+            s.ui.text(format!("Entity {}", tile.id));
+        }
     }
 }

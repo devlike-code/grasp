@@ -13,12 +13,16 @@ use crate::{
     },
     editor_state::{foundation::TransformerState, windows::GraspEditorWindow},
     querying::traversal::{TraversalOperator, Traverse},
+    utilities::ColorQuery,
     GuiState,
 };
-use mosaic::iterators::{component_selectors::ComponentSelectors, tile_deletion::TileDeletion};
 use mosaic::{
     capabilities::SelectionCapability,
     internals::{void, EntityId, Mosaic, MosaicCRUD, MosaicIO, MosaicTypelevelCRUD, Tile},
+};
+use mosaic::{
+    internals::TileFieldEmptyQuery,
+    iterators::{component_selectors::ComponentSelectors, tile_deletion::TileDeletion},
 };
 use ordered_multimap::ListOrderedMultimap;
 
@@ -475,26 +479,29 @@ pub fn pattern_match_validation(window: &GraspEditorWindow, ui: &GuiState) -> Tr
                 .get_all()
                 .include_component("Pick1")
                 .next();
-            ui.text(format!(
-                "Pattern (pick #1): {}",
-                pick1
-                    .as_ref()
-                    .map(|t| t.id.to_string())
-                    .unwrap_or("Nothing".to_string())
-            ));
+
+            if let Some(p1) = &pick1 {
+                ui.text(format!("Pattern (pick #1): {}", p1.id));
+                ui.same_line();
+                let p = ColorQuery(&p1.target()).query();
+                ui.color_button("Pick 1", [p.x, p.y, p.z, p.w]);
+            } else {
+                ui.text("Pattern (pick #1): Nothing");
+            }
             ui.spacing();
             let pick2 = window
                 .document_mosaic
                 .get_all()
                 .include_component("Pick2")
                 .next();
-            ui.text(format!(
-                "Target (pick #2): {}",
-                pick2
-                    .as_ref()
-                    .map(|t| t.id.to_string())
-                    .unwrap_or("Nothing".to_string())
-            ));
+            if let Some(p2) = &pick2 {
+                ui.text(format!("Target (pick #2): {}", p2.id));
+                ui.same_line();
+                let p = ColorQuery(&p2.target()).query();
+                ui.color_button("Pick 2", [p.x, p.y, p.z, p.w]);
+            } else {
+                ui.text("Target (pick #2): Nothing");
+            }
 
             ui.separator();
             let token = if pick1.is_none() || pick2.is_none() {
