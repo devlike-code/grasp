@@ -96,7 +96,6 @@ impl Procedure for Arc<Mosaic> {
     }
 
     fn add_result(&self, proc: &Tile, result: &Tile) {
-        println!("Adding result: {:?}", result);
         proc.arrow_to(result, "ProcedureResult", void());
     }
 

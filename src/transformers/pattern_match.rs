@@ -1,12 +1,15 @@
-use std::{borrow::Borrow, collections::HashMap, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
 
 use array_tool::vec::Intersect;
 use itertools::Itertools;
+use log::warn;
 
 use crate::{
-    core::{
-        has_mosaic::HasMosaic,
-        structures::{pairs::PairCapability, ErrorCapability, ListCapability, ListTile, PairTile},
+    core::structures::{
+        pairs::PairCapability, ErrorCapability, ListCapability, ListTile, PairTile,
     },
     editor_state::{foundation::TransformerState, windows::GraspEditorWindow},
     querying::traversal::{TraversalOperator, Traverse},
@@ -44,7 +47,7 @@ fn find_candidates_by_degrees(
         let in_degree = target.in_degree(&target_node) - loop_degree;
         let out_degree = target.out_degree(&target_node) - loop_degree;
 
-        println!(
+        warn!(
             "\t\tTARGET {:?} {} {} {}",
             target_node, in_degree, out_degree, loop_degree
         );
@@ -63,23 +66,23 @@ fn find_candidates_by_degrees(
 
         state.loops.insert(target_node.id, loop_degree);
     }
-    println!("\t\t-----------------------",);
+    warn!("\t\t-----------------------",);
     for pattern_node in pattern.get_objects() {
         let loops = pattern.get_self_loops(&pattern_node);
         let loop_degree = loops.len();
         let in_degree = pattern.in_degree(&pattern_node) - loop_degree;
         let out_degree = pattern.out_degree(&pattern_node) - loop_degree;
 
-        println!(
+        warn!(
             "\t\t{:?} {} {} {}",
             pattern_node, in_degree, out_degree, loop_degree
         );
         let in_candidates = in_degree_mmap.get_all(&in_degree).collect_vec();
         let out_candidates = out_degree_mmap.get_all(&out_degree).collect_vec();
         let loop_candidates = loop_degree_mmap.get_all(&loop_degree).collect_vec();
-        println!("\t\tIN CAND:   {:?}", in_candidates);
-        println!("\t\tOUT CAND:  {:?}", out_candidates);
-        println!("\t\tLOOP CAND: {:?}", loop_candidates);
+        warn!("\t\tIN CAND:   {:?}", in_candidates);
+        warn!("\t\tOUT CAND:  {:?}", out_candidates);
+        warn!("\t\tLOOP CAND: {:?}", loop_candidates);
 
         in_candidates
             .intersect(out_candidates)
@@ -101,7 +104,7 @@ fn assign_candidate_and_test(
     bindings: &mut HashMap<EntityId, EntityId>,
     results: &mut Vec<HashMap<EntityId, EntityId>>,
 ) {
-    println!(
+    warn!(
         "ASSIGN CANDIDATE AND TEST: {:?} {:?}\nREMAINING: {:?}\n",
         bindings, results, remaining_candidates
     );
@@ -112,7 +115,7 @@ fn assign_candidate_and_test(
             bindings.remove(head);
         }
     } else {
-        println!(
+        warn!(
             "\n\t*********** NO REMAINING CANDIDATES. TESTING {:?}",
             bindings
         );
@@ -126,7 +129,7 @@ fn assign_candidate_and_test(
 
         let candidates = find_candidates_by_degrees(pattern, &traversal).candidates;
         let candidates_found = candidates.keys_len();
-        println!("\nBY DEGREES ({}): {:?}", candidates_found, candidates);
+        warn!("\nBY DEGREES ({}): {:?}", candidates_found, candidates);
 
         if candidates_found == bindings.len() {
             results.push(HashMap::from_iter(
@@ -136,7 +139,7 @@ fn assign_candidate_and_test(
                     .collect_vec(),
             ));
 
-            println!("\tRESULTS FOUND: {:?}", bindings,);
+            warn!("\tRESULTS FOUND: {:?}", bindings,);
         }
     }
 }
@@ -178,26 +181,40 @@ pub fn pattern_match(match_process: &ProcedureTile) -> anyhow::Result<Tile> {
         }
     }
 
-    for start_node in pattern.get_objects() {
-        let pid = start_node.id;
-        let start_candidates = state.candidates.get_all(&start_node.id).collect_vec();
+    for start_node_in_pattern in pattern.get_objects() {
+        let pid = start_node_in_pattern.id;
+        let start_candidates_in_target = state
+            .candidates
+            .get_all(&start_node_in_pattern.id)
+            .collect_vec();
 
-        for end_node in pattern.get_forward_neighbors(&start_node) {
-            let tid = end_node.id;
-            let end_candidates = state.candidates.get_all(&end_node.id).collect_vec();
+        for end_node_in_pattern in pattern.get_forward_neighbors(&start_node_in_pattern) {
+            let tid = end_node_in_pattern.id;
+            let end_candidates_in_target = state
+                .candidates
+                .get_all(&end_node_in_pattern.id)
+                .collect_vec();
 
-            for &sc in &start_candidates {
-                for &ec in &end_candidates {
-                    if *sc == *ec {
+            for &start_candidate_in_target in &start_candidates_in_target {
+                for &end_candidate_in_target in &end_candidates_in_target {
+                    if start_candidate_in_target == end_candidate_in_target {
                         continue;
                     }
 
-                    if !reachability.are_adjacent(*sc, *ec) {
+                    if !reachability
+                        .are_adjacent(*start_candidate_in_target, *end_candidate_in_target)
+                    {
                         continue;
                     }
 
-                    let cand1 = state.rev_candidate_mapping.get(&(pid, *sc)).unwrap();
-                    let cand2 = state.rev_candidate_mapping.get(&(tid, *ec)).unwrap();
+                    let cand1 = state
+                        .rev_candidate_mapping
+                        .get(&(pid, *start_candidate_in_target))
+                        .unwrap();
+                    let cand2 = state
+                        .rev_candidate_mapping
+                        .get(&(tid, *end_candidate_in_target))
+                        .unwrap();
 
                     let binding = mosaic.new_arrow(cand1, cand2, "PatternMatchBinding", void());
 
@@ -221,6 +238,15 @@ pub fn pattern_match(match_process: &ProcedureTile) -> anyhow::Result<Tile> {
 
     for result in results {
         let bindings = mosaic.make_list();
+        let mut values = HashSet::new();
+        for v in result.values() {
+            values.insert(v);
+        }
+
+        if values.len() < result.len() {
+            continue;
+        }
+
         for (k, v) in result {
             let binding_pair = mosaic.make_pair(&k, &v);
             bindings.add_back(&binding_pair);
@@ -230,12 +256,20 @@ pub fn pattern_match(match_process: &ProcedureTile) -> anyhow::Result<Tile> {
     }
 
     transient.into_iter().delete();
-
+    mosaic
+        .get_all()
+        .include_component("PatternMatchBinding")
+        .delete();
+    mosaic
+        .get_all()
+        .include_component("PatternMatchCandidate")
+        .delete();
     Ok(match_process.0.clone())
 }
 
 #[cfg(test)]
 mod pattern_match_tests {
+    use log::warn;
     use mosaic::{
         capabilities::SelectionCapability,
         internals::{void, Mosaic, MosaicCRUD, MosaicIO},
@@ -285,9 +319,8 @@ mod pattern_match_tests {
             let list = ListTile::from_tile(result).unwrap();
             for binding in list.iter() {
                 let bind = PairTile::from_tile(binding).unwrap();
-                println!("{:?} -> {:?}", bind.get_first(), bind.get_second());
+                warn!("{:?} -> {:?}", bind.get_first(), bind.get_second());
             }
-            println!();
         }
     }
 
@@ -332,9 +365,8 @@ mod pattern_match_tests {
             let list = ListTile::from_tile(result).unwrap();
             for binding in list.iter() {
                 let bind = PairTile::from_tile(binding).unwrap();
-                println!("{:?} -> {:?}", bind.get_first(), bind.get_second());
+                warn!("{:?} -> {:?}", bind.get_first(), bind.get_second());
             }
-            println!();
         }
     }
 
@@ -380,9 +412,8 @@ mod pattern_match_tests {
             let list = ListTile::from_tile(result).unwrap();
             for binding in list.iter() {
                 let bind = PairTile::from_tile(binding).unwrap();
-                println!("{:?} -> {:?}", bind.get_first(), bind.get_second());
+                warn!("{:?} -> {:?}", bind.get_first(), bind.get_second());
             }
-            println!();
         }
     }
 
@@ -430,9 +461,8 @@ mod pattern_match_tests {
             let list = ListTile::from_tile(result).unwrap();
             for binding in list.iter() {
                 let bind = PairTile::from_tile(binding).unwrap();
-                println!("{:?} -> {:?}", bind.get_first(), bind.get_second());
+                warn!("{:?} -> {:?}", bind.get_first(), bind.get_second());
             }
-            println!();
         }
     }
 }
@@ -478,18 +508,17 @@ pub fn pattern_match_validation(window: &GraspEditorWindow, ui: &GuiState) -> Tr
                 p.add_argument("target", &pick2.unwrap().target());
                 match pattern_match(&p) {
                     Ok(_) => {
-                        println!("PATTERN MATCH OK!");
+                        warn!("PATTERN MATCH OK!");
                         for result in p.get_results() {
                             let list = ListTile::from_tile(result).unwrap();
                             for binding in list.iter() {
                                 let bind = PairTile::from_tile(binding).unwrap();
-                                println!("{:?} -> {:?}", bind.get_first(), bind.get_second());
+                                warn!("{:?} -> {:?}", bind.get_first(), bind.get_second());
                             }
-                            println!();
                         }
                     }
                     Err(e) => {
-                        println!("PATTERN MATCH ERROR: {:?}!", e.to_string());
+                        warn!("PATTERN MATCH ERROR: {:?}!", e.to_string());
                         window.editor_mosaic.make_error(
                             &e.to_string(),
                             Some(window.window_tile.clone()),

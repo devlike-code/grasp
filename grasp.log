@@ -1,0 +1,406 @@
+TRANSITION NOT DEALT WITH: Idle EndDrag!
+TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
+TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
+TRANSITION NOT DEALT WITH: Idle EndDrag!
+TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
+TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
+TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
+TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
+		TARGET (13|o:Node|Node) 0 0 1
+		-----------------------
+		(4|o:Node|Node) 1 0 0
+		IN CAND:   []
+		OUT CAND:  [13]
+		LOOP CAND: [13]
+		(0|o:Node|Node) 0 1 0
+		IN CAND:   [13]
+		OUT CAND:  []
+		LOOP CAND: [13]
+ASSIGN CANDIDATE AND TEST: {} []
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {}
+		-----------------------
+		(4|o:Node|Node) 1 0 0
+		IN CAND:   []
+		OUT CAND:  []
+		LOOP CAND: []
+		(0|o:Node|Node) 0 1 0
+		IN CAND:   []
+		OUT CAND:  []
+		LOOP CAND: []
+
+BY DEGREES (0): {}
+	RESULTS FOUND: {}
+PATTERN MATCH OK!
+TRANSITION NOT DEALT WITH: Idle EndDrag!
+TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
+TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
+		TARGET (4|o:Node|Node) 1 0 0
+		TARGET (0|o:Node|Node) 0 1 0
+		-----------------------
+		(13|o:Node|Node) 0 0 1
+		IN CAND:   [4, 0]
+		OUT CAND:  [4, 0]
+		LOOP CAND: []
+ASSIGN CANDIDATE AND TEST: {} []
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {}
+		-----------------------
+		(13|o:Node|Node) 0 0 1
+		IN CAND:   []
+		OUT CAND:  []
+		LOOP CAND: []
+
+BY DEGREES (0): {}
+	RESULTS FOUND: {}
+PATTERN MATCH OK!
+TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
+TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
+		TARGET (4|o:Node|Node) 1 0 0
+		TARGET (0|o:Node|Node) 0 1 1
+		-----------------------
+		(13|o:Node|Node) 0 0 1
+		IN CAND:   [4, 0]
+		OUT CAND:  [4, 0]
+		LOOP CAND: [0]
+ASSIGN CANDIDATE AND TEST: {} []
+REMAINING: [13]
+
+ASSIGN CANDIDATE AND TEST: {13: 56} []
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {13: 56}
+		TARGET (56|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 1
+		-----------------------
+		(13|o:Node|Node) 0 0 1
+		IN CAND:   [56]
+		OUT CAND:  [56]
+		LOOP CAND: [56]
+
+BY DEGREES (1): {13: 56}
+	RESULTS FOUND: {13: 56}
+PATTERN MATCH OK!
+(13|o:Node|Node) -> (0|o:Node|Node)
+TRANSITION NOT DEALT WITH: Idle EndDrag!
+TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
+TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
+		TARGET (4|o:Node|Node) 1 0 0
+		TARGET (0|o:Node|Node) 0 1 2
+		-----------------------
+		(13|o:Node|Node) 0 0 1
+		IN CAND:   [4, 0]
+		OUT CAND:  [4, 0]
+		LOOP CAND: [0]
+ASSIGN CANDIDATE AND TEST: {} []
+REMAINING: [13]
+
+ASSIGN CANDIDATE AND TEST: {13: 71} []
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {13: 71}
+		TARGET (71|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 2
+		-----------------------
+		(13|o:Node|Node) 0 0 1
+		IN CAND:   [71]
+		OUT CAND:  [71]
+		LOOP CAND: [71]
+
+BY DEGREES (1): {13: 71}
+	RESULTS FOUND: {13: 71}
+PATTERN MATCH OK!
+(13|o:Node|Node) -> (0|o:Node|Node)
+TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
+TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
+		TARGET (4|o:Node|Node) 1 0 1
+		TARGET (0|o:Node|Node) 0 1 2
+		-----------------------
+		(13|o:Node|Node) 0 0 1
+		IN CAND:   [4, 0]
+		OUT CAND:  [4, 0]
+		LOOP CAND: [4, 0]
+ASSIGN CANDIDATE AND TEST: {} []
+REMAINING: [13]
+
+ASSIGN CANDIDATE AND TEST: {13: 87} []
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {13: 87}
+		TARGET (87|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 1
+		-----------------------
+		(13|o:Node|Node) 0 0 1
+		IN CAND:   [87]
+		OUT CAND:  [87]
+		LOOP CAND: [87]
+
+BY DEGREES (1): {13: 87}
+	RESULTS FOUND: {13: 87}
+ASSIGN CANDIDATE AND TEST: {13: 89} [{13: 4}]
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {13: 89}
+		TARGET (89|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 2
+		-----------------------
+		(13|o:Node|Node) 0 0 1
+		IN CAND:   [89]
+		OUT CAND:  [89]
+		LOOP CAND: [89]
+
+BY DEGREES (1): {13: 89}
+	RESULTS FOUND: {13: 89}
+PATTERN MATCH OK!
+(13|o:Node|Node) -> (4|o:Node|Node)
+(13|o:Node|Node) -> (0|o:Node|Node)
+TRANSITION NOT DEALT WITH: Idle EndDrag!
+TRANSITION NOT DEALT WITH: Idle EndDrag!
+TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
+TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
+TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
+TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
+		TARGET (4|o:Node|Node) 1 0 1
+		TARGET (100|o:Node|Node) 1 0 0
+		TARGET (0|o:Node|Node) 0 2 2
+		-----------------------
+		(13|o:Node|Node) 0 0 1
+		IN CAND:   [4, 100, 0]
+		OUT CAND:  [4, 100, 0]
+		LOOP CAND: [4, 0]
+ASSIGN CANDIDATE AND TEST: {} []
+REMAINING: [13]
+
+ASSIGN CANDIDATE AND TEST: {13: 123} []
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {13: 123}
+		TARGET (123|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 1
+		-----------------------
+		(13|o:Node|Node) 0 0 1
+		IN CAND:   [123]
+		OUT CAND:  [123]
+		LOOP CAND: [123]
+
+BY DEGREES (1): {13: 123}
+	RESULTS FOUND: {13: 123}
+ASSIGN CANDIDATE AND TEST: {13: 125} [{13: 4}]
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {13: 125}
+		TARGET (125|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 2
+		-----------------------
+		(13|o:Node|Node) 0 0 1
+		IN CAND:   [125]
+		OUT CAND:  [125]
+		LOOP CAND: [125]
+
+BY DEGREES (1): {13: 125}
+	RESULTS FOUND: {13: 125}
+PATTERN MATCH OK!
+(13|o:Node|Node) -> (4|o:Node|Node)
+(13|o:Node|Node) -> (0|o:Node|Node)
+TRANSITION NOT DEALT WITH: Idle EndDrag!
+TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
+TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
+TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
+TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
+		TARGET (4|o:Node|Node) 1 0 1
+		TARGET (100|o:Node|Node) 1 0 0
+		TARGET (0|o:Node|Node) 0 2 2
+		-----------------------
+		(136|o:Node|Node) 1 0 0
+		IN CAND:   [4, 100]
+		OUT CAND:  [4, 100, 0]
+		LOOP CAND: [4, 100, 0]
+		(13|o:Node|Node) 0 1 1
+		IN CAND:   [4, 100, 0]
+		OUT CAND:  [0]
+		LOOP CAND: [4, 0]
+ASSIGN CANDIDATE AND TEST: {} []
+REMAINING: [136, 13]
+
+ASSIGN CANDIDATE AND TEST: {136: 156} []
+REMAINING: [13]
+
+ASSIGN CANDIDATE AND TEST: {136: 156, 13: 159} []
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {136: 156, 13: 159}
+		TARGET (156|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 0 1
+		TARGET (159|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 2
+		-----------------------
+		(136|o:Node|Node) 1 0 0
+		IN CAND:   [156]
+		OUT CAND:  [156, 159]
+		LOOP CAND: [156, 159]
+		(13|o:Node|Node) 0 1 1
+		IN CAND:   [156, 159]
+		OUT CAND:  [159]
+		LOOP CAND: [156, 159]
+
+BY DEGREES (2): {136: 156, 13: 159}
+	RESULTS FOUND: {136: 156, 13: 159}
+ASSIGN CANDIDATE AND TEST: {136: 158} [{136: 4, 13: 0}]
+REMAINING: [13]
+
+ASSIGN CANDIDATE AND TEST: {136: 158, 13: 159} [{136: 4, 13: 0}]
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {136: 158, 13: 159}
+		TARGET (158|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 0 0
+		TARGET (159|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 2
+		-----------------------
+		(136|o:Node|Node) 1 0 0
+		IN CAND:   [158]
+		OUT CAND:  [158, 159]
+		LOOP CAND: [158, 159]
+		(13|o:Node|Node) 0 1 1
+		IN CAND:   [158, 159]
+		OUT CAND:  [159]
+		LOOP CAND: [159]
+
+BY DEGREES (2): {136: 158, 13: 159}
+	RESULTS FOUND: {136: 158, 13: 159}
+PATTERN MATCH OK!
+(136|o:Node|Node) -> (4|o:Node|Node)
+(13|o:Node|Node) -> (0|o:Node|Node)
+(13|o:Node|Node) -> (0|o:Node|Node)
+(136|o:Node|Node) -> (100|o:Node|Node)
+TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
+TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
+		TARGET (4|o:Node|Node) 1 0 1
+		TARGET (0|o:Node|Node) 0 1 2
+		-----------------------
+		(136|o:Node|Node) 1 0 0
+		IN CAND:   [4]
+		OUT CAND:  [4, 0]
+		LOOP CAND: [4, 0]
+		(13|o:Node|Node) 0 1 1
+		IN CAND:   [4, 0]
+		OUT CAND:  [0]
+		LOOP CAND: [4, 0]
+ASSIGN CANDIDATE AND TEST: {} []
+REMAINING: [136, 13]
+
+ASSIGN CANDIDATE AND TEST: {136: 192} []
+REMAINING: [13]
+
+ASSIGN CANDIDATE AND TEST: {136: 192, 13: 194} []
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {136: 192, 13: 194}
+		TARGET (192|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 0 1
+		TARGET (194|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 2
+		-----------------------
+		(136|o:Node|Node) 1 0 0
+		IN CAND:   [192]
+		OUT CAND:  [192, 194]
+		LOOP CAND: [192, 194]
+		(13|o:Node|Node) 0 1 1
+		IN CAND:   [192, 194]
+		OUT CAND:  [194]
+		LOOP CAND: [192, 194]
+
+BY DEGREES (2): {136: 192, 13: 194}
+	RESULTS FOUND: {136: 192, 13: 194}
+PATTERN MATCH OK!
+(136|o:Node|Node) -> (4|o:Node|Node)
+(13|o:Node|Node) -> (0|o:Node|Node)
+TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
+TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
+		TARGET (4|o:Node|Node) 1 0 1
+		TARGET (0|o:Node|Node) 0 1 2
+		-----------------------
+		(136|o:Node|Node) 1 0 0
+		IN CAND:   [4]
+		OUT CAND:  [4, 0]
+		LOOP CAND: [4, 0]
+		(13|o:Node|Node) 0 1 1
+		IN CAND:   [4, 0]
+		OUT CAND:  [0]
+		LOOP CAND: [4, 0]
+ASSIGN CANDIDATE AND TEST: {} []
+REMAINING: [136, 13]
+
+ASSIGN CANDIDATE AND TEST: {136: 212} []
+REMAINING: [13]
+
+ASSIGN CANDIDATE AND TEST: {136: 212, 13: 214} []
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {136: 212, 13: 214}
+		TARGET (212|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 0 1
+		TARGET (214|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 2
+		-----------------------
+		(136|o:Node|Node) 1 0 0
+		IN CAND:   [212]
+		OUT CAND:  [212, 214]
+		LOOP CAND: [212, 214]
+		(13|o:Node|Node) 0 1 1
+		IN CAND:   [212, 214]
+		OUT CAND:  [214]
+		LOOP CAND: [212, 214]
+
+BY DEGREES (2): {136: 212, 13: 214}
+	RESULTS FOUND: {136: 212, 13: 214}
+PATTERN MATCH OK!
+(136|o:Node|Node) -> (4|o:Node|Node)
+(13|o:Node|Node) -> (0|o:Node|Node)
+TRANSITION NOT DEALT WITH: Idle EndDrag!
+TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
+TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
+TRANSITION NOT DEALT WITH: Idle EndDrag!
+TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
+TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
+TRANSITION NOT DEALT WITH: Idle EndDrag!
+TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
+TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
+TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
+TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
+		TARGET (10|o:Node|Node) 0 0 1
+		TARGET (46|o:Node|Node) 1 0 0
+		-----------------------
+		(0|o:Node|Node) 0 0 1
+		IN CAND:   [10, 46]
+		OUT CAND:  [10, 46]
+		LOOP CAND: [10]
+		(20|o:Node|Node) 1 0 0
+		IN CAND:   [46]
+		OUT CAND:  [10, 46]
+		LOOP CAND: [10, 46]
+ASSIGN CANDIDATE AND TEST: {} []
+REMAINING: [0, 20]
+
+ASSIGN CANDIDATE AND TEST: {0: 77} []
+REMAINING: [20]
+
+ASSIGN CANDIDATE AND TEST: {20: 79, 0: 77} []
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {20: 79, 0: 77}
+		TARGET (79|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		TARGET (77|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 1
+		-----------------------
+		(0|o:Node|Node) 0 0 1
+		IN CAND:   [79, 77]
+		OUT CAND:  [79, 77]
+		LOOP CAND: [77]
+		(20|o:Node|Node) 1 0 0
+		IN CAND:   []
+		OUT CAND:  [79, 77]
+		LOOP CAND: [79, 77]
+
+BY DEGREES (1): {0: 77}
+PATTERN MATCH OK!

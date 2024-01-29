@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
-    fs::File,
-    io::Read,
+    fs::{self, File},
+    io::{BufWriter, Read, Write},
     path::Path,
     sync::{Arc, Mutex},
     time::Instant,
@@ -177,12 +177,20 @@ pub fn run_main_forever<F: FnMut(&Ui, &mut bool)>(mut update: F) {
     let sdl_context = sdl2::init().unwrap();
     let video = sdl_context.video().unwrap();
 
+    let log = fs::File::create("grasp.log").unwrap();
+
     env_logger::builder()
         .format(move |_buf, record| {
+            let mut log_writer = BufWriter::new(log.try_clone().unwrap());
             writer.send(record);
+            log_writer
+                .write_all((record.args().to_string() + "\n").as_bytes())
+                .unwrap();
+
+            let _ = log_writer.flush();
             Ok(())
         })
-        .filter_level(log::LevelFilter::Debug)
+        .filter_level(log::LevelFilter::Warn)
         .init();
 
     let app_name = "GRASP";
