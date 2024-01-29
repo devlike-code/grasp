@@ -2,13 +2,16 @@ use grasp_proc_macros::GraspQueue;
 use itertools::Itertools;
 use mosaic::{
     capabilities::ArchetypeSubject,
-    internals::{pars, void, ComponentValuesBuilderSetter, MosaicIO, Tile, TileFieldEmptyQuery},
+    internals::{
+        pars, void, ComponentValuesBuilderSetter, EntityId, MosaicCRUD, MosaicIO, Tile,
+        TileFieldEmptyQuery,
+    },
     iterators::{
         component_selectors::ComponentSelectors, tile_deletion::TileDeletion,
         tile_getters::TileGetters,
     },
 };
-use std::vec::IntoIter;
+use std::{collections::HashSet, vec::IntoIter};
 
 use crate::{
     core::{
@@ -39,6 +42,9 @@ pub struct QuadtreeUpdateRequestQueue;
 pub struct WindowMessageInboxQueue(Tile);
 
 #[derive(GraspQueue)]
+pub struct WindowTileDeleteReactionRequestQueue;
+
+#[derive(GraspQueue)]
 pub struct WindowTransformerQueue;
 
 #[derive(GraspQueue)]
@@ -56,12 +62,52 @@ impl GraspEditorState {
 
     //processing all queues on Editor level
     pub fn process_requests(&mut self, ui: &GuiState) {
+        self.process_delete_reaction_queue();
         self.process_rename_window_queue();
         self.process_named_focus_window_queue();
         self.process_new_window_queue();
         self.process_quadtree_queue();
         self.process_close_window_queue(ui);
         self.process_window_transformer_queue(ui);
+    }
+
+    fn process_delete_reaction_queue(&mut self) {
+        let mut to_delete = HashSet::new();
+        let mut to_update_quadtree = HashSet::new();
+        while let Some(request) = dequeue(WindowTileDeleteReactionRequestQueue, &self.editor_mosaic)
+        {
+            let tile = request.get("tile").as_u64() as EntityId;
+            let window = request.get("window").as_u64() as usize;
+            to_delete.insert((tile, window));
+            to_update_quadtree.insert(window);
+            let component = request.get("component").as_s32().to_string();
+
+            println!("[xxx] {}@{} {}", tile, window, component);
+            if let Some(reaction) = self.component_delete_reactions.get(&component) {
+                if let Some(window) = self.window_list.get_by_id_mut(window) {
+                    if let Some(node) = window.document_mosaic.get(tile) {
+                        reaction(window, component, &node);
+                    } else {
+                        println!("TILE {} IS INVALID", tile);
+                    }
+                } else {
+                    println!("WINDOW {} IS INVALID!", window);
+                }
+            }
+            request.iter().delete();
+        }
+
+        for (tile, window) in to_delete {
+            if let Some(window) = self.window_list.get_by_id_mut(window) {
+                window.document_mosaic.delete_tile(tile);
+            }
+        }
+
+        for window in to_update_quadtree {
+            if let Some(window) = self.window_list.get_by_id_mut(window) {
+                window.request_quadtree_update();
+            }
+        }
     }
 
     fn process_rename_window_queue(&mut self) {
@@ -354,24 +400,14 @@ impl GraspEditorState {
                 .find(|w| w.window_tile.id == window_index)
             {
                 if let Some(transformer) = self.transformer_functions.get(&transformer) {
-                    if let Some(validation) = &transformer.input_validation {
-                        let validated = validation(window, ui);
-                        if validated == TransformerState::Valid {
-                            (transformer.transform_function)(
-                                &window.editor_data.selected,
-                                &window.window_tile,
-                            );
-
-                            if let Some(w) = self.window_list.get_by_id_mut(window_index) {
-                                self.pending_transform_window_request
-                                    .as_ref()
-                                    .unwrap()
-                                    .iter()
-                                    .delete();
-                                self.pending_transform_window_request = None;
-                                w.trigger(EditorStateTrigger::TransformerDone)
-                            }
-                        } else if validated == TransformerState::Cancelled {
+                    match (transformer.transform_function)(
+                        window,
+                        ui,
+                        &window.editor_data.selected,
+                        &window.window_tile,
+                    ) {
+                        TransformerState::Running => {}
+                        TransformerState::Cancelled => {
                             if let Some(w) = self.window_list.get_by_id_mut(window_index) {
                                 self.pending_transform_window_request
                                     .as_ref()
@@ -382,20 +418,16 @@ impl GraspEditorState {
                                 w.trigger(EditorStateTrigger::TransformerCancelled)
                             }
                         }
-                    } else {
-                        (transformer.transform_function)(
-                            &window.editor_data.selected,
-                            &window.window_tile,
-                        );
-
-                        if let Some(w) = self.window_list.get_by_id_mut(window_index) {
-                            self.pending_transform_window_request
-                                .as_ref()
-                                .unwrap()
-                                .iter()
-                                .delete();
-                            self.pending_transform_window_request = None;
-                            w.trigger(EditorStateTrigger::TransformerDone)
+                        TransformerState::Valid => {
+                            if let Some(w) = self.window_list.get_by_id_mut(window_index) {
+                                self.pending_transform_window_request
+                                    .as_ref()
+                                    .unwrap()
+                                    .iter()
+                                    .delete();
+                                self.pending_transform_window_request = None;
+                                w.trigger(EditorStateTrigger::TransformerDone)
+                            }
                         }
                     }
                 }
@@ -403,7 +435,7 @@ impl GraspEditorState {
         } else if let Some(request) = dequeue(WindowTransformerQueue, &self.editor_mosaic) {
             let window_index = request.get("window_index").as_u64() as usize;
 
-            if let Some(window) = self
+            if let Some(_window) = self
                 .window_list
                 .windows
                 .iter()

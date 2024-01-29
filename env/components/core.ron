@@ -44,6 +44,7 @@
             "CloseWindowRequestQueue: unit;",
             "NamedFocusWindowRequestQueue: unit;",
             "WindowRenameRequestQueue: unit;",
+            "WindowTileDeleteReactionRequestQueue: unit;",
         ]
     ),
 
@@ -59,6 +60,7 @@
             "NamedFocusWindowRequest: str;",
             "WindowRenameRequest: { id: u64, index: u64, name: s32 };",
             "WindowTransformerRequest: { transform: s32, window_index: u64 };",
+            "WindowTileDeleteReactionRequest: { window: u64, tile: u64, component: s32 };",
         ]
     ),
 
@@ -126,6 +128,8 @@
         display: "Pattern Matching",
         hidden: false,
         components: [
+            "PatternMatch: unit;",
+            "PatternMatchElement: u64;",
             "PatternMatchCandidate: s32;",
             "PatternMatchBinding: s32;",
         ]
@@ -138,7 +142,9 @@
         components: [
             "List: unit;",
             "ListElement: u64;",
+            "ListMember: u64;",
             "Pair: { first: u64, second: u64 };",
+            "PairElement: u64;",
         ]
     ),
 

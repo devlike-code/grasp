@@ -1,11 +1,11 @@
 use std::{collections::HashMap, sync::Arc};
 
-use imgui::{DrawListMut, TreeNodeFlags};
+use imgui::TreeNodeFlags;
 use itertools::Itertools;
 use mosaic::{
     internals::{
-        par, pars, void, ComponentValuesBuilderSetter, Mosaic, MosaicCRUD, MosaicIO,
-        MosaicTypelevelCRUD, Tile, TileFieldEmptyQuery,
+        par, pars, void, ComponentValuesBuilderSetter, Mosaic, MosaicCRUD, MosaicIO, Tile,
+        TileFieldEmptyQuery,
     },
     iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
 };
@@ -16,7 +16,7 @@ pub trait Procedure {
     fn make_procedure(&self, name: &str) -> ProcedureTile;
     fn add_argument(&self, proc: &Tile, name: &str, tile: &Tile);
     fn get_argument(&self, proc: &Tile, name: &str) -> Option<Tile>;
-    fn get_arguments(&self, proc: &Tile) -> HashMap<String, Tile>;
+    fn get_arguments(&self, proc: &Tile) -> Option<HashMap<String, Tile>>;
     fn add_result(&self, proc: &Tile, result: &Tile);
     fn get_results(&self, proc: &Tile) -> Vec<Tile>;
     fn result_count(&self, proc: &Tile) -> usize;
@@ -43,7 +43,7 @@ impl ProcedureTile {
         self.0.mosaic.get_argument(&self.0, name)
     }
 
-    pub fn get_arguments(&self) -> HashMap<String, Tile> {
+    pub fn get_arguments(&self) -> Option<HashMap<String, Tile>> {
         self.0.mosaic.get_arguments(&self.0)
     }
 
@@ -87,20 +87,23 @@ impl Procedure for Arc<Mosaic> {
         }
     }
 
-    fn get_arguments(&self, proc: &Tile) -> HashMap<String, Tile> {
+    fn get_arguments(&self, proc: &Tile) -> Option<HashMap<String, Tile>> {
         let mut args = HashMap::new();
         for ext in proc
             .iter()
             .get_descriptors()
             .include_component("ProcedureArgument")
         {
-            args.insert(
-                ext.get("name").as_s32().to_string(),
-                proc.mosaic.get(ext.get("value").as_u64() as usize).unwrap(),
-            );
+            let arg = proc.mosaic.get(ext.get("value").as_u64() as usize);
+
+            if let Some(arg) = arg {
+                args.insert(ext.get("name").as_s32().to_string(), arg);
+            } else {
+                return None;
+            }
         }
 
-        args
+        Some(args)
     }
 
     fn add_result(&self, proc: &Tile, result: &Tile) {
@@ -128,23 +131,28 @@ impl Procedure for Arc<Mosaic> {
     }
 }
 
-pub fn procedure_renderer(s: &GuiState, _window: &mut GraspEditorWindow, input: Tile) {
+pub fn procedure_args_renderer(s: &GuiState, _window: &mut GraspEditorWindow, input: Tile) {
     let id = input.id;
     let proc = ProcedureTile(input);
-    s.ui.text(proc.get_name());
     if s.ui
         .collapsing_header(format!("Arguments##{}-args", id), TreeNodeFlags::empty())
     {
-        for (arg_name, tile) in proc.get_arguments().iter().sorted_by_key(|(a, _b)| *a) {
-            s.ui.text(format!("{}: ", arg_name));
-            s.ui.same_line();
-            let color = ColorQuery(tile).query();
-            s.ui.text(format!("Entity {}", tile.id));
-            s.ui.same_line();
-            s.ui.color_button("", [color.x, color.y, color.z, color.w]);
+        if let Some(args) = proc.get_arguments() {
+            for (arg_name, tile) in args.iter().sorted_by_key(|(a, _b)| *a) {
+                s.ui.text(format!("{}: ", arg_name));
+                s.ui.same_line();
+                let color = ColorQuery(tile).query();
+                s.ui.text(format!("Entity {}", tile.id));
+                s.ui.same_line();
+                s.ui.color_button("", [color.x, color.y, color.z, color.w]);
+            }
         }
     }
-    s.ui.separator();
+}
+
+pub fn procedure_results_renderer(s: &GuiState, _window: &mut GraspEditorWindow, input: Tile) {
+    let id = input.id;
+    let proc = ProcedureTile(input);
     if s.ui
         .collapsing_header(format!("Results##{}-args", id), TreeNodeFlags::empty())
     {

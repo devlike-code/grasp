@@ -34,6 +34,8 @@ use super::{
     windows::GraspEditorWindow,
 };
 
+pub type DeleteReaction = Box<dyn Fn(&mut GraspEditorWindow, String, &Tile) + Send + Sync>;
+
 pub type ComponentRenderer =
     Box<dyn Fn(&GuiState, &mut GraspEditorWindow, Tile, &mut DrawListMut<'_>) + Send + Sync>;
 
@@ -291,8 +293,8 @@ impl GraspEditorState {
             if let Some(token) = s.ui.begin_popup("component-menu") {
                 println!("BEGIN POPUP");
                 if s.ui.menu_item("Delete") {
-                    if let Some(tile) = queued_component_delete {
-                        focused.document_mosaic.delete_tile(*tile);
+                    if let Some(tile_id) = queued_component_delete {
+                        focused.document_mosaic.delete_tile(*tile_id);
                     }
                 }
 
@@ -423,13 +425,13 @@ impl GraspEditorState {
                                 );
 
                                 let mut any_visible = false;
-                                for (part, _tiles) in &o
+                                for (component, _tiles) in &o
                                     .get_full_archetype()
                                     .into_iter()
                                     .sorted_by(|a, b| (a.1.first().cmp(&b.1.first())))
                                     .collect_vec()
                                 {
-                                    if !self.hidden_property_renderers.contains(part) {
+                                    if !self.hidden_property_renderers.contains(component) {
                                         any_visible = true;
                                         break;
                                     }
@@ -446,27 +448,27 @@ impl GraspEditorState {
                                 ) {
                                     header_color.end();
 
-                                    for (part, tiles) in &o
+                                    for (component, tiles) in &o
                                         .get_full_archetype()
                                         .into_iter()
                                         .sorted_by(|a, b| (a.1.first().cmp(&b.1.first())))
                                         .collect_vec()
                                     {
                                         for tile in tiles.iter().sorted_by(|a, b| a.id.cmp(&b.id)) {
-                                            if self.hidden_property_renderers.contains(part) {
+                                            if self.hidden_property_renderers.contains(component) {
                                                 continue;
                                             }
 
                                             if let Some(renderer) =
-                                                self.component_property_renderers.get(part)
+                                                self.component_property_renderers.get(component)
                                             {
                                                 if let Some(_subnode_token) =
-                                                    tree(s, &part.to_string(), false)
+                                                    tree(s, &component.to_string(), false)
                                                 {
                                                     renderer(s, focused_window, tile.clone());
                                                 }
                                             } else if let Some(_subnode_token) =
-                                                tree(s, &part.to_string(), false)
+                                                tree(s, &component.to_string(), false)
                                             {
                                                 let is_locked = self
                                                     .locked_components

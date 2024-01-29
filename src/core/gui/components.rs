@@ -1,4 +1,5 @@
 use crate::{
+    core::structures::{on_list_element_deleted, on_pair_element_deleted},
     editor_state::{
         foundation::GraspEditorState,
         selection::{pick_n_renderer, selection_renderer},
@@ -6,7 +7,10 @@ use crate::{
             color_property_renderer, selected_property_renderer, two_float_property_xy_renderer,
         },
     },
-    transformers::procedure_renderer,
+    transformers::{
+        on_pattern_match_deleted, on_pattern_match_element_deleted, on_selected_delete,
+        pattern_match_property_renderer,
+    },
 };
 
 pub fn setup_component_renderers(instance: &mut GraspEditorState) {
@@ -19,6 +23,10 @@ pub fn setup_component_renderers(instance: &mut GraspEditorState) {
     instance
         .hidden_property_renderers
         .insert("Color".to_string());
+
+    instance
+        .hidden_property_renderers
+        .insert("Procedure".to_string());
 
     instance
         .hidden_property_renderers
@@ -37,12 +45,36 @@ pub fn setup_component_renderers(instance: &mut GraspEditorState) {
         .insert("SelectionOwner".to_string());
 
     instance
+        .component_delete_reactions
+        .insert("Selected".to_string(), Box::new(on_selected_delete));
+
+    instance
         .hidden_property_renderers
         .insert("List".to_string());
 
     instance
         .hidden_property_renderers
+        .insert("ListMember".to_string());
+
+    instance
+        .hidden_property_renderers
+        .insert("ListElement".to_string());
+
+    instance
+        .component_delete_reactions
+        .insert("ListElement".into(), Box::new(on_list_element_deleted));
+
+    instance
+        .hidden_property_renderers
         .insert("Pair".to_string());
+
+    instance
+        .hidden_property_renderers
+        .insert("PairElement".to_string());
+
+    instance
+        .component_delete_reactions
+        .insert("PairElement".into(), Box::new(on_pair_element_deleted));
 
     instance
         .component_entity_renderers
@@ -54,9 +86,19 @@ pub fn setup_component_renderers(instance: &mut GraspEditorState) {
             .insert(format!("Pick{}", i), Box::new(pick_n_renderer(i)));
     }
 
+    instance.component_property_renderers.insert(
+        "PatternMatch".into(),
+        Box::new(pattern_match_property_renderer),
+    );
+
     instance
-        .component_property_renderers
-        .insert("Procedure".into(), Box::new(procedure_renderer));
+        .component_delete_reactions
+        .insert("PatternMatch".into(), Box::new(on_pattern_match_deleted));
+
+    instance.component_delete_reactions.insert(
+        "PatternMatchElement".into(),
+        Box::new(on_pattern_match_element_deleted),
+    );
 
     instance
         .component_property_renderers

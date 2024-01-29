@@ -1,9 +1,9 @@
 use std::vec::IntoIter;
 
-use imgui::{sys::ImColor, DrawListMut, ImColor32};
+use imgui::{DrawListMut, ImColor32};
 use mosaic::{
     capabilities::{ArchetypeSubject, SelectionCapability},
-    internals::{Tile, TileFieldEmptyQuery},
+    internals::{EntityId, Tile, TileFieldEmptyQuery},
     iterators::{
         component_selectors::ComponentSelectors, tile_deletion::TileDeletion,
         tile_getters::TileGetters,
@@ -41,17 +41,29 @@ impl SelectionTile {
             .iter()
             .get_extensions()
             .include_component("Selection")
-            .filter(|t| t.get("self").as_u64() as usize == child.id)
+            .filter(|t| t.get("self").as_u64() as usize == child.target_id())
             .delete();
-        println!("BEFORE: {:?}", child.get_components("Selected"));
         child.remove_components("Selected");
-        println!("AFTER: {:?}", child.get_components("Selected"));
+
+        if self.iter().len() == 0 {
+            self.0.iter().delete();
+        }
+    }
+
+    #[allow(dead_code)]
+    pub fn remove_by_id(&self, child: EntityId) {
+        self.0
+            .iter()
+            .get_extensions()
+            .include_component("Selection")
+            .filter(|t| t.get("self").as_u64() as usize == child)
+            .delete();
     }
 }
 
 pub fn pick_n_renderer(n: u32) -> ComponentRenderer {
     Box::new(
-        move |s: &GuiState,
+        move |_s: &GuiState,
               window: &mut GraspEditorWindow,
               input: Tile,
               painter: &mut DrawListMut<'_>| {
@@ -132,11 +144,5 @@ pub fn selection_renderer(
             1.0,
             Some(color),
         );
-
-        // painter.add_text(
-        //     [pos.x - 25.0, pos.y - 25.0],
-        //     ImColor32::from_rgba_f32s(color.x, color.y, color.z, color.w),
-        //     format!("{}", selection.0.id),
-        // );
     }
 }

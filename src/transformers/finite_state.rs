@@ -8,7 +8,11 @@ use mosaic::{
     iterators::tile_filters::TileFilters,
 };
 
-use crate::core::structures::errors::ErrorCapability;
+use crate::{
+    core::structures::errors::ErrorCapability,
+    editor_state::{foundation::TransformerState, windows::GraspEditorWindow},
+    GuiState,
+};
 
 fn make_enum(name: &str, members: &[String]) -> String {
     format!(
@@ -18,7 +22,12 @@ fn make_enum(name: &str, members: &[String]) -> String {
     )
 }
 
-pub fn finite_state_transformer(initial_state: &[Tile], window: &Tile) {
+pub fn finite_state_transformer(
+    _window: &GraspEditorWindow,
+    _ui: &GuiState,
+    initial_state: &[Tile],
+    window: &Tile,
+) -> TransformerState {
     let initial_state = initial_state.first().unwrap();
     let document = Arc::clone(&initial_state.mosaic);
     let mut result = vec![];
@@ -49,7 +58,7 @@ pub fn finite_state_transformer(initial_state: &[Tile], window: &Tile) {
                 Some(window.clone()),
                 Some(initial_state.clone()),
             );
-            return;
+            return TransformerState::Cancelled;
         }
 
         let node_name = format!("{}State", name);
@@ -129,6 +138,8 @@ pub fn finite_state_transformer(initial_state: &[Tile], window: &Tile) {
             }
         }
     }
+
+    TransformerState::Valid
 }
 
 #[allow(clippy::upper_case_acronyms)]

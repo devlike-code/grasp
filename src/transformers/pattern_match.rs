@@ -4,6 +4,7 @@ use std::{
 };
 
 use array_tool::vec::Intersect;
+use imgui::TreeNodeFlags;
 use itertools::Itertools;
 use log::warn;
 
@@ -17,8 +18,8 @@ use crate::{
     GuiState,
 };
 use mosaic::{
-    capabilities::SelectionCapability,
-    internals::{void, EntityId, Mosaic, MosaicCRUD, MosaicIO, MosaicTypelevelCRUD, Tile},
+    capabilities::{ArchetypeSubject, SelectionCapability},
+    internals::{par, void, EntityId, Mosaic, MosaicCRUD, MosaicIO, MosaicTypelevelCRUD, Tile},
 };
 use mosaic::{
     internals::TileFieldEmptyQuery,
@@ -26,7 +27,7 @@ use mosaic::{
 };
 use ordered_multimap::ListOrderedMultimap;
 
-use super::{Procedure, ProcedureTile};
+use super::{procedure_args_renderer, Procedure, ProcedureTile};
 
 #[derive(Default, Debug)]
 pub(crate) struct PatternMatchState {
@@ -252,6 +253,17 @@ pub fn pattern_match(match_process: &ProcedureTile) -> anyhow::Result<Tile> {
         }
 
         for (k, v) in result {
+            let _ = mosaic.get(k).map(|k| {
+                if k.get_component("PatternMatchElement").is_none() {
+                    k.add_component("PatternMatchElement", par(match_process.0.id as u64));
+                }
+            });
+
+            let _ = mosaic.get(v).map(|v| {
+                if v.get_component("PatternMatchElement").is_none() {
+                    v.add_component("PatternMatchElement", par(match_process.0.id as u64));
+                }
+            });
             let binding_pair = mosaic.make_pair(&k, &v);
             bindings.add_back(&binding_pair);
         }
@@ -471,7 +483,12 @@ mod pattern_match_tests {
     }
 }
 
-pub fn pattern_match_validation(window: &GraspEditorWindow, ui: &GuiState) -> TransformerState {
+pub fn pattern_match_tool(
+    window: &GraspEditorWindow,
+    ui: &GuiState,
+    _initial_state: &[Tile],
+    _tile: &Tile,
+) -> TransformerState {
     ui.window("Pattern Match")
         .build(|| {
             let pick1 = window
@@ -509,13 +526,16 @@ pub fn pattern_match_validation(window: &GraspEditorWindow, ui: &GuiState) -> Tr
             } else {
                 None
             };
+
             if ui.button_with_size("Run", [100.0, 20.0]) {
                 let p = window.document_mosaic.make_procedure("PatternMatch");
                 p.add_argument("pattern", &pick1.unwrap().target());
                 p.add_argument("target", &pick2.unwrap().target());
+
                 match pattern_match(&p) {
                     Ok(_) => {
                         warn!("PATTERN MATCH OK!");
+                        p.0.add_component("PatternMatch", void());
                         for result in p.get_results() {
                             let list = ListTile::from_tile(result).unwrap();
                             for binding in list.iter() {
@@ -533,12 +553,13 @@ pub fn pattern_match_validation(window: &GraspEditorWindow, ui: &GuiState) -> Tr
                         );
                     }
                 }
-
                 if let Some(t) = token {
                     t.end()
                 }
+
                 return TransformerState::Valid;
             }
+
             if let Some(t) = token {
                 t.end()
             }
@@ -553,4 +574,80 @@ pub fn pattern_match_validation(window: &GraspEditorWindow, ui: &GuiState) -> Tr
         .unwrap_or(TransformerState::Running)
 }
 
-pub fn pattern_match_tool(initial_state: &[Tile], _window: &Tile) {}
+pub fn pattern_match_property_renderer(s: &GuiState, window: &mut GraspEditorWindow, input: Tile) {
+    let proc = ProcedureTile(input.target());
+
+    let args = proc.get_arguments();
+    let mut ok = args.is_some();
+
+    for res in proc.get_results() {
+        if let Some(binding_list) = ListTile::from_tile(res.clone()) {
+            for binding in binding_list.iter() {
+                if let Some(pair) = PairTile::from_tile(binding) {
+                    println!("1: {:?}", pair.get_first());
+                    println!("2: {:?}", pair.get_second());
+                    if pair.get_first().is_none() || pair.get_second().is_none() {
+                        ok = false;
+                        break;
+                    }
+                } else {
+                    ok = false;
+                    break;
+                }
+            }
+        } else {
+            ok = false;
+            break;
+        }
+    }
+
+    if ok {
+        procedure_args_renderer(s, window, input.target());
+        pattern_match_result_renderer(s, window, proc);
+    } else {
+        panic!();
+        window.delete_tiles(&[proc.0]);
+    }
+}
+
+pub fn on_pattern_match_element_deleted(window: &mut GraspEditorWindow, comp: String, pm: &Tile) {
+    if let Some(p) = pm.mosaic.get(pm.get("self").as_u64() as usize) {
+        let proc = ProcedureTile(p);
+
+        window.delete_tiles(&[proc.0]);
+    }
+}
+
+pub fn on_pattern_match_deleted(window: &mut GraspEditorWindow, comp: String, pm: &Tile) {
+    assert_eq!(&comp, "PatternMatch");
+
+    let proc = ProcedureTile(pm.target());
+    for res in proc.get_results() {
+        if let Some(binding_list) = ListTile::from_tile(res.clone()) {
+            for binding in binding_list.iter() {
+                if let Some(pair) = PairTile::from_tile(binding) {
+                    window.delete_tiles(&[pair.0]);
+                }
+            }
+        }
+        window.delete_tiles(&[res]);
+    }
+}
+
+pub fn pattern_match_result_renderer(
+    s: &GuiState,
+    _window: &mut GraspEditorWindow,
+    proc: ProcedureTile,
+) {
+    if s.ui
+        .collapsing_header("Results", TreeNodeFlags::DEFAULT_OPEN)
+    {
+        for (i, _result) in proc.get_results().iter().enumerate() {
+            if s.ui
+                .button_with_size(format!("Result {}", i), [150.0, 20.0])
+            {
+                // something happens on graph
+            }
+        }
+    }
+}

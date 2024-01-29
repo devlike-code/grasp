@@ -2,11 +2,19 @@ use std::sync::Arc;
 
 use mosaic::{
     capabilities::{ArchetypeSubject, SelectionCapability},
-    internals::{par, MosaicIO, Tile, TileFieldEmptyQuery},
+    internals::{par, pars, ComponentValuesBuilderSetter, MosaicIO, Tile, TileFieldEmptyQuery},
     iterators::tile_deletion::TileDeletion,
 };
 
-use crate::{core::math::Vec2, editor_state::selection::SelectionTile, utilities::PosQuery};
+use crate::{
+    core::{math::Vec2, structures::enqueue},
+    editor_state::{
+        foundation::TransformerState, selection::SelectionTile, windows::GraspEditorWindow,
+    },
+    grasp_queues::WindowTileDeleteReactionRequestQueue,
+    utilities::PosQuery,
+    GuiState,
+};
 
 pub fn find_selection_owner(selected_tile: &Tile) -> Option<SelectionTile> {
     selected_tile
@@ -15,7 +23,12 @@ pub fn find_selection_owner(selected_tile: &Tile) -> Option<SelectionTile> {
         .map(SelectionTile::from_tile)
 }
 
-pub fn deselect(initial_state: &[Tile], _window: &Tile) {
+pub fn deselect(
+    _window: &GraspEditorWindow,
+    _ui: &GuiState,
+    initial_state: &[Tile],
+    _tile: &Tile,
+) -> TransformerState {
     for selected in initial_state {
         if let Some(previous_selection) = find_selection_owner(selected) {
             previous_selection.remove(selected);
@@ -25,14 +38,33 @@ pub fn deselect(initial_state: &[Tile], _window: &Tile) {
             }
         }
     }
+
+    TransformerState::Valid
 }
 
-pub fn select(initial_state: &[Tile], window: &Tile) {
+pub fn on_selected_delete(window: &mut GraspEditorWindow, comp: String, selected: &Tile) {
+    assert_eq!(&comp, "Selected");
+
+    if let Some(previous_selection) = find_selection_owner(selected) {
+        previous_selection.remove(selected);
+
+        if previous_selection.iter().len() == 0 {
+            window.delete_tiles(&[previous_selection.0]);
+        }
+    }
+}
+
+pub fn select(
+    window: &GraspEditorWindow,
+    ui: &GuiState,
+    initial_state: &[Tile],
+    tile: &Tile,
+) -> TransformerState {
     if let Some(node) = initial_state.first() {
         let mosaic = Arc::clone(&node.mosaic);
         let selection = mosaic.make_selection(initial_state);
 
-        deselect(initial_state, window);
+        deselect(window, ui, initial_state, tile);
 
         for selected in initial_state {
             selected.add_component("Selected", par(selection.id as u64));
@@ -60,4 +92,6 @@ pub fn select(initial_state: &[Tile], window: &Tile) {
             }
         }
     }
+
+    TransformerState::Valid
 }

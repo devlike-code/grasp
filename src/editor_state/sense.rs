@@ -7,7 +7,7 @@ use imgui::Key;
 use itertools::Itertools;
 use mosaic::{
     capabilities::ArchetypeSubject,
-    internals::{void, MosaicCRUD, MosaicIO, Tile, Value},
+    internals::{pars, void, ComponentValuesBuilderSetter, MosaicIO, Tile, Value},
     iterators::{
         component_selectors::ComponentSelectors, tile_deletion::TileDeletion,
         tile_getters::TileGetters,
@@ -18,9 +18,11 @@ use crate::{
     core::{
         gui::imgui_keys::ExtraKeyEvents,
         math::{Rect2, Vec2},
+        structures::enqueue,
     },
     editor_state::helpers::RequireWindowFocus,
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
+    grasp_queues::WindowTileDeleteReactionRequestQueue,
     transformers::find_selection_owner,
     utilities::QuadTreeFetch,
     GuiState,
@@ -37,21 +39,28 @@ pub fn hash_input(s: &str) -> u64 {
 }
 
 impl GraspEditorWindow {
-    pub fn delete_tiles(&self, _tiles: &[Tile]) {
-        if self.editor_data.selected.is_empty() {
+    pub fn delete_tiles(&self, tiles: &[Tile]) {
+        if tiles.is_empty() {
             return;
         }
 
-        let quadtree = self.quadtree.lock().unwrap();
-        let mut object_to_area = self.object_to_area.lock().unwrap();
-        let _under_cursor = quadtree.query(self.build_cursor_area()).collect_vec();
-        let mut areas_to_remove: Vec<u64> = vec![];
+        for selected in tiles {
+            self.delete_tiles(selected.iter().get_extensions().as_slice());
 
-        for selected in &self.editor_data.selected {
-            self.document_mosaic.delete_tile(selected.id);
-            if let Some(area_id) = object_to_area.get(&selected.id) {
-                areas_to_remove.push(*area_id);
-                object_to_area.remove(&selected.id);
+            for (name, property) in selected.get_full_archetype() {
+                for desc in property {
+                    enqueue(
+                        WindowTileDeleteReactionRequestQueue,
+                        self.editor_mosaic.new_object(
+                            "WindowTileDeleteReactionRequest",
+                            pars()
+                                .set("window", self.window_tile.id as u64)
+                                .set("tile", desc.id as u64)
+                                .set("component", name.as_str())
+                                .ok(),
+                        ),
+                    );
+                }
             }
         }
     }
