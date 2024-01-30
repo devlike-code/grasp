@@ -250,13 +250,7 @@ pub fn default_renderer_draw(
         .exclude_component("Position")
         .collect_vec();
 
-    for obj in &meta {
-        for (name, _tiles) in obj.get_full_archetype() {
-            if let Some(renderer) = component_renderers.get(&name) {
-                renderer(s, window, obj.clone(), &mut painter);
-            }
-        }
-    }
+
 
     let arrows = window
         .document_mosaic
@@ -373,4 +367,13 @@ pub fn default_renderer_draw(
         }
         _ => {}
     }
+    
+    for obj in &meta {
+        for (name, _tiles) in obj.get_full_archetype() {
+            if let Some(renderer) = component_renderers.get(&name) {
+                renderer(s, window, obj.clone(), &mut painter);
+            }
+        }
+    }
+
 }

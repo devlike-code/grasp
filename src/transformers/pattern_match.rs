@@ -9,10 +9,13 @@ use itertools::Itertools;
 use log::warn;
 
 use crate::{
-    core::structures::{
-        pairs::PairCapability, ErrorCapability, ListCapability, ListTile, PairTile,
+    core::{
+        gui::windowing::gui_draw_image,
+        math::Vec2,
+        structures::{pairs::PairCapability, ErrorCapability, ListCapability, ListTile, PairTile},
     },
     editor_state::{foundation::TransformerState, windows::GraspEditorWindow},
+    grasp_transitions::query_position_recursive,
     querying::traversal::{TraversalOperator, Traverse},
     utilities::{ColorQuery, PosQuery},
     GuiState,
@@ -529,8 +532,8 @@ pub fn pattern_match_tool(
 
             if ui.button_with_size("Run", [100.0, 20.0]) {
                 let p = window.document_mosaic.make_procedure("PatternMatch");
-                p.add_argument("pattern", &pick1.unwrap().target());
-                p.add_argument("target", &pick2.unwrap().target());
+                p.add_argument("pattern", &pick1.as_ref().unwrap().target());
+                p.add_argument("target", &pick2.as_ref().unwrap().target());
 
                 match pattern_match(&p) {
                     Ok(_) => {
@@ -543,6 +546,9 @@ pub fn pattern_match_tool(
                                 warn!("{:?} -> {:?}", bind.get_first(), bind.get_second());
                             }
                         }
+
+                        pick1.unwrap().iter().delete();
+                        pick2.unwrap().iter().delete();
                     }
                     Err(e) => {
                         warn!("PATTERN MATCH ERROR: {:?}!", e.to_string());
@@ -584,8 +590,8 @@ pub fn pattern_match_property_renderer(s: &GuiState, window: &mut GraspEditorWin
         if let Some(binding_list) = ListTile::from_tile(res.clone()) {
             for binding in binding_list.iter() {
                 if let Some(pair) = PairTile::from_tile(binding) {
-                    println!("1: {:?}", pair.get_first());
-                    println!("2: {:?}", pair.get_second());
+                    // println!("1: {:?}", pair.get_first());
+                    // println!("2: {:?}", pair.get_second());
                     if pair.get_first().is_none() || pair.get_second().is_none() {
                         ok = false;
                         break;
@@ -724,9 +730,16 @@ pub fn pattern_match_renderer(
                 bindings.sort_by_key(|a| a.0.clone());
 
                 let mut index = 1;
+
+                let mut min_x = 10000.0;
+                let mut min_y = 10000.0;
+                let mut max_x = -10000.0;
+                let mut max_y = -10000.0;
+
                 for (fst, snd) in &bindings {
                     let fst = window.get_position_with_offset_and_pan(PosQuery(fst).query());
                     let snd = window.get_position_with_offset_and_pan(PosQuery(snd).query());
+
                     painter.add_text(
                         [fst.x + 15.0, fst.y - 10.0],
                         ImColor32::WHITE,
@@ -739,16 +752,64 @@ pub fn pattern_match_renderer(
                         format!("{}", index),
                     );
 
+                    let pos = snd;
+                    if pos.x < min_x {
+                        min_x = pos.x;
+                    }
+                    if pos.y < min_y {
+                        min_y = pos.y;
+                    }
+                    if pos.x > max_x {
+                        max_x = pos.x;
+                    }
+                    if pos.y > max_y {
+                        max_y = pos.y;
+                    }
+
                     painter
                         .add_line(
                             [fst.x, fst.y],
                             [snd.x, snd.y],
                             ImColor32::from_rgba_f32s(0.5, 0.5, 1.0, 0.2),
                         )
+                        .thickness(10.0)
                         .build();
+
+                    // painter
+                    //     .add_circle([snd.x, snd.y], 10.0, ImColor32::from_rgb(255, 0, 0))
+                    //     .build();
+
+                    let is_selected = window.editor_data.selected.contains(&chosen_result);
+                    let image = if is_selected { "[dot]" } else { "dot" };
+
+                    gui_draw_image(
+                        image,
+                        [20.0, 20.0],
+                        [snd.x - window.rect.x, snd.y - window.rect.y],
+                        0.0,
+                        1.0,
+                        None,
+                    );
 
                     index += 1;
                 }
+
+                let min_xy = Vec2::new(min_x, min_y);
+                let max_xy = Vec2::new(max_x, max_y);
+
+                let c1 = ImColor32::from_rgba(45, 45, 45, 128);
+                let c2 = ImColor32::from_rgba(45, 40, 45, 128);
+                let c3 = ImColor32::from_rgba(40, 45, 40, 128);
+                let c4 = ImColor32::from_rgba(40, 40, 40, 128);
+
+                painter.add_rect_filled_multicolor(
+                    [min_xy.x - 60.0, min_xy.y - 60.0],
+                    [max_xy.x + 60.0, max_xy.y + 60.0],
+                    c1,
+                    c2,
+                    c3,
+                    c4,
+                );
             } else {
                 println!("Not a list");
             }
@@ -756,6 +817,6 @@ pub fn pattern_match_renderer(
             println!("Id {} not found", id);
         }
     } else {
-        println!("No PatternMatchShow component");
+        //println!("No PatternMatchShow component");
     }
 }

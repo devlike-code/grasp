@@ -1,344 +1,1812 @@
-TRANSITION NOT DEALT WITH: Idle EndDrag!
 TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
 TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
-TRANSITION NOT DEALT WITH: Idle EndDrag!
-TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
-TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
-TRANSITION NOT DEALT WITH: Idle EndDrag!
-TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
-TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
-		TARGET (31|o:Node|Node) 2 1 0
-		TARGET (27|o:Node|Node) 1 2 0
-		TARGET (35|o:Node|Node) 2 2 0
+		TARGET (40|o:Node|Node) 1 1 0
+		TARGET (48|o:Node|Node) 2 0 0
+		TARGET (44|o:Node|Node) 1 1 0
+		TARGET (36|o:Node|Node) 0 2 0
 		-----------------------
-		(4|o:Node|Node) 1 1 0
-		IN CAND:   [31, 27, 35]
-		OUT CAND:  [31, 27, 35]
-		LOOP CAND: [31, 27, 35]
-		(8|o:Node|Node) 2 0 0
-		IN CAND:   [31, 35]
-		OUT CAND:  [31, 27, 35]
-		LOOP CAND: [31, 27, 35]
+		(12|o:Node|Node) 2 0 0
+		IN CAND:   [48]
+		OUT CAND:  [40, 48, 44, 36]
+		LOOP CAND: [40, 48, 44, 36]
 		(0|o:Node|Node) 0 2 0
-		IN CAND:   [31, 27, 35]
-		OUT CAND:  [27, 35]
-		LOOP CAND: [31, 27, 35]
+		IN CAND:   [40, 48, 44, 36]
+		OUT CAND:  [36]
+		LOOP CAND: [40, 48, 44, 36]
+		(8|o:Node|Node) 1 1 0
+		IN CAND:   [40, 48, 44]
+		OUT CAND:  [40, 44, 36]
+		LOOP CAND: [40, 48, 44, 36]
+		(4|o:Node|Node) 1 1 0
+		IN CAND:   [40, 48, 44]
+		OUT CAND:  [40, 44, 36]
+		LOOP CAND: [40, 48, 44, 36]
 ASSIGN CANDIDATE AND TEST: {} []
-REMAINING: [4, 8, 0]
+REMAINING: [12, 0, 8, 4]
 
-ASSIGN CANDIDATE AND TEST: {4: 85} []
-REMAINING: [8, 0]
+ASSIGN CANDIDATE AND TEST: {12: 97} []
+REMAINING: [0, 8, 4]
 
-ASSIGN CANDIDATE AND TEST: {4: 85, 8: 88} []
-REMAINING: [0]
+ASSIGN CANDIDATE AND TEST: {0: 98, 12: 97} []
+REMAINING: [8, 4]
 
-ASSIGN CANDIDATE AND TEST: {4: 85, 0: 90, 8: 88} []
+ASSIGN CANDIDATE AND TEST: {0: 98, 12: 97, 8: 99} []
+REMAINING: [4]
+
+ASSIGN CANDIDATE AND TEST: {12: 97, 8: 99, 0: 98, 4: 101} []
 REMAINING: []
 
 
-	*********** NO REMAINING CANDIDATES. TESTING {4: 85, 0: 90, 8: 88}
-		TARGET (85|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 0 0
-		TARGET (90|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 2 0
-		TARGET (88|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 0 0
+	*********** NO REMAINING CANDIDATES. TESTING {12: 97, 8: 99, 0: 98, 4: 101}
+		TARGET (97|o:PatternMatchCandidate|PatternMatchCandidate: ) 2 0 0
+		TARGET (99|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 1 0
+		TARGET (98|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 2 0
+		TARGET (101|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 1 0
 		-----------------------
+		(12|o:Node|Node) 2 0 0
+		IN CAND:   [97]
+		OUT CAND:  [97, 99, 98, 101]
+		LOOP CAND: [97, 99, 98, 101]
+		(0|o:Node|Node) 0 2 0
+		IN CAND:   [97, 99, 98, 101]
+		OUT CAND:  [98]
+		LOOP CAND: [97, 99, 98, 101]
+		(8|o:Node|Node) 1 1 0
+		IN CAND:   [97, 99, 101]
+		OUT CAND:  [99, 98, 101]
+		LOOP CAND: [97, 99, 98, 101]
 		(4|o:Node|Node) 1 1 0
-		IN CAND:   [85, 88]
-		OUT CAND:  [90]
-		LOOP CAND: [85, 90, 88]
-		(8|o:Node|Node) 2 0 0
+		IN CAND:   [97, 99, 101]
+		OUT CAND:  [99, 98, 101]
+		LOOP CAND: [97, 99, 98, 101]
+
+BY DEGREES (4): {12: 97, 0: 98, 8: 99, 8: 101, 4: 99, 4: 101}
+	RESULTS FOUND: {12: 97, 8: 99, 0: 98, 4: 101}
+ASSIGN CANDIDATE AND TEST: {12: 97, 8: 99, 0: 98, 4: 102} [{0: 36, 12: 48, 8: 40, 4: 40}]
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {12: 97, 8: 99, 0: 98, 4: 102}
+		TARGET (97|o:PatternMatchCandidate|PatternMatchCandidate: ) 2 0 0
+		TARGET (99|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 1 0
+		TARGET (98|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 2 0
+		TARGET (102|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 1 0
+		-----------------------
+		(12|o:Node|Node) 2 0 0
+		IN CAND:   [97]
+		OUT CAND:  [97, 99, 98, 102]
+		LOOP CAND: [97, 99, 98, 102]
+		(0|o:Node|Node) 0 2 0
+		IN CAND:   [97, 99, 98, 102]
+		OUT CAND:  [98]
+		LOOP CAND: [97, 99, 98, 102]
+		(8|o:Node|Node) 1 1 0
+		IN CAND:   [97, 99, 102]
+		OUT CAND:  [99, 98, 102]
+		LOOP CAND: [97, 99, 98, 102]
+		(4|o:Node|Node) 1 1 0
+		IN CAND:   [97, 99, 102]
+		OUT CAND:  [99, 98, 102]
+		LOOP CAND: [97, 99, 98, 102]
+
+BY DEGREES (4): {12: 97, 0: 98, 8: 99, 8: 102, 4: 99, 4: 102}
+	RESULTS FOUND: {12: 97, 8: 99, 0: 98, 4: 102}
+ASSIGN CANDIDATE AND TEST: {12: 97, 8: 100, 0: 98} [{0: 36, 12: 48, 8: 40, 4: 40}, {4: 44, 0: 36, 12: 48, 8: 40}]
+REMAINING: [4]
+
+ASSIGN CANDIDATE AND TEST: {12: 97, 8: 100, 0: 98, 4: 101} [{0: 36, 12: 48, 8: 40, 4: 40}, {4: 44, 0: 36, 12: 48, 8: 40}]
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {12: 97, 8: 100, 0: 98, 4: 101}
+		TARGET (97|o:PatternMatchCandidate|PatternMatchCandidate: ) 2 0 0
+		TARGET (100|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 1 0
+		TARGET (98|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 2 0
+		TARGET (101|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 1 0
+		-----------------------
+		(12|o:Node|Node) 2 0 0
+		IN CAND:   [97]
+		OUT CAND:  [97, 100, 98, 101]
+		LOOP CAND: [97, 100, 98, 101]
+		(0|o:Node|Node) 0 2 0
+		IN CAND:   [97, 100, 98, 101]
+		OUT CAND:  [98]
+		LOOP CAND: [97, 100, 98, 101]
+		(8|o:Node|Node) 1 1 0
+		IN CAND:   [97, 100, 101]
+		OUT CAND:  [100, 98, 101]
+		LOOP CAND: [97, 100, 98, 101]
+		(4|o:Node|Node) 1 1 0
+		IN CAND:   [97, 100, 101]
+		OUT CAND:  [100, 98, 101]
+		LOOP CAND: [97, 100, 98, 101]
+
+BY DEGREES (4): {12: 97, 0: 98, 8: 100, 8: 101, 4: 100, 4: 101}
+	RESULTS FOUND: {12: 97, 8: 100, 0: 98, 4: 101}
+ASSIGN CANDIDATE AND TEST: {12: 97, 8: 100, 0: 98, 4: 102} [{0: 36, 12: 48, 8: 40, 4: 40}, {4: 44, 0: 36, 12: 48, 8: 40}, {8: 44, 0: 36, 12: 48, 4: 40}]
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {12: 97, 8: 100, 0: 98, 4: 102}
+		TARGET (97|o:PatternMatchCandidate|PatternMatchCandidate: ) 2 0 0
+		TARGET (100|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 1 0
+		TARGET (98|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 2 0
+		TARGET (102|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 1 0
+		-----------------------
+		(12|o:Node|Node) 2 0 0
+		IN CAND:   [97]
+		OUT CAND:  [97, 100, 98, 102]
+		LOOP CAND: [97, 100, 98, 102]
+		(0|o:Node|Node) 0 2 0
+		IN CAND:   [97, 100, 98, 102]
+		OUT CAND:  [98]
+		LOOP CAND: [97, 100, 98, 102]
+		(8|o:Node|Node) 1 1 0
+		IN CAND:   [97, 100, 102]
+		OUT CAND:  [100, 98, 102]
+		LOOP CAND: [97, 100, 98, 102]
+		(4|o:Node|Node) 1 1 0
+		IN CAND:   [97, 100, 102]
+		OUT CAND:  [100, 98, 102]
+		LOOP CAND: [97, 100, 98, 102]
+
+BY DEGREES (4): {12: 97, 0: 98, 8: 100, 8: 102, 4: 100, 4: 102}
+	RESULTS FOUND: {12: 97, 8: 100, 0: 98, 4: 102}
+PATTERN MATCH OK!
+Some((4|o:Node|Node)) -> Some((44|o:Node|Node))
+Some((0|o:Node|Node)) -> Some((36|o:Node|Node))
+Some((12|o:Node|Node)) -> Some((48|o:Node|Node))
+Some((8|o:Node|Node)) -> Some((40|o:Node|Node))
+Some((8|o:Node|Node)) -> Some((44|o:Node|Node))
+Some((0|o:Node|Node)) -> Some((36|o:Node|Node))
+Some((12|o:Node|Node)) -> Some((48|o:Node|Node))
+Some((4|o:Node|Node)) -> Some((40|o:Node|Node))
+TRANSITION NOT DEALT WITH: Idle EndDrag!
+TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
+TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
+TRANSITION NOT DEALT WITH: TransformerWorking EndDrag!
+TRANSITION NOT DEALT WITH: TransformerWorking EndDrag!
+TRANSITION NOT DEALT WITH: TransformerWorking EndDrag!
+TRANSITION NOT DEALT WITH: Idle EndDrag!
+TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
+TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
+		TARGET (40|o:Node|Node) 1 1 0
+		TARGET (48|o:Node|Node) 2 0 0
+		TARGET (44|o:Node|Node) 1 1 0
+		TARGET (36|o:Node|Node) 0 2 0
+		-----------------------
+		(12|o:Node|Node) 2 0 0
+		IN CAND:   [48]
+		OUT CAND:  [40, 48, 44, 36]
+		LOOP CAND: [40, 48, 44, 36]
+		(0|o:Node|Node) 0 1 0
+		IN CAND:   [40, 48, 44, 36]
+		OUT CAND:  [40, 44, 36]
+		LOOP CAND: [40, 48, 44, 36]
+		(8|o:Node|Node) 0 1 0
+		IN CAND:   [40, 48, 44, 36]
+		OUT CAND:  [40, 44, 36]
+		LOOP CAND: [40, 48, 44, 36]
+		(4|o:Node|Node) 1 1 0
+		IN CAND:   [40, 48, 44]
+		OUT CAND:  [40, 44, 36]
+		LOOP CAND: [40, 48, 44, 36]
+ASSIGN CANDIDATE AND TEST: {} []
+REMAINING: [12, 0, 8, 4]
+
+ASSIGN CANDIDATE AND TEST: {12: 175} []
+REMAINING: [0, 8, 4]
+
+ASSIGN CANDIDATE AND TEST: {0: 176, 12: 175} []
+REMAINING: [8, 4]
+
+ASSIGN CANDIDATE AND TEST: {0: 176, 8: 179, 12: 175} []
+REMAINING: [4]
+
+ASSIGN CANDIDATE AND TEST: {0: 176, 8: 179, 12: 175, 4: 182} []
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {0: 176, 8: 179, 12: 175, 4: 182}
+		TARGET (176|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		TARGET (179|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		TARGET (175|o:PatternMatchCandidate|PatternMatchCandidate: ) 2 0 0
+		TARGET (182|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		-----------------------
+		(12|o:Node|Node) 2 0 0
+		IN CAND:   [175]
+		OUT CAND:  [176, 179, 175, 182]
+		LOOP CAND: [176, 179, 175, 182]
+		(0|o:Node|Node) 0 1 0
+		IN CAND:   [176, 179, 175, 182]
+		OUT CAND:  [179, 182]
+		LOOP CAND: [176, 179, 175, 182]
+		(8|o:Node|Node) 0 1 0
+		IN CAND:   [176, 179, 175, 182]
+		OUT CAND:  [179, 182]
+		LOOP CAND: [176, 179, 175, 182]
+		(4|o:Node|Node) 1 1 0
+		IN CAND:   [175]
+		OUT CAND:  [179, 182]
+		LOOP CAND: [176, 179, 175, 182]
+
+BY DEGREES (3): {12: 175, 0: 179, 0: 182, 8: 179, 8: 182}
+ASSIGN CANDIDATE AND TEST: {0: 176, 8: 179, 12: 175, 4: 183} []
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {0: 176, 8: 179, 12: 175, 4: 183}
+		TARGET (176|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		TARGET (179|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		TARGET (175|o:PatternMatchCandidate|PatternMatchCandidate: ) 2 0 0
+		TARGET (183|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		-----------------------
+		(12|o:Node|Node) 2 0 0
+		IN CAND:   [175]
+		OUT CAND:  [176, 179, 175, 183]
+		LOOP CAND: [176, 179, 175, 183]
+		(0|o:Node|Node) 0 1 0
+		IN CAND:   [176, 179, 175, 183]
+		OUT CAND:  [179, 183]
+		LOOP CAND: [176, 179, 175, 183]
+		(8|o:Node|Node) 0 1 0
+		IN CAND:   [176, 179, 175, 183]
+		OUT CAND:  [179, 183]
+		LOOP CAND: [176, 179, 175, 183]
+		(4|o:Node|Node) 1 1 0
+		IN CAND:   [175]
+		OUT CAND:  [179, 183]
+		LOOP CAND: [176, 179, 175, 183]
+
+BY DEGREES (3): {12: 175, 0: 179, 0: 183, 8: 179, 8: 183}
+ASSIGN CANDIDATE AND TEST: {0: 176, 8: 180, 12: 175} []
+REMAINING: [4]
+
+ASSIGN CANDIDATE AND TEST: {0: 176, 8: 180, 12: 175, 4: 182} []
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {0: 176, 8: 180, 12: 175, 4: 182}
+		TARGET (176|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		TARGET (180|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		TARGET (175|o:PatternMatchCandidate|PatternMatchCandidate: ) 2 0 0
+		TARGET (182|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		-----------------------
+		(12|o:Node|Node) 2 0 0
+		IN CAND:   [175]
+		OUT CAND:  [176, 180, 175, 182]
+		LOOP CAND: [176, 180, 175, 182]
+		(0|o:Node|Node) 0 1 0
+		IN CAND:   [176, 180, 175, 182]
+		OUT CAND:  [180, 182]
+		LOOP CAND: [176, 180, 175, 182]
+		(8|o:Node|Node) 0 1 0
+		IN CAND:   [176, 180, 175, 182]
+		OUT CAND:  [180, 182]
+		LOOP CAND: [176, 180, 175, 182]
+		(4|o:Node|Node) 1 1 0
+		IN CAND:   [175]
+		OUT CAND:  [180, 182]
+		LOOP CAND: [176, 180, 175, 182]
+
+BY DEGREES (3): {12: 175, 0: 180, 0: 182, 8: 180, 8: 182}
+ASSIGN CANDIDATE AND TEST: {0: 176, 8: 180, 12: 175, 4: 183} []
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {0: 176, 8: 180, 12: 175, 4: 183}
+		TARGET (176|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		TARGET (180|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		TARGET (175|o:PatternMatchCandidate|PatternMatchCandidate: ) 2 0 0
+		TARGET (183|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		-----------------------
+		(12|o:Node|Node) 2 0 0
+		IN CAND:   [175]
+		OUT CAND:  [176, 180, 175, 183]
+		LOOP CAND: [176, 180, 175, 183]
+		(0|o:Node|Node) 0 1 0
+		IN CAND:   [176, 180, 175, 183]
+		OUT CAND:  [180, 183]
+		LOOP CAND: [176, 180, 175, 183]
+		(8|o:Node|Node) 0 1 0
+		IN CAND:   [176, 180, 175, 183]
+		OUT CAND:  [180, 183]
+		LOOP CAND: [176, 180, 175, 183]
+		(4|o:Node|Node) 1 1 0
+		IN CAND:   [175]
+		OUT CAND:  [180, 183]
+		LOOP CAND: [176, 180, 175, 183]
+
+BY DEGREES (3): {12: 175, 0: 180, 0: 183, 8: 180, 8: 183}
+ASSIGN CANDIDATE AND TEST: {0: 176, 8: 181, 12: 175} []
+REMAINING: [4]
+
+ASSIGN CANDIDATE AND TEST: {0: 176, 8: 181, 12: 175, 4: 182} []
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {0: 176, 8: 181, 12: 175, 4: 182}
+		TARGET (176|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		TARGET (181|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		TARGET (175|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 0 0
+		TARGET (182|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		-----------------------
+		(12|o:Node|Node) 2 0 0
 		IN CAND:   []
-		OUT CAND:  [85, 90, 88]
-		LOOP CAND: [85, 90, 88]
-		(0|o:Node|Node) 0 2 0
-		IN CAND:   [85, 90, 88]
-		OUT CAND:  [90]
-		LOOP CAND: [85, 90, 88]
+		OUT CAND:  [176, 181, 175, 182]
+		LOOP CAND: [176, 181, 175, 182]
+		(0|o:Node|Node) 0 1 0
+		IN CAND:   [176, 181, 175, 182]
+		OUT CAND:  [182]
+		LOOP CAND: [176, 181, 175, 182]
+		(8|o:Node|Node) 0 1 0
+		IN CAND:   [176, 181, 175, 182]
+		OUT CAND:  [182]
+		LOOP CAND: [176, 181, 175, 182]
+		(4|o:Node|Node) 1 1 0
+		IN CAND:   [175]
+		OUT CAND:  [182]
+		LOOP CAND: [176, 181, 175, 182]
 
-BY DEGREES (1): {0: 90}
-ASSIGN CANDIDATE AND TEST: {4: 85, 0: 91, 8: 88} []
+BY DEGREES (2): {0: 182, 8: 182}
+ASSIGN CANDIDATE AND TEST: {0: 176, 8: 181, 12: 175, 4: 183} []
 REMAINING: []
 
 
-	*********** NO REMAINING CANDIDATES. TESTING {4: 85, 0: 91, 8: 88}
-		TARGET (85|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 0 0
-		TARGET (91|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 2 0
-		TARGET (88|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 0 0
+	*********** NO REMAINING CANDIDATES. TESTING {0: 176, 8: 181, 12: 175, 4: 183}
+		TARGET (176|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		TARGET (181|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		TARGET (175|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 0 0
+		TARGET (183|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
 		-----------------------
-		(4|o:Node|Node) 1 1 0
-		IN CAND:   [85, 88]
-		OUT CAND:  [91]
-		LOOP CAND: [85, 91, 88]
-		(8|o:Node|Node) 2 0 0
+		(12|o:Node|Node) 2 0 0
 		IN CAND:   []
-		OUT CAND:  [85, 91, 88]
-		LOOP CAND: [85, 91, 88]
-		(0|o:Node|Node) 0 2 0
-		IN CAND:   [85, 91, 88]
-		OUT CAND:  [91]
-		LOOP CAND: [85, 91, 88]
+		OUT CAND:  [176, 181, 175, 183]
+		LOOP CAND: [176, 181, 175, 183]
+		(0|o:Node|Node) 0 1 0
+		IN CAND:   [176, 181, 175, 183]
+		OUT CAND:  [183]
+		LOOP CAND: [176, 181, 175, 183]
+		(8|o:Node|Node) 0 1 0
+		IN CAND:   [176, 181, 175, 183]
+		OUT CAND:  [183]
+		LOOP CAND: [176, 181, 175, 183]
+		(4|o:Node|Node) 1 1 0
+		IN CAND:   [175]
+		OUT CAND:  [183]
+		LOOP CAND: [176, 181, 175, 183]
 
-BY DEGREES (1): {0: 91}
-ASSIGN CANDIDATE AND TEST: {4: 85, 8: 89} []
-REMAINING: [0]
+BY DEGREES (2): {0: 183, 8: 183}
+ASSIGN CANDIDATE AND TEST: {0: 177, 12: 175} []
+REMAINING: [8, 4]
 
-ASSIGN CANDIDATE AND TEST: {4: 85, 0: 90, 8: 89} []
+ASSIGN CANDIDATE AND TEST: {0: 177, 8: 179, 12: 175} []
+REMAINING: [4]
+
+ASSIGN CANDIDATE AND TEST: {0: 177, 8: 179, 12: 175, 4: 182} []
 REMAINING: []
 
 
-	*********** NO REMAINING CANDIDATES. TESTING {4: 85, 0: 90, 8: 89}
-		TARGET (85|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 1 0
-		TARGET (90|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 2 0
-		TARGET (89|o:PatternMatchCandidate|PatternMatchCandidate: ) 2 0 0
+	*********** NO REMAINING CANDIDATES. TESTING {0: 177, 8: 179, 12: 175, 4: 182}
+		TARGET (177|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		TARGET (179|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		TARGET (175|o:PatternMatchCandidate|PatternMatchCandidate: ) 2 0 0
+		TARGET (182|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
 		-----------------------
+		(12|o:Node|Node) 2 0 0
+		IN CAND:   [175]
+		OUT CAND:  [177, 179, 175, 182]
+		LOOP CAND: [177, 179, 175, 182]
+		(0|o:Node|Node) 0 1 0
+		IN CAND:   [177, 179, 175, 182]
+		OUT CAND:  [179, 182]
+		LOOP CAND: [177, 179, 175, 182]
+		(8|o:Node|Node) 0 1 0
+		IN CAND:   [177, 179, 175, 182]
+		OUT CAND:  [179, 182]
+		LOOP CAND: [177, 179, 175, 182]
 		(4|o:Node|Node) 1 1 0
-		IN CAND:   [85, 89]
-		OUT CAND:  [85, 90]
-		LOOP CAND: [85, 90, 89]
-		(8|o:Node|Node) 2 0 0
-		IN CAND:   [89]
-		OUT CAND:  [85, 90, 89]
-		LOOP CAND: [85, 90, 89]
-		(0|o:Node|Node) 0 2 0
-		IN CAND:   [85, 90, 89]
-		OUT CAND:  [90]
-		LOOP CAND: [85, 90, 89]
+		IN CAND:   [175]
+		OUT CAND:  [179, 182]
+		LOOP CAND: [177, 179, 175, 182]
 
-BY DEGREES (3): {4: 85, 8: 89, 0: 90}
-	RESULTS FOUND: {4: 85, 0: 90, 8: 89}
-ASSIGN CANDIDATE AND TEST: {4: 85, 0: 91, 8: 89} [{0: 27, 8: 35, 4: 31}]
+BY DEGREES (3): {12: 175, 0: 179, 0: 182, 8: 179, 8: 182}
+ASSIGN CANDIDATE AND TEST: {0: 177, 8: 179, 12: 175, 4: 183} []
 REMAINING: []
 
 
-	*********** NO REMAINING CANDIDATES. TESTING {4: 85, 0: 91, 8: 89}
-		TARGET (85|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 1 0
-		TARGET (91|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
-		TARGET (89|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 0 0
+	*********** NO REMAINING CANDIDATES. TESTING {0: 177, 8: 179, 12: 175, 4: 183}
+		TARGET (177|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		TARGET (179|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		TARGET (175|o:PatternMatchCandidate|PatternMatchCandidate: ) 2 0 0
+		TARGET (183|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
 		-----------------------
+		(12|o:Node|Node) 2 0 0
+		IN CAND:   [175]
+		OUT CAND:  [177, 179, 175, 183]
+		LOOP CAND: [177, 179, 175, 183]
+		(0|o:Node|Node) 0 1 0
+		IN CAND:   [177, 179, 175, 183]
+		OUT CAND:  [179, 183]
+		LOOP CAND: [177, 179, 175, 183]
+		(8|o:Node|Node) 0 1 0
+		IN CAND:   [177, 179, 175, 183]
+		OUT CAND:  [179, 183]
+		LOOP CAND: [177, 179, 175, 183]
 		(4|o:Node|Node) 1 1 0
-		IN CAND:   [85, 89]
-		OUT CAND:  [85, 91]
-		LOOP CAND: [85, 91, 89]
-		(8|o:Node|Node) 2 0 0
+		IN CAND:   [175]
+		OUT CAND:  [179, 183]
+		LOOP CAND: [177, 179, 175, 183]
+
+BY DEGREES (3): {12: 175, 0: 179, 0: 183, 8: 179, 8: 183}
+ASSIGN CANDIDATE AND TEST: {0: 177, 8: 180, 12: 175} []
+REMAINING: [4]
+
+ASSIGN CANDIDATE AND TEST: {0: 177, 8: 180, 12: 175, 4: 182} []
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {0: 177, 8: 180, 12: 175, 4: 182}
+		TARGET (177|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		TARGET (180|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		TARGET (175|o:PatternMatchCandidate|PatternMatchCandidate: ) 2 0 0
+		TARGET (182|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		-----------------------
+		(12|o:Node|Node) 2 0 0
+		IN CAND:   [175]
+		OUT CAND:  [177, 180, 175, 182]
+		LOOP CAND: [177, 180, 175, 182]
+		(0|o:Node|Node) 0 1 0
+		IN CAND:   [177, 180, 175, 182]
+		OUT CAND:  [180, 182]
+		LOOP CAND: [177, 180, 175, 182]
+		(8|o:Node|Node) 0 1 0
+		IN CAND:   [177, 180, 175, 182]
+		OUT CAND:  [180, 182]
+		LOOP CAND: [177, 180, 175, 182]
+		(4|o:Node|Node) 1 1 0
+		IN CAND:   [175]
+		OUT CAND:  [180, 182]
+		LOOP CAND: [177, 180, 175, 182]
+
+BY DEGREES (3): {12: 175, 0: 180, 0: 182, 8: 180, 8: 182}
+ASSIGN CANDIDATE AND TEST: {0: 177, 8: 180, 12: 175, 4: 183} []
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {0: 177, 8: 180, 12: 175, 4: 183}
+		TARGET (177|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		TARGET (180|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		TARGET (175|o:PatternMatchCandidate|PatternMatchCandidate: ) 2 0 0
+		TARGET (183|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		-----------------------
+		(12|o:Node|Node) 2 0 0
+		IN CAND:   [175]
+		OUT CAND:  [177, 180, 175, 183]
+		LOOP CAND: [177, 180, 175, 183]
+		(0|o:Node|Node) 0 1 0
+		IN CAND:   [177, 180, 175, 183]
+		OUT CAND:  [180, 183]
+		LOOP CAND: [177, 180, 175, 183]
+		(8|o:Node|Node) 0 1 0
+		IN CAND:   [177, 180, 175, 183]
+		OUT CAND:  [180, 183]
+		LOOP CAND: [177, 180, 175, 183]
+		(4|o:Node|Node) 1 1 0
+		IN CAND:   [175]
+		OUT CAND:  [180, 183]
+		LOOP CAND: [177, 180, 175, 183]
+
+BY DEGREES (3): {12: 175, 0: 180, 0: 183, 8: 180, 8: 183}
+ASSIGN CANDIDATE AND TEST: {0: 177, 8: 181, 12: 175} []
+REMAINING: [4]
+
+ASSIGN CANDIDATE AND TEST: {0: 177, 8: 181, 12: 175, 4: 182} []
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {0: 177, 8: 181, 12: 175, 4: 182}
+		TARGET (177|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		TARGET (181|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		TARGET (175|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 0 0
+		TARGET (182|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		-----------------------
+		(12|o:Node|Node) 2 0 0
 		IN CAND:   []
-		OUT CAND:  [85, 91, 89]
-		LOOP CAND: [85, 91, 89]
-		(0|o:Node|Node) 0 2 0
-		IN CAND:   [85, 91, 89]
-		OUT CAND:  []
-		LOOP CAND: [85, 91, 89]
+		OUT CAND:  [177, 181, 175, 182]
+		LOOP CAND: [177, 181, 175, 182]
+		(0|o:Node|Node) 0 1 0
+		IN CAND:   [177, 181, 175, 182]
+		OUT CAND:  [182]
+		LOOP CAND: [177, 181, 175, 182]
+		(8|o:Node|Node) 0 1 0
+		IN CAND:   [177, 181, 175, 182]
+		OUT CAND:  [182]
+		LOOP CAND: [177, 181, 175, 182]
+		(4|o:Node|Node) 1 1 0
+		IN CAND:   [175]
+		OUT CAND:  [182]
+		LOOP CAND: [177, 181, 175, 182]
 
-BY DEGREES (1): {4: 85}
-ASSIGN CANDIDATE AND TEST: {4: 86} [{0: 27, 8: 35, 4: 31}]
-REMAINING: [8, 0]
-
-ASSIGN CANDIDATE AND TEST: {4: 86, 8: 88} [{0: 27, 8: 35, 4: 31}]
-REMAINING: [0]
-
-ASSIGN CANDIDATE AND TEST: {4: 86, 0: 90, 8: 88} [{0: 27, 8: 35, 4: 31}]
+BY DEGREES (2): {0: 182, 8: 182}
+ASSIGN CANDIDATE AND TEST: {0: 177, 8: 181, 12: 175, 4: 183} []
 REMAINING: []
 
 
-	*********** NO REMAINING CANDIDATES. TESTING {4: 86, 0: 90, 8: 88}
-		TARGET (86|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
-		TARGET (90|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
-		TARGET (88|o:PatternMatchCandidate|PatternMatchCandidate: ) 2 0 0
+	*********** NO REMAINING CANDIDATES. TESTING {0: 177, 8: 181, 12: 175, 4: 183}
+		TARGET (177|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		TARGET (181|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		TARGET (175|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 0 0
+		TARGET (183|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
 		-----------------------
-		(4|o:Node|Node) 1 1 0
-		IN CAND:   [88]
-		OUT CAND:  [86, 90]
-		LOOP CAND: [86, 90, 88]
-		(8|o:Node|Node) 2 0 0
-		IN CAND:   [88]
-		OUT CAND:  [86, 90, 88]
-		LOOP CAND: [86, 90, 88]
-		(0|o:Node|Node) 0 2 0
-		IN CAND:   [86, 90, 88]
-		OUT CAND:  []
-		LOOP CAND: [86, 90, 88]
-
-BY DEGREES (1): {8: 88}
-ASSIGN CANDIDATE AND TEST: {4: 86, 0: 91, 8: 88} [{0: 27, 8: 35, 4: 31}]
-REMAINING: []
-
-
-	*********** NO REMAINING CANDIDATES. TESTING {4: 86, 0: 91, 8: 88}
-		TARGET (86|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 1 0
-		TARGET (91|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 2 0
-		TARGET (88|o:PatternMatchCandidate|PatternMatchCandidate: ) 2 0 0
-		-----------------------
-		(4|o:Node|Node) 1 1 0
-		IN CAND:   [86, 88]
-		OUT CAND:  [86, 91]
-		LOOP CAND: [86, 91, 88]
-		(8|o:Node|Node) 2 0 0
-		IN CAND:   [88]
-		OUT CAND:  [86, 91, 88]
-		LOOP CAND: [86, 91, 88]
-		(0|o:Node|Node) 0 2 0
-		IN CAND:   [86, 91, 88]
-		OUT CAND:  [91]
-		LOOP CAND: [86, 91, 88]
-
-BY DEGREES (3): {4: 86, 8: 88, 0: 91}
-	RESULTS FOUND: {4: 86, 0: 91, 8: 88}
-ASSIGN CANDIDATE AND TEST: {4: 86, 8: 89} [{0: 27, 8: 35, 4: 31}, {8: 31, 4: 27, 0: 35}]
-REMAINING: [0]
-
-ASSIGN CANDIDATE AND TEST: {4: 86, 0: 90, 8: 89} [{0: 27, 8: 35, 4: 31}, {8: 31, 4: 27, 0: 35}]
-REMAINING: []
-
-
-	*********** NO REMAINING CANDIDATES. TESTING {4: 86, 0: 90, 8: 89}
-		TARGET (86|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
-		TARGET (90|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
-		TARGET (89|o:PatternMatchCandidate|PatternMatchCandidate: ) 2 0 0
-		-----------------------
-		(4|o:Node|Node) 1 1 0
-		IN CAND:   [89]
-		OUT CAND:  [86, 90]
-		LOOP CAND: [86, 90, 89]
-		(8|o:Node|Node) 2 0 0
-		IN CAND:   [89]
-		OUT CAND:  [86, 90, 89]
-		LOOP CAND: [86, 90, 89]
-		(0|o:Node|Node) 0 2 0
-		IN CAND:   [86, 90, 89]
-		OUT CAND:  []
-		LOOP CAND: [86, 90, 89]
-
-BY DEGREES (1): {8: 89}
-ASSIGN CANDIDATE AND TEST: {4: 86, 0: 91, 8: 89} [{0: 27, 8: 35, 4: 31}, {8: 31, 4: 27, 0: 35}]
-REMAINING: []
-
-
-	*********** NO REMAINING CANDIDATES. TESTING {4: 86, 0: 91, 8: 89}
-		TARGET (86|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 1 0
-		TARGET (91|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
-		TARGET (89|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 0 0
-		-----------------------
-		(4|o:Node|Node) 1 1 0
-		IN CAND:   [86, 89]
-		OUT CAND:  [86, 91]
-		LOOP CAND: [86, 91, 89]
-		(8|o:Node|Node) 2 0 0
+		(12|o:Node|Node) 2 0 0
 		IN CAND:   []
-		OUT CAND:  [86, 91, 89]
-		LOOP CAND: [86, 91, 89]
-		(0|o:Node|Node) 0 2 0
-		IN CAND:   [86, 91, 89]
-		OUT CAND:  []
-		LOOP CAND: [86, 91, 89]
+		OUT CAND:  [177, 181, 175, 183]
+		LOOP CAND: [177, 181, 175, 183]
+		(0|o:Node|Node) 0 1 0
+		IN CAND:   [177, 181, 175, 183]
+		OUT CAND:  [183]
+		LOOP CAND: [177, 181, 175, 183]
+		(8|o:Node|Node) 0 1 0
+		IN CAND:   [177, 181, 175, 183]
+		OUT CAND:  [183]
+		LOOP CAND: [177, 181, 175, 183]
+		(4|o:Node|Node) 1 1 0
+		IN CAND:   [175]
+		OUT CAND:  [183]
+		LOOP CAND: [177, 181, 175, 183]
 
-BY DEGREES (1): {4: 86}
-ASSIGN CANDIDATE AND TEST: {4: 87} [{0: 27, 8: 35, 4: 31}, {8: 31, 4: 27, 0: 35}]
-REMAINING: [8, 0]
+BY DEGREES (2): {0: 183, 8: 183}
+ASSIGN CANDIDATE AND TEST: {0: 178, 12: 175} []
+REMAINING: [8, 4]
 
-ASSIGN CANDIDATE AND TEST: {4: 87, 8: 88} [{0: 27, 8: 35, 4: 31}, {8: 31, 4: 27, 0: 35}]
-REMAINING: [0]
+ASSIGN CANDIDATE AND TEST: {0: 178, 8: 179, 12: 175} []
+REMAINING: [4]
 
-ASSIGN CANDIDATE AND TEST: {4: 87, 0: 90, 8: 88} [{0: 27, 8: 35, 4: 31}, {8: 31, 4: 27, 0: 35}]
+ASSIGN CANDIDATE AND TEST: {0: 178, 8: 179, 12: 175, 4: 182} []
 REMAINING: []
 
 
-	*********** NO REMAINING CANDIDATES. TESTING {4: 87, 0: 90, 8: 88}
-		TARGET (87|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 1 0
-		TARGET (90|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 2 0
-		TARGET (88|o:PatternMatchCandidate|PatternMatchCandidate: ) 2 0 0
+	*********** NO REMAINING CANDIDATES. TESTING {0: 178, 8: 179, 12: 175, 4: 182}
+		TARGET (178|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		TARGET (179|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		TARGET (175|o:PatternMatchCandidate|PatternMatchCandidate: ) 2 0 0
+		TARGET (182|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 1 0
 		-----------------------
+		(12|o:Node|Node) 2 0 0
+		IN CAND:   [175]
+		OUT CAND:  [178, 179, 175, 182]
+		LOOP CAND: [178, 179, 175, 182]
+		(0|o:Node|Node) 0 1 0
+		IN CAND:   [178, 179, 175, 182]
+		OUT CAND:  [178, 179, 182]
+		LOOP CAND: [178, 179, 175, 182]
+		(8|o:Node|Node) 0 1 0
+		IN CAND:   [178, 179, 175, 182]
+		OUT CAND:  [178, 179, 182]
+		LOOP CAND: [178, 179, 175, 182]
 		(4|o:Node|Node) 1 1 0
-		IN CAND:   [87, 88]
-		OUT CAND:  [87, 90]
-		LOOP CAND: [87, 90, 88]
-		(8|o:Node|Node) 2 0 0
-		IN CAND:   [88]
-		OUT CAND:  [87, 90, 88]
-		LOOP CAND: [87, 90, 88]
-		(0|o:Node|Node) 0 2 0
-		IN CAND:   [87, 90, 88]
-		OUT CAND:  [90]
-		LOOP CAND: [87, 90, 88]
+		IN CAND:   [175, 182]
+		OUT CAND:  [178, 179, 182]
+		LOOP CAND: [178, 179, 175, 182]
 
-BY DEGREES (3): {4: 87, 8: 88, 0: 90}
-	RESULTS FOUND: {4: 87, 0: 90, 8: 88}
-ASSIGN CANDIDATE AND TEST: {4: 87, 0: 91, 8: 88} [{0: 27, 8: 35, 4: 31}, {8: 31, 4: 27, 0: 35}, {4: 35, 8: 31, 0: 27}]
+BY DEGREES (4): {12: 175, 0: 178, 0: 179, 0: 182, 8: 178, 8: 179, 8: 182, 4: 182}
+	RESULTS FOUND: {0: 178, 8: 179, 12: 175, 4: 182}
+ASSIGN CANDIDATE AND TEST: {0: 178, 8: 179, 12: 175, 4: 183} [{4: 40, 8: 40, 12: 48, 0: 36}]
 REMAINING: []
 
 
-	*********** NO REMAINING CANDIDATES. TESTING {4: 87, 0: 91, 8: 88}
-		TARGET (87|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
-		TARGET (91|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
-		TARGET (88|o:PatternMatchCandidate|PatternMatchCandidate: ) 2 0 0
+	*********** NO REMAINING CANDIDATES. TESTING {0: 178, 8: 179, 12: 175, 4: 183}
+		TARGET (178|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		TARGET (179|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		TARGET (175|o:PatternMatchCandidate|PatternMatchCandidate: ) 2 0 0
+		TARGET (183|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 1 0
 		-----------------------
+		(12|o:Node|Node) 2 0 0
+		IN CAND:   [175]
+		OUT CAND:  [178, 179, 175, 183]
+		LOOP CAND: [178, 179, 175, 183]
+		(0|o:Node|Node) 0 1 0
+		IN CAND:   [178, 179, 175, 183]
+		OUT CAND:  [178, 179, 183]
+		LOOP CAND: [178, 179, 175, 183]
+		(8|o:Node|Node) 0 1 0
+		IN CAND:   [178, 179, 175, 183]
+		OUT CAND:  [178, 179, 183]
+		LOOP CAND: [178, 179, 175, 183]
 		(4|o:Node|Node) 1 1 0
-		IN CAND:   [88]
-		OUT CAND:  [87, 91]
-		LOOP CAND: [87, 91, 88]
-		(8|o:Node|Node) 2 0 0
-		IN CAND:   [88]
-		OUT CAND:  [87, 91, 88]
-		LOOP CAND: [87, 91, 88]
-		(0|o:Node|Node) 0 2 0
-		IN CAND:   [87, 91, 88]
-		OUT CAND:  []
-		LOOP CAND: [87, 91, 88]
+		IN CAND:   [175, 183]
+		OUT CAND:  [178, 179, 183]
+		LOOP CAND: [178, 179, 175, 183]
 
-BY DEGREES (1): {8: 88}
-ASSIGN CANDIDATE AND TEST: {4: 87, 8: 89} [{0: 27, 8: 35, 4: 31}, {8: 31, 4: 27, 0: 35}, {4: 35, 8: 31, 0: 27}]
-REMAINING: [0]
+BY DEGREES (4): {12: 175, 0: 178, 0: 179, 0: 183, 8: 178, 8: 179, 8: 183, 4: 183}
+	RESULTS FOUND: {0: 178, 8: 179, 12: 175, 4: 183}
+ASSIGN CANDIDATE AND TEST: {0: 178, 8: 180, 12: 175} [{4: 40, 8: 40, 12: 48, 0: 36}, {0: 36, 8: 40, 12: 48, 4: 44}]
+REMAINING: [4]
 
-ASSIGN CANDIDATE AND TEST: {4: 87, 0: 90, 8: 89} [{0: 27, 8: 35, 4: 31}, {8: 31, 4: 27, 0: 35}, {4: 35, 8: 31, 0: 27}]
+ASSIGN CANDIDATE AND TEST: {0: 178, 8: 180, 12: 175, 4: 182} [{4: 40, 8: 40, 12: 48, 0: 36}, {0: 36, 8: 40, 12: 48, 4: 44}]
 REMAINING: []
 
 
-	*********** NO REMAINING CANDIDATES. TESTING {4: 87, 0: 90, 8: 89}
-		TARGET (87|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 0 0
-		TARGET (90|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 2 0
-		TARGET (89|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 0 0
+	*********** NO REMAINING CANDIDATES. TESTING {0: 178, 8: 180, 12: 175, 4: 182}
+		TARGET (178|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		TARGET (180|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		TARGET (175|o:PatternMatchCandidate|PatternMatchCandidate: ) 2 0 0
+		TARGET (182|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 1 0
 		-----------------------
+		(12|o:Node|Node) 2 0 0
+		IN CAND:   [175]
+		OUT CAND:  [178, 180, 175, 182]
+		LOOP CAND: [178, 180, 175, 182]
+		(0|o:Node|Node) 0 1 0
+		IN CAND:   [178, 180, 175, 182]
+		OUT CAND:  [178, 180, 182]
+		LOOP CAND: [178, 180, 175, 182]
+		(8|o:Node|Node) 0 1 0
+		IN CAND:   [178, 180, 175, 182]
+		OUT CAND:  [178, 180, 182]
+		LOOP CAND: [178, 180, 175, 182]
 		(4|o:Node|Node) 1 1 0
-		IN CAND:   [87, 89]
-		OUT CAND:  [90]
-		LOOP CAND: [87, 90, 89]
-		(8|o:Node|Node) 2 0 0
+		IN CAND:   [175, 182]
+		OUT CAND:  [178, 180, 182]
+		LOOP CAND: [178, 180, 175, 182]
+
+BY DEGREES (4): {12: 175, 0: 178, 0: 180, 0: 182, 8: 178, 8: 180, 8: 182, 4: 182}
+	RESULTS FOUND: {0: 178, 8: 180, 12: 175, 4: 182}
+ASSIGN CANDIDATE AND TEST: {0: 178, 8: 180, 12: 175, 4: 183} [{4: 40, 8: 40, 12: 48, 0: 36}, {0: 36, 8: 40, 12: 48, 4: 44}, {0: 36, 12: 48, 4: 40, 8: 44}]
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {0: 178, 8: 180, 12: 175, 4: 183}
+		TARGET (178|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		TARGET (180|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		TARGET (175|o:PatternMatchCandidate|PatternMatchCandidate: ) 2 0 0
+		TARGET (183|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 1 0
+		-----------------------
+		(12|o:Node|Node) 2 0 0
+		IN CAND:   [175]
+		OUT CAND:  [178, 180, 175, 183]
+		LOOP CAND: [178, 180, 175, 183]
+		(0|o:Node|Node) 0 1 0
+		IN CAND:   [178, 180, 175, 183]
+		OUT CAND:  [178, 180, 183]
+		LOOP CAND: [178, 180, 175, 183]
+		(8|o:Node|Node) 0 1 0
+		IN CAND:   [178, 180, 175, 183]
+		OUT CAND:  [178, 180, 183]
+		LOOP CAND: [178, 180, 175, 183]
+		(4|o:Node|Node) 1 1 0
+		IN CAND:   [175, 183]
+		OUT CAND:  [178, 180, 183]
+		LOOP CAND: [178, 180, 175, 183]
+
+BY DEGREES (4): {12: 175, 0: 178, 0: 180, 0: 183, 8: 178, 8: 180, 8: 183, 4: 183}
+	RESULTS FOUND: {0: 178, 8: 180, 12: 175, 4: 183}
+ASSIGN CANDIDATE AND TEST: {0: 178, 8: 181, 12: 175} [{4: 40, 8: 40, 12: 48, 0: 36}, {0: 36, 8: 40, 12: 48, 4: 44}, {0: 36, 12: 48, 4: 40, 8: 44}, {0: 36, 8: 44, 4: 44, 12: 48}]
+REMAINING: [4]
+
+ASSIGN CANDIDATE AND TEST: {0: 178, 8: 181, 12: 175, 4: 182} [{4: 40, 8: 40, 12: 48, 0: 36}, {0: 36, 8: 40, 12: 48, 4: 44}, {0: 36, 12: 48, 4: 40, 8: 44}, {0: 36, 8: 44, 4: 44, 12: 48}]
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {0: 178, 8: 181, 12: 175, 4: 182}
+		TARGET (178|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		TARGET (181|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		TARGET (175|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 0 0
+		TARGET (182|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 1 0
+		-----------------------
+		(12|o:Node|Node) 2 0 0
 		IN CAND:   []
-		OUT CAND:  [87, 90, 89]
-		LOOP CAND: [87, 90, 89]
-		(0|o:Node|Node) 0 2 0
-		IN CAND:   [87, 90, 89]
-		OUT CAND:  [90]
-		LOOP CAND: [87, 90, 89]
+		OUT CAND:  [178, 181, 175, 182]
+		LOOP CAND: [178, 181, 175, 182]
+		(0|o:Node|Node) 0 1 0
+		IN CAND:   [178, 181, 175, 182]
+		OUT CAND:  [178, 182]
+		LOOP CAND: [178, 181, 175, 182]
+		(8|o:Node|Node) 0 1 0
+		IN CAND:   [178, 181, 175, 182]
+		OUT CAND:  [178, 182]
+		LOOP CAND: [178, 181, 175, 182]
+		(4|o:Node|Node) 1 1 0
+		IN CAND:   [175, 182]
+		OUT CAND:  [178, 182]
+		LOOP CAND: [178, 181, 175, 182]
 
-BY DEGREES (1): {0: 90}
-ASSIGN CANDIDATE AND TEST: {4: 87, 0: 91, 8: 89} [{0: 27, 8: 35, 4: 31}, {8: 31, 4: 27, 0: 35}, {4: 35, 8: 31, 0: 27}]
+BY DEGREES (3): {0: 178, 0: 182, 8: 178, 8: 182, 4: 182}
+ASSIGN CANDIDATE AND TEST: {0: 178, 8: 181, 12: 175, 4: 183} [{4: 40, 8: 40, 12: 48, 0: 36}, {0: 36, 8: 40, 12: 48, 4: 44}, {0: 36, 12: 48, 4: 40, 8: 44}, {0: 36, 8: 44, 4: 44, 12: 48}]
 REMAINING: []
 
 
-	*********** NO REMAINING CANDIDATES. TESTING {4: 87, 0: 91, 8: 89}
-		TARGET (87|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
-		TARGET (91|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
-		TARGET (89|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+	*********** NO REMAINING CANDIDATES. TESTING {0: 178, 8: 181, 12: 175, 4: 183}
+		TARGET (178|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		TARGET (181|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		TARGET (175|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 0 0
+		TARGET (183|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 1 0
 		-----------------------
+		(12|o:Node|Node) 2 0 0
+		IN CAND:   []
+		OUT CAND:  [178, 181, 175, 183]
+		LOOP CAND: [178, 181, 175, 183]
+		(0|o:Node|Node) 0 1 0
+		IN CAND:   [178, 181, 175, 183]
+		OUT CAND:  [178, 183]
+		LOOP CAND: [178, 181, 175, 183]
+		(8|o:Node|Node) 0 1 0
+		IN CAND:   [178, 181, 175, 183]
+		OUT CAND:  [178, 183]
+		LOOP CAND: [178, 181, 175, 183]
 		(4|o:Node|Node) 1 1 0
+		IN CAND:   [175, 183]
+		OUT CAND:  [178, 183]
+		LOOP CAND: [178, 181, 175, 183]
+
+BY DEGREES (3): {0: 178, 0: 183, 8: 178, 8: 183, 4: 183}
+PATTERN MATCH OK!
+Some((0|o:Node|Node)) -> Some((36|o:Node|Node))
+Some((8|o:Node|Node)) -> Some((40|o:Node|Node))
+Some((12|o:Node|Node)) -> Some((48|o:Node|Node))
+Some((4|o:Node|Node)) -> Some((44|o:Node|Node))
+Some((0|o:Node|Node)) -> Some((36|o:Node|Node))
+Some((12|o:Node|Node)) -> Some((48|o:Node|Node))
+Some((4|o:Node|Node)) -> Some((40|o:Node|Node))
+Some((8|o:Node|Node)) -> Some((44|o:Node|Node))
+TRANSITION NOT DEALT WITH: Idle EndDrag!
+TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
+TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
+		TARGET (40|o:Node|Node) 1 1 0
+		TARGET (48|o:Node|Node) 2 0 0
+		TARGET (44|o:Node|Node) 1 1 0
+		TARGET (36|o:Node|Node) 0 2 0
+		-----------------------
+		(12|o:Node|Node) 2 0 0
+		IN CAND:   [48]
+		OUT CAND:  [40, 48, 44, 36]
+		LOOP CAND: [40, 48, 44, 36]
+		(0|o:Node|Node) 0 1 0
+		IN CAND:   [40, 48, 44, 36]
+		OUT CAND:  [40, 44, 36]
+		LOOP CAND: [40, 48, 44, 36]
+		(8|o:Node|Node) 1 1 0
+		IN CAND:   [40, 48, 44]
+		OUT CAND:  [40, 44, 36]
+		LOOP CAND: [40, 48, 44, 36]
+		(4|o:Node|Node) 0 1 0
+		IN CAND:   [40, 48, 44, 36]
+		OUT CAND:  [40, 44, 36]
+		LOOP CAND: [40, 48, 44, 36]
+ASSIGN CANDIDATE AND TEST: {} []
+REMAINING: [12, 0, 8, 4]
+
+ASSIGN CANDIDATE AND TEST: {12: 19} []
+REMAINING: [0, 8, 4]
+
+ASSIGN CANDIDATE AND TEST: {12: 19, 0: 20} []
+REMAINING: [8, 4]
+
+ASSIGN CANDIDATE AND TEST: {12: 19, 0: 20, 8: 96} []
+REMAINING: [4]
+
+ASSIGN CANDIDATE AND TEST: {12: 19, 0: 20, 4: 98, 8: 96} []
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {12: 19, 0: 20, 4: 98, 8: 96}
+		TARGET (19|o:PatternMatchCandidate|PatternMatchCandidate: ) 2 0 0
+		TARGET (20|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		TARGET (98|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		TARGET (96|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		-----------------------
+		(12|o:Node|Node) 2 0 0
+		IN CAND:   [19]
+		OUT CAND:  [19, 20, 98, 96]
+		LOOP CAND: [19, 20, 98, 96]
+		(0|o:Node|Node) 0 1 0
+		IN CAND:   [19, 20, 98, 96]
+		OUT CAND:  [98, 96]
+		LOOP CAND: [19, 20, 98, 96]
+		(8|o:Node|Node) 1 1 0
+		IN CAND:   [19]
+		OUT CAND:  [98, 96]
+		LOOP CAND: [19, 20, 98, 96]
+		(4|o:Node|Node) 0 1 0
+		IN CAND:   [19, 20, 98, 96]
+		OUT CAND:  [98, 96]
+		LOOP CAND: [19, 20, 98, 96]
+
+BY DEGREES (3): {12: 19, 0: 98, 0: 96, 4: 98, 4: 96}
+ASSIGN CANDIDATE AND TEST: {12: 19, 0: 20, 4: 99, 8: 96} []
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {12: 19, 0: 20, 4: 99, 8: 96}
+		TARGET (19|o:PatternMatchCandidate|PatternMatchCandidate: ) 2 0 0
+		TARGET (20|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		TARGET (99|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		TARGET (96|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		-----------------------
+		(12|o:Node|Node) 2 0 0
+		IN CAND:   [19]
+		OUT CAND:  [19, 20, 99, 96]
+		LOOP CAND: [19, 20, 99, 96]
+		(0|o:Node|Node) 0 1 0
+		IN CAND:   [19, 20, 99, 96]
+		OUT CAND:  [99, 96]
+		LOOP CAND: [19, 20, 99, 96]
+		(8|o:Node|Node) 1 1 0
+		IN CAND:   [19]
+		OUT CAND:  [99, 96]
+		LOOP CAND: [19, 20, 99, 96]
+		(4|o:Node|Node) 0 1 0
+		IN CAND:   [19, 20, 99, 96]
+		OUT CAND:  [99, 96]
+		LOOP CAND: [19, 20, 99, 96]
+
+BY DEGREES (3): {12: 19, 0: 99, 0: 96, 4: 99, 4: 96}
+ASSIGN CANDIDATE AND TEST: {12: 19, 0: 20, 4: 100, 8: 96} []
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {12: 19, 0: 20, 4: 100, 8: 96}
+		TARGET (19|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 0 0
+		TARGET (20|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		TARGET (100|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		TARGET (96|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		-----------------------
+		(12|o:Node|Node) 2 0 0
 		IN CAND:   []
-		OUT CAND:  []
-		LOOP CAND: [87, 91, 89]
-		(8|o:Node|Node) 2 0 0
+		OUT CAND:  [19, 20, 100, 96]
+		LOOP CAND: [19, 20, 100, 96]
+		(0|o:Node|Node) 0 1 0
+		IN CAND:   [19, 20, 100, 96]
+		OUT CAND:  [96]
+		LOOP CAND: [19, 20, 100, 96]
+		(8|o:Node|Node) 1 1 0
+		IN CAND:   [19]
+		OUT CAND:  [96]
+		LOOP CAND: [19, 20, 100, 96]
+		(4|o:Node|Node) 0 1 0
+		IN CAND:   [19, 20, 100, 96]
+		OUT CAND:  [96]
+		LOOP CAND: [19, 20, 100, 96]
+
+BY DEGREES (2): {0: 96, 4: 96}
+ASSIGN CANDIDATE AND TEST: {12: 19, 0: 20, 8: 97} []
+REMAINING: [4]
+
+ASSIGN CANDIDATE AND TEST: {12: 19, 0: 20, 4: 98, 8: 97} []
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {12: 19, 0: 20, 4: 98, 8: 97}
+		TARGET (19|o:PatternMatchCandidate|PatternMatchCandidate: ) 2 0 0
+		TARGET (20|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		TARGET (98|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		TARGET (97|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		-----------------------
+		(12|o:Node|Node) 2 0 0
+		IN CAND:   [19]
+		OUT CAND:  [19, 20, 98, 97]
+		LOOP CAND: [19, 20, 98, 97]
+		(0|o:Node|Node) 0 1 0
+		IN CAND:   [19, 20, 98, 97]
+		OUT CAND:  [98, 97]
+		LOOP CAND: [19, 20, 98, 97]
+		(8|o:Node|Node) 1 1 0
+		IN CAND:   [19]
+		OUT CAND:  [98, 97]
+		LOOP CAND: [19, 20, 98, 97]
+		(4|o:Node|Node) 0 1 0
+		IN CAND:   [19, 20, 98, 97]
+		OUT CAND:  [98, 97]
+		LOOP CAND: [19, 20, 98, 97]
+
+BY DEGREES (3): {12: 19, 0: 98, 0: 97, 4: 98, 4: 97}
+ASSIGN CANDIDATE AND TEST: {12: 19, 0: 20, 4: 99, 8: 97} []
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {12: 19, 0: 20, 4: 99, 8: 97}
+		TARGET (19|o:PatternMatchCandidate|PatternMatchCandidate: ) 2 0 0
+		TARGET (20|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		TARGET (99|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		TARGET (97|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		-----------------------
+		(12|o:Node|Node) 2 0 0
+		IN CAND:   [19]
+		OUT CAND:  [19, 20, 99, 97]
+		LOOP CAND: [19, 20, 99, 97]
+		(0|o:Node|Node) 0 1 0
+		IN CAND:   [19, 20, 99, 97]
+		OUT CAND:  [99, 97]
+		LOOP CAND: [19, 20, 99, 97]
+		(8|o:Node|Node) 1 1 0
+		IN CAND:   [19]
+		OUT CAND:  [99, 97]
+		LOOP CAND: [19, 20, 99, 97]
+		(4|o:Node|Node) 0 1 0
+		IN CAND:   [19, 20, 99, 97]
+		OUT CAND:  [99, 97]
+		LOOP CAND: [19, 20, 99, 97]
+
+BY DEGREES (3): {12: 19, 0: 99, 0: 97, 4: 99, 4: 97}
+ASSIGN CANDIDATE AND TEST: {12: 19, 0: 20, 4: 100, 8: 97} []
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {12: 19, 0: 20, 4: 100, 8: 97}
+		TARGET (19|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 0 0
+		TARGET (20|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		TARGET (100|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		TARGET (97|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		-----------------------
+		(12|o:Node|Node) 2 0 0
 		IN CAND:   []
-		OUT CAND:  [87, 91, 89]
-		LOOP CAND: [87, 91, 89]
-		(0|o:Node|Node) 0 2 0
-		IN CAND:   [87, 91, 89]
+		OUT CAND:  [19, 20, 100, 97]
+		LOOP CAND: [19, 20, 100, 97]
+		(0|o:Node|Node) 0 1 0
+		IN CAND:   [19, 20, 100, 97]
+		OUT CAND:  [97]
+		LOOP CAND: [19, 20, 100, 97]
+		(8|o:Node|Node) 1 1 0
+		IN CAND:   [19]
+		OUT CAND:  [97]
+		LOOP CAND: [19, 20, 100, 97]
+		(4|o:Node|Node) 0 1 0
+		IN CAND:   [19, 20, 100, 97]
+		OUT CAND:  [97]
+		LOOP CAND: [19, 20, 100, 97]
+
+BY DEGREES (2): {0: 97, 4: 97}
+ASSIGN CANDIDATE AND TEST: {12: 19, 0: 94} []
+REMAINING: [8, 4]
+
+ASSIGN CANDIDATE AND TEST: {12: 19, 0: 94, 8: 96} []
+REMAINING: [4]
+
+ASSIGN CANDIDATE AND TEST: {12: 19, 0: 94, 4: 98, 8: 96} []
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {12: 19, 0: 94, 4: 98, 8: 96}
+		TARGET (19|o:PatternMatchCandidate|PatternMatchCandidate: ) 2 0 0
+		TARGET (94|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		TARGET (98|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		TARGET (96|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		-----------------------
+		(12|o:Node|Node) 2 0 0
+		IN CAND:   [19]
+		OUT CAND:  [19, 94, 98, 96]
+		LOOP CAND: [19, 94, 98, 96]
+		(0|o:Node|Node) 0 1 0
+		IN CAND:   [19, 94, 98, 96]
+		OUT CAND:  [98, 96]
+		LOOP CAND: [19, 94, 98, 96]
+		(8|o:Node|Node) 1 1 0
+		IN CAND:   [19]
+		OUT CAND:  [98, 96]
+		LOOP CAND: [19, 94, 98, 96]
+		(4|o:Node|Node) 0 1 0
+		IN CAND:   [19, 94, 98, 96]
+		OUT CAND:  [98, 96]
+		LOOP CAND: [19, 94, 98, 96]
+
+BY DEGREES (3): {12: 19, 0: 98, 0: 96, 4: 98, 4: 96}
+ASSIGN CANDIDATE AND TEST: {12: 19, 0: 94, 4: 99, 8: 96} []
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {12: 19, 0: 94, 4: 99, 8: 96}
+		TARGET (19|o:PatternMatchCandidate|PatternMatchCandidate: ) 2 0 0
+		TARGET (94|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		TARGET (99|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		TARGET (96|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		-----------------------
+		(12|o:Node|Node) 2 0 0
+		IN CAND:   [19]
+		OUT CAND:  [19, 94, 99, 96]
+		LOOP CAND: [19, 94, 99, 96]
+		(0|o:Node|Node) 0 1 0
+		IN CAND:   [19, 94, 99, 96]
+		OUT CAND:  [99, 96]
+		LOOP CAND: [19, 94, 99, 96]
+		(8|o:Node|Node) 1 1 0
+		IN CAND:   [19]
+		OUT CAND:  [99, 96]
+		LOOP CAND: [19, 94, 99, 96]
+		(4|o:Node|Node) 0 1 0
+		IN CAND:   [19, 94, 99, 96]
+		OUT CAND:  [99, 96]
+		LOOP CAND: [19, 94, 99, 96]
+
+BY DEGREES (3): {12: 19, 0: 99, 0: 96, 4: 99, 4: 96}
+ASSIGN CANDIDATE AND TEST: {12: 19, 0: 94, 4: 100, 8: 96} []
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {12: 19, 0: 94, 4: 100, 8: 96}
+		TARGET (19|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 0 0
+		TARGET (94|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		TARGET (100|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		TARGET (96|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		-----------------------
+		(12|o:Node|Node) 2 0 0
+		IN CAND:   []
+		OUT CAND:  [19, 94, 100, 96]
+		LOOP CAND: [19, 94, 100, 96]
+		(0|o:Node|Node) 0 1 0
+		IN CAND:   [19, 94, 100, 96]
+		OUT CAND:  [96]
+		LOOP CAND: [19, 94, 100, 96]
+		(8|o:Node|Node) 1 1 0
+		IN CAND:   [19]
+		OUT CAND:  [96]
+		LOOP CAND: [19, 94, 100, 96]
+		(4|o:Node|Node) 0 1 0
+		IN CAND:   [19, 94, 100, 96]
+		OUT CAND:  [96]
+		LOOP CAND: [19, 94, 100, 96]
+
+BY DEGREES (2): {0: 96, 4: 96}
+ASSIGN CANDIDATE AND TEST: {12: 19, 0: 94, 8: 97} []
+REMAINING: [4]
+
+ASSIGN CANDIDATE AND TEST: {12: 19, 0: 94, 4: 98, 8: 97} []
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {12: 19, 0: 94, 4: 98, 8: 97}
+		TARGET (19|o:PatternMatchCandidate|PatternMatchCandidate: ) 2 0 0
+		TARGET (94|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		TARGET (98|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		TARGET (97|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		-----------------------
+		(12|o:Node|Node) 2 0 0
+		IN CAND:   [19]
+		OUT CAND:  [19, 94, 98, 97]
+		LOOP CAND: [19, 94, 98, 97]
+		(0|o:Node|Node) 0 1 0
+		IN CAND:   [19, 94, 98, 97]
+		OUT CAND:  [98, 97]
+		LOOP CAND: [19, 94, 98, 97]
+		(8|o:Node|Node) 1 1 0
+		IN CAND:   [19]
+		OUT CAND:  [98, 97]
+		LOOP CAND: [19, 94, 98, 97]
+		(4|o:Node|Node) 0 1 0
+		IN CAND:   [19, 94, 98, 97]
+		OUT CAND:  [98, 97]
+		LOOP CAND: [19, 94, 98, 97]
+
+BY DEGREES (3): {12: 19, 0: 98, 0: 97, 4: 98, 4: 97}
+ASSIGN CANDIDATE AND TEST: {12: 19, 0: 94, 4: 99, 8: 97} []
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {12: 19, 0: 94, 4: 99, 8: 97}
+		TARGET (19|o:PatternMatchCandidate|PatternMatchCandidate: ) 2 0 0
+		TARGET (94|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		TARGET (99|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		TARGET (97|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		-----------------------
+		(12|o:Node|Node) 2 0 0
+		IN CAND:   [19]
+		OUT CAND:  [19, 94, 99, 97]
+		LOOP CAND: [19, 94, 99, 97]
+		(0|o:Node|Node) 0 1 0
+		IN CAND:   [19, 94, 99, 97]
+		OUT CAND:  [99, 97]
+		LOOP CAND: [19, 94, 99, 97]
+		(8|o:Node|Node) 1 1 0
+		IN CAND:   [19]
+		OUT CAND:  [99, 97]
+		LOOP CAND: [19, 94, 99, 97]
+		(4|o:Node|Node) 0 1 0
+		IN CAND:   [19, 94, 99, 97]
+		OUT CAND:  [99, 97]
+		LOOP CAND: [19, 94, 99, 97]
+
+BY DEGREES (3): {12: 19, 0: 99, 0: 97, 4: 99, 4: 97}
+ASSIGN CANDIDATE AND TEST: {12: 19, 0: 94, 4: 100, 8: 97} []
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {12: 19, 0: 94, 4: 100, 8: 97}
+		TARGET (19|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 0 0
+		TARGET (94|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		TARGET (100|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		TARGET (97|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		-----------------------
+		(12|o:Node|Node) 2 0 0
+		IN CAND:   []
+		OUT CAND:  [19, 94, 100, 97]
+		LOOP CAND: [19, 94, 100, 97]
+		(0|o:Node|Node) 0 1 0
+		IN CAND:   [19, 94, 100, 97]
+		OUT CAND:  [97]
+		LOOP CAND: [19, 94, 100, 97]
+		(8|o:Node|Node) 1 1 0
+		IN CAND:   [19]
+		OUT CAND:  [97]
+		LOOP CAND: [19, 94, 100, 97]
+		(4|o:Node|Node) 0 1 0
+		IN CAND:   [19, 94, 100, 97]
+		OUT CAND:  [97]
+		LOOP CAND: [19, 94, 100, 97]
+
+BY DEGREES (2): {0: 97, 4: 97}
+ASSIGN CANDIDATE AND TEST: {12: 19, 0: 95} []
+REMAINING: [8, 4]
+
+ASSIGN CANDIDATE AND TEST: {12: 19, 0: 95, 8: 96} []
+REMAINING: [4]
+
+ASSIGN CANDIDATE AND TEST: {12: 19, 0: 95, 4: 98, 8: 96} []
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {12: 19, 0: 95, 4: 98, 8: 96}
+		TARGET (19|o:PatternMatchCandidate|PatternMatchCandidate: ) 2 0 0
+		TARGET (95|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		TARGET (98|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		TARGET (96|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 1 0
+		-----------------------
+		(12|o:Node|Node) 2 0 0
+		IN CAND:   [19]
+		OUT CAND:  [19, 95, 98, 96]
+		LOOP CAND: [19, 95, 98, 96]
+		(0|o:Node|Node) 0 1 0
+		IN CAND:   [19, 95, 98, 96]
+		OUT CAND:  [95, 98, 96]
+		LOOP CAND: [19, 95, 98, 96]
+		(8|o:Node|Node) 1 1 0
+		IN CAND:   [19, 96]
+		OUT CAND:  [95, 98, 96]
+		LOOP CAND: [19, 95, 98, 96]
+		(4|o:Node|Node) 0 1 0
+		IN CAND:   [19, 95, 98, 96]
+		OUT CAND:  [95, 98, 96]
+		LOOP CAND: [19, 95, 98, 96]
+
+BY DEGREES (4): {12: 19, 0: 95, 0: 98, 0: 96, 8: 96, 4: 95, 4: 98, 4: 96}
+	RESULTS FOUND: {12: 19, 0: 95, 4: 98, 8: 96}
+ASSIGN CANDIDATE AND TEST: {12: 19, 0: 95, 4: 99, 8: 96} [{12: 48, 0: 36, 8: 40, 4: 40}]
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {12: 19, 0: 95, 4: 99, 8: 96}
+		TARGET (19|o:PatternMatchCandidate|PatternMatchCandidate: ) 2 0 0
+		TARGET (95|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		TARGET (99|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		TARGET (96|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 1 0
+		-----------------------
+		(12|o:Node|Node) 2 0 0
+		IN CAND:   [19]
+		OUT CAND:  [19, 95, 99, 96]
+		LOOP CAND: [19, 95, 99, 96]
+		(0|o:Node|Node) 0 1 0
+		IN CAND:   [19, 95, 99, 96]
+		OUT CAND:  [95, 99, 96]
+		LOOP CAND: [19, 95, 99, 96]
+		(8|o:Node|Node) 1 1 0
+		IN CAND:   [19, 96]
+		OUT CAND:  [95, 99, 96]
+		LOOP CAND: [19, 95, 99, 96]
+		(4|o:Node|Node) 0 1 0
+		IN CAND:   [19, 95, 99, 96]
+		OUT CAND:  [95, 99, 96]
+		LOOP CAND: [19, 95, 99, 96]
+
+BY DEGREES (4): {12: 19, 0: 95, 0: 99, 0: 96, 8: 96, 4: 95, 4: 99, 4: 96}
+	RESULTS FOUND: {12: 19, 0: 95, 4: 99, 8: 96}
+ASSIGN CANDIDATE AND TEST: {12: 19, 0: 95, 4: 100, 8: 96} [{12: 48, 0: 36, 8: 40, 4: 40}, {4: 44, 0: 36, 8: 40, 12: 48}]
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {12: 19, 0: 95, 4: 100, 8: 96}
+		TARGET (19|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 0 0
+		TARGET (95|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		TARGET (100|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		TARGET (96|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 1 0
+		-----------------------
+		(12|o:Node|Node) 2 0 0
+		IN CAND:   []
+		OUT CAND:  [19, 95, 100, 96]
+		LOOP CAND: [19, 95, 100, 96]
+		(0|o:Node|Node) 0 1 0
+		IN CAND:   [19, 95, 100, 96]
+		OUT CAND:  [95, 96]
+		LOOP CAND: [19, 95, 100, 96]
+		(8|o:Node|Node) 1 1 0
+		IN CAND:   [19, 96]
+		OUT CAND:  [95, 96]
+		LOOP CAND: [19, 95, 100, 96]
+		(4|o:Node|Node) 0 1 0
+		IN CAND:   [19, 95, 100, 96]
+		OUT CAND:  [95, 96]
+		LOOP CAND: [19, 95, 100, 96]
+
+BY DEGREES (3): {0: 95, 0: 96, 8: 96, 4: 95, 4: 96}
+ASSIGN CANDIDATE AND TEST: {12: 19, 0: 95, 8: 97} [{12: 48, 0: 36, 8: 40, 4: 40}, {4: 44, 0: 36, 8: 40, 12: 48}]
+REMAINING: [4]
+
+ASSIGN CANDIDATE AND TEST: {12: 19, 0: 95, 4: 98, 8: 97} [{12: 48, 0: 36, 8: 40, 4: 40}, {4: 44, 0: 36, 8: 40, 12: 48}]
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {12: 19, 0: 95, 4: 98, 8: 97}
+		TARGET (19|o:PatternMatchCandidate|PatternMatchCandidate: ) 2 0 0
+		TARGET (95|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		TARGET (98|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		TARGET (97|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 1 0
+		-----------------------
+		(12|o:Node|Node) 2 0 0
+		IN CAND:   [19]
+		OUT CAND:  [19, 95, 98, 97]
+		LOOP CAND: [19, 95, 98, 97]
+		(0|o:Node|Node) 0 1 0
+		IN CAND:   [19, 95, 98, 97]
+		OUT CAND:  [95, 98, 97]
+		LOOP CAND: [19, 95, 98, 97]
+		(8|o:Node|Node) 1 1 0
+		IN CAND:   [19, 97]
+		OUT CAND:  [95, 98, 97]
+		LOOP CAND: [19, 95, 98, 97]
+		(4|o:Node|Node) 0 1 0
+		IN CAND:   [19, 95, 98, 97]
+		OUT CAND:  [95, 98, 97]
+		LOOP CAND: [19, 95, 98, 97]
+
+BY DEGREES (4): {12: 19, 0: 95, 0: 98, 0: 97, 8: 97, 4: 95, 4: 98, 4: 97}
+	RESULTS FOUND: {12: 19, 0: 95, 4: 98, 8: 97}
+ASSIGN CANDIDATE AND TEST: {12: 19, 0: 95, 4: 99, 8: 97} [{12: 48, 0: 36, 8: 40, 4: 40}, {4: 44, 0: 36, 8: 40, 12: 48}, {0: 36, 4: 40, 12: 48, 8: 44}]
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {12: 19, 0: 95, 4: 99, 8: 97}
+		TARGET (19|o:PatternMatchCandidate|PatternMatchCandidate: ) 2 0 0
+		TARGET (95|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		TARGET (99|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		TARGET (97|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 1 0
+		-----------------------
+		(12|o:Node|Node) 2 0 0
+		IN CAND:   [19]
+		OUT CAND:  [19, 95, 99, 97]
+		LOOP CAND: [19, 95, 99, 97]
+		(0|o:Node|Node) 0 1 0
+		IN CAND:   [19, 95, 99, 97]
+		OUT CAND:  [95, 99, 97]
+		LOOP CAND: [19, 95, 99, 97]
+		(8|o:Node|Node) 1 1 0
+		IN CAND:   [19, 97]
+		OUT CAND:  [95, 99, 97]
+		LOOP CAND: [19, 95, 99, 97]
+		(4|o:Node|Node) 0 1 0
+		IN CAND:   [19, 95, 99, 97]
+		OUT CAND:  [95, 99, 97]
+		LOOP CAND: [19, 95, 99, 97]
+
+BY DEGREES (4): {12: 19, 0: 95, 0: 99, 0: 97, 8: 97, 4: 95, 4: 99, 4: 97}
+	RESULTS FOUND: {12: 19, 0: 95, 4: 99, 8: 97}
+ASSIGN CANDIDATE AND TEST: {12: 19, 0: 95, 4: 100, 8: 97} [{12: 48, 0: 36, 8: 40, 4: 40}, {4: 44, 0: 36, 8: 40, 12: 48}, {0: 36, 4: 40, 12: 48, 8: 44}, {12: 48, 0: 36, 4: 44, 8: 44}]
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {12: 19, 0: 95, 4: 100, 8: 97}
+		TARGET (19|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 0 0
+		TARGET (95|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		TARGET (100|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		TARGET (97|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 1 0
+		-----------------------
+		(12|o:Node|Node) 2 0 0
+		IN CAND:   []
+		OUT CAND:  [19, 95, 100, 97]
+		LOOP CAND: [19, 95, 100, 97]
+		(0|o:Node|Node) 0 1 0
+		IN CAND:   [19, 95, 100, 97]
+		OUT CAND:  [95, 97]
+		LOOP CAND: [19, 95, 100, 97]
+		(8|o:Node|Node) 1 1 0
+		IN CAND:   [19, 97]
+		OUT CAND:  [95, 97]
+		LOOP CAND: [19, 95, 100, 97]
+		(4|o:Node|Node) 0 1 0
+		IN CAND:   [19, 95, 100, 97]
+		OUT CAND:  [95, 97]
+		LOOP CAND: [19, 95, 100, 97]
+
+BY DEGREES (3): {0: 95, 0: 97, 8: 97, 4: 95, 4: 97}
+PATTERN MATCH OK!
+Some((4|o:Node|Node)) -> Some((44|o:Node|Node))
+Some((0|o:Node|Node)) -> Some((36|o:Node|Node))
+Some((8|o:Node|Node)) -> Some((40|o:Node|Node))
+Some((12|o:Node|Node)) -> Some((48|o:Node|Node))
+Some((0|o:Node|Node)) -> Some((36|o:Node|Node))
+Some((4|o:Node|Node)) -> Some((40|o:Node|Node))
+Some((12|o:Node|Node)) -> Some((48|o:Node|Node))
+Some((8|o:Node|Node)) -> Some((44|o:Node|Node))
+TRANSITION NOT DEALT WITH: Idle EndDrag!
+TRANSITION NOT DEALT WITH: Idle EndDrag!
+TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
+TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
+		TARGET (40|o:Node|Node) 1 1 0
+		TARGET (48|o:Node|Node) 2 0 0
+		TARGET (44|o:Node|Node) 1 1 0
+		TARGET (36|o:Node|Node) 0 2 0
+		-----------------------
+		(12|o:Node|Node) 1 0 0
+		IN CAND:   [40, 48, 44]
+		OUT CAND:  [40, 48, 44, 36]
+		LOOP CAND: [40, 48, 44, 36]
+		(8|o:Node|Node) 0 1 0
+		IN CAND:   [40, 48, 44, 36]
+		OUT CAND:  [40, 44, 36]
+		LOOP CAND: [40, 48, 44, 36]
+ASSIGN CANDIDATE AND TEST: {} []
+REMAINING: [12, 8]
+
+ASSIGN CANDIDATE AND TEST: {12: 3} []
+REMAINING: [8]
+
+ASSIGN CANDIDATE AND TEST: {12: 3, 8: 6} []
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {12: 3, 8: 6}
+		TARGET (3|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		TARGET (6|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		-----------------------
+		(12|o:Node|Node) 1 0 0
+		IN CAND:   []
+		OUT CAND:  [3, 6]
+		LOOP CAND: [3, 6]
+		(8|o:Node|Node) 0 1 0
+		IN CAND:   [3, 6]
 		OUT CAND:  []
-		LOOP CAND: [87, 91, 89]
+		LOOP CAND: [3, 6]
 
 BY DEGREES (0): {}
+ASSIGN CANDIDATE AND TEST: {12: 3, 8: 7} []
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {12: 3, 8: 7}
+		TARGET (3|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		TARGET (7|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		-----------------------
+		(12|o:Node|Node) 1 0 0
+		IN CAND:   []
+		OUT CAND:  [3, 7]
+		LOOP CAND: [3, 7]
+		(8|o:Node|Node) 0 1 0
+		IN CAND:   [3, 7]
+		OUT CAND:  []
+		LOOP CAND: [3, 7]
+
+BY DEGREES (0): {}
+ASSIGN CANDIDATE AND TEST: {12: 3, 8: 16} []
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {12: 3, 8: 16}
+		TARGET (3|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 0 0
+		TARGET (16|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		-----------------------
+		(12|o:Node|Node) 1 0 0
+		IN CAND:   [3]
+		OUT CAND:  [3, 16]
+		LOOP CAND: [3, 16]
+		(8|o:Node|Node) 0 1 0
+		IN CAND:   [3, 16]
+		OUT CAND:  [16]
+		LOOP CAND: [3, 16]
+
+BY DEGREES (2): {12: 3, 8: 16}
+	RESULTS FOUND: {12: 3, 8: 16}
+ASSIGN CANDIDATE AND TEST: {12: 4} [{8: 36, 12: 40}]
+REMAINING: [8]
+
+ASSIGN CANDIDATE AND TEST: {12: 4, 8: 6} [{8: 36, 12: 40}]
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {12: 4, 8: 6}
+		TARGET (4|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 0 0
+		TARGET (6|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		-----------------------
+		(12|o:Node|Node) 1 0 0
+		IN CAND:   [4]
+		OUT CAND:  [4, 6]
+		LOOP CAND: [4, 6]
+		(8|o:Node|Node) 0 1 0
+		IN CAND:   [4, 6]
+		OUT CAND:  [6]
+		LOOP CAND: [4, 6]
+
+BY DEGREES (2): {12: 4, 8: 6}
+	RESULTS FOUND: {12: 4, 8: 6}
+ASSIGN CANDIDATE AND TEST: {12: 4, 8: 7} [{8: 36, 12: 40}, {12: 48, 8: 40}]
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {12: 4, 8: 7}
+		TARGET (4|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 0 0
+		TARGET (7|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		-----------------------
+		(12|o:Node|Node) 1 0 0
+		IN CAND:   [4]
+		OUT CAND:  [4, 7]
+		LOOP CAND: [4, 7]
+		(8|o:Node|Node) 0 1 0
+		IN CAND:   [4, 7]
+		OUT CAND:  [7]
+		LOOP CAND: [4, 7]
+
+BY DEGREES (2): {12: 4, 8: 7}
+	RESULTS FOUND: {12: 4, 8: 7}
+ASSIGN CANDIDATE AND TEST: {12: 4, 8: 16} [{8: 36, 12: 40}, {12: 48, 8: 40}, {12: 48, 8: 44}]
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {12: 4, 8: 16}
+		TARGET (4|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		TARGET (16|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		-----------------------
+		(12|o:Node|Node) 1 0 0
+		IN CAND:   []
+		OUT CAND:  [4, 16]
+		LOOP CAND: [4, 16]
+		(8|o:Node|Node) 0 1 0
+		IN CAND:   [4, 16]
+		OUT CAND:  []
+		LOOP CAND: [4, 16]
+
+BY DEGREES (0): {}
+ASSIGN CANDIDATE AND TEST: {12: 5} [{8: 36, 12: 40}, {12: 48, 8: 40}, {12: 48, 8: 44}]
+REMAINING: [8]
+
+ASSIGN CANDIDATE AND TEST: {12: 5, 8: 6} [{8: 36, 12: 40}, {12: 48, 8: 40}, {12: 48, 8: 44}]
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {12: 5, 8: 6}
+		TARGET (5|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		TARGET (6|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		-----------------------
+		(12|o:Node|Node) 1 0 0
+		IN CAND:   []
+		OUT CAND:  [5, 6]
+		LOOP CAND: [5, 6]
+		(8|o:Node|Node) 0 1 0
+		IN CAND:   [5, 6]
+		OUT CAND:  []
+		LOOP CAND: [5, 6]
+
+BY DEGREES (0): {}
+ASSIGN CANDIDATE AND TEST: {12: 5, 8: 7} [{8: 36, 12: 40}, {12: 48, 8: 40}, {12: 48, 8: 44}]
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {12: 5, 8: 7}
+		TARGET (5|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		TARGET (7|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		-----------------------
+		(12|o:Node|Node) 1 0 0
+		IN CAND:   []
+		OUT CAND:  [5, 7]
+		LOOP CAND: [5, 7]
+		(8|o:Node|Node) 0 1 0
+		IN CAND:   [5, 7]
+		OUT CAND:  []
+		LOOP CAND: [5, 7]
+
+BY DEGREES (0): {}
+ASSIGN CANDIDATE AND TEST: {12: 5, 8: 16} [{8: 36, 12: 40}, {12: 48, 8: 40}, {12: 48, 8: 44}]
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {12: 5, 8: 16}
+		TARGET (5|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 0 0
+		TARGET (16|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		-----------------------
+		(12|o:Node|Node) 1 0 0
+		IN CAND:   [5]
+		OUT CAND:  [5, 16]
+		LOOP CAND: [5, 16]
+		(8|o:Node|Node) 0 1 0
+		IN CAND:   [5, 16]
+		OUT CAND:  [16]
+		LOOP CAND: [5, 16]
+
+BY DEGREES (2): {12: 5, 8: 16}
+	RESULTS FOUND: {12: 5, 8: 16}
 PATTERN MATCH OK!
-Some((0|o:Node|Node)) -> Some((27|o:Node|Node))
-Some((8|o:Node|Node)) -> Some((35|o:Node|Node))
-Some((4|o:Node|Node)) -> Some((31|o:Node|Node))
-Some((8|o:Node|Node)) -> Some((31|o:Node|Node))
-Some((4|o:Node|Node)) -> Some((27|o:Node|Node))
-Some((0|o:Node|Node)) -> Some((35|o:Node|Node))
-Some((4|o:Node|Node)) -> Some((35|o:Node|Node))
-Some((8|o:Node|Node)) -> Some((31|o:Node|Node))
-Some((0|o:Node|Node)) -> Some((27|o:Node|Node))
+Some((8|o:Node|Node)) -> Some((36|o:Node|Node))
+Some((12|o:Node|Node)) -> Some((40|o:Node|Node))
+Some((12|o:Node|Node)) -> Some((48|o:Node|Node))
+Some((8|o:Node|Node)) -> Some((40|o:Node|Node))
+Some((12|o:Node|Node)) -> Some((48|o:Node|Node))
+Some((8|o:Node|Node)) -> Some((44|o:Node|Node))
+Some((8|o:Node|Node)) -> Some((36|o:Node|Node))
+Some((12|o:Node|Node)) -> Some((44|o:Node|Node))
+TRANSITION NOT DEALT WITH: Idle EndDrag!
+TRANSITION NOT DEALT WITH: Idle EndDrag!
+TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
+TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
+TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
+TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
+		TARGET (40|o:Node|Node) 1 1 0
+		TARGET (48|o:Node|Node) 2 0 0
+		TARGET (44|o:Node|Node) 1 1 0
+		TARGET (36|o:Node|Node) 0 2 0
+		-----------------------
+		(12|o:Node|Node) 1 0 0
+		IN CAND:   [40, 48, 44]
+		OUT CAND:  [40, 48, 44, 36]
+		LOOP CAND: [40, 48, 44, 36]
+		(8|o:Node|Node) 0 1 0
+		IN CAND:   [40, 48, 44, 36]
+		OUT CAND:  [40, 44, 36]
+		LOOP CAND: [40, 48, 44, 36]
+ASSIGN CANDIDATE AND TEST: {} []
+REMAINING: [12, 8]
+
+ASSIGN CANDIDATE AND TEST: {12: 155} []
+REMAINING: [8]
+
+ASSIGN CANDIDATE AND TEST: {12: 155, 8: 158} []
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {12: 155, 8: 158}
+		TARGET (155|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		TARGET (158|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		-----------------------
+		(12|o:Node|Node) 1 0 0
+		IN CAND:   []
+		OUT CAND:  [155, 158]
+		LOOP CAND: [155, 158]
+		(8|o:Node|Node) 0 1 0
+		IN CAND:   [155, 158]
+		OUT CAND:  []
+		LOOP CAND: [155, 158]
+
+BY DEGREES (0): {}
+ASSIGN CANDIDATE AND TEST: {12: 155, 8: 159} []
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {12: 155, 8: 159}
+		TARGET (155|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		TARGET (159|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		-----------------------
+		(12|o:Node|Node) 1 0 0
+		IN CAND:   []
+		OUT CAND:  [155, 159]
+		LOOP CAND: [155, 159]
+		(8|o:Node|Node) 0 1 0
+		IN CAND:   [155, 159]
+		OUT CAND:  []
+		LOOP CAND: [155, 159]
+
+BY DEGREES (0): {}
+ASSIGN CANDIDATE AND TEST: {12: 155, 8: 160} []
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {12: 155, 8: 160}
+		TARGET (155|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 0 0
+		TARGET (160|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		-----------------------
+		(12|o:Node|Node) 1 0 0
+		IN CAND:   [155]
+		OUT CAND:  [155, 160]
+		LOOP CAND: [155, 160]
+		(8|o:Node|Node) 0 1 0
+		IN CAND:   [155, 160]
+		OUT CAND:  [160]
+		LOOP CAND: [155, 160]
+
+BY DEGREES (2): {12: 155, 8: 160}
+	RESULTS FOUND: {12: 155, 8: 160}
+ASSIGN CANDIDATE AND TEST: {12: 156} [{8: 36, 12: 40}]
+REMAINING: [8]
+
+ASSIGN CANDIDATE AND TEST: {12: 156, 8: 158} [{8: 36, 12: 40}]
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {12: 156, 8: 158}
+		TARGET (156|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 0 0
+		TARGET (158|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		-----------------------
+		(12|o:Node|Node) 1 0 0
+		IN CAND:   [156]
+		OUT CAND:  [156, 158]
+		LOOP CAND: [156, 158]
+		(8|o:Node|Node) 0 1 0
+		IN CAND:   [156, 158]
+		OUT CAND:  [158]
+		LOOP CAND: [156, 158]
+
+BY DEGREES (2): {12: 156, 8: 158}
+	RESULTS FOUND: {12: 156, 8: 158}
+ASSIGN CANDIDATE AND TEST: {12: 156, 8: 159} [{8: 36, 12: 40}, {12: 48, 8: 40}]
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {12: 156, 8: 159}
+		TARGET (156|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 0 0
+		TARGET (159|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		-----------------------
+		(12|o:Node|Node) 1 0 0
+		IN CAND:   [156]
+		OUT CAND:  [156, 159]
+		LOOP CAND: [156, 159]
+		(8|o:Node|Node) 0 1 0
+		IN CAND:   [156, 159]
+		OUT CAND:  [159]
+		LOOP CAND: [156, 159]
+
+BY DEGREES (2): {12: 156, 8: 159}
+	RESULTS FOUND: {12: 156, 8: 159}
+ASSIGN CANDIDATE AND TEST: {12: 156, 8: 160} [{8: 36, 12: 40}, {12: 48, 8: 40}, {12: 48, 8: 44}]
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {12: 156, 8: 160}
+		TARGET (156|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		TARGET (160|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		-----------------------
+		(12|o:Node|Node) 1 0 0
+		IN CAND:   []
+		OUT CAND:  [156, 160]
+		LOOP CAND: [156, 160]
+		(8|o:Node|Node) 0 1 0
+		IN CAND:   [156, 160]
+		OUT CAND:  []
+		LOOP CAND: [156, 160]
+
+BY DEGREES (0): {}
+ASSIGN CANDIDATE AND TEST: {12: 157} [{8: 36, 12: 40}, {12: 48, 8: 40}, {12: 48, 8: 44}]
+REMAINING: [8]
+
+ASSIGN CANDIDATE AND TEST: {12: 157, 8: 158} [{8: 36, 12: 40}, {12: 48, 8: 40}, {12: 48, 8: 44}]
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {12: 157, 8: 158}
+		TARGET (157|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		TARGET (158|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		-----------------------
+		(12|o:Node|Node) 1 0 0
+		IN CAND:   []
+		OUT CAND:  [157, 158]
+		LOOP CAND: [157, 158]
+		(8|o:Node|Node) 0 1 0
+		IN CAND:   [157, 158]
+		OUT CAND:  []
+		LOOP CAND: [157, 158]
+
+BY DEGREES (0): {}
+ASSIGN CANDIDATE AND TEST: {12: 157, 8: 159} [{8: 36, 12: 40}, {12: 48, 8: 40}, {12: 48, 8: 44}]
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {12: 157, 8: 159}
+		TARGET (157|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		TARGET (159|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		-----------------------
+		(12|o:Node|Node) 1 0 0
+		IN CAND:   []
+		OUT CAND:  [157, 159]
+		LOOP CAND: [157, 159]
+		(8|o:Node|Node) 0 1 0
+		IN CAND:   [157, 159]
+		OUT CAND:  []
+		LOOP CAND: [157, 159]
+
+BY DEGREES (0): {}
+ASSIGN CANDIDATE AND TEST: {12: 157, 8: 160} [{8: 36, 12: 40}, {12: 48, 8: 40}, {12: 48, 8: 44}]
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {12: 157, 8: 160}
+		TARGET (157|o:PatternMatchCandidate|PatternMatchCandidate: ) 1 0 0
+		TARGET (160|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 1 0
+		-----------------------
+		(12|o:Node|Node) 1 0 0
+		IN CAND:   [157]
+		OUT CAND:  [157, 160]
+		LOOP CAND: [157, 160]
+		(8|o:Node|Node) 0 1 0
+		IN CAND:   [157, 160]
+		OUT CAND:  [160]
+		LOOP CAND: [157, 160]
+
+BY DEGREES (2): {12: 157, 8: 160}
+	RESULTS FOUND: {12: 157, 8: 160}
+PATTERN MATCH OK!
+Some((8|o:Node|Node)) -> Some((36|o:Node|Node))
+Some((12|o:Node|Node)) -> Some((40|o:Node|Node))
+Some((12|o:Node|Node)) -> Some((48|o:Node|Node))
+Some((8|o:Node|Node)) -> Some((40|o:Node|Node))
+Some((12|o:Node|Node)) -> Some((48|o:Node|Node))
+Some((8|o:Node|Node)) -> Some((44|o:Node|Node))
+Some((12|o:Node|Node)) -> Some((44|o:Node|Node))
+Some((8|o:Node|Node)) -> Some((36|o:Node|Node))
+TRANSITION NOT DEALT WITH: Idle EndDrag!
+TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
+TRANSITION NOT DEALT WITH: TransformerWorking ExitContextMenu!
+		TARGET (40|o:Node|Node) 1 1 0
+		TARGET (48|o:Node|Node) 2 0 0
+		TARGET (44|o:Node|Node) 1 1 0
+		TARGET (36|o:Node|Node) 0 2 0
+		-----------------------
+		(12|o:Node|Node) 0 0 0
+		IN CAND:   [40, 48, 44, 36]
+		OUT CAND:  [40, 48, 44, 36]
+		LOOP CAND: [40, 48, 44, 36]
+ASSIGN CANDIDATE AND TEST: {} []
+REMAINING: [12]
+
+ASSIGN CANDIDATE AND TEST: {12: 219} []
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {12: 219}
+		TARGET (219|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		-----------------------
+		(12|o:Node|Node) 0 0 0
+		IN CAND:   [219]
+		OUT CAND:  [219]
+		LOOP CAND: [219]
+
+BY DEGREES (1): {12: 219}
+	RESULTS FOUND: {12: 219}
+ASSIGN CANDIDATE AND TEST: {12: 220} [{12: 40}]
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {12: 220}
+		TARGET (220|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		-----------------------
+		(12|o:Node|Node) 0 0 0
+		IN CAND:   [220]
+		OUT CAND:  [220]
+		LOOP CAND: [220]
+
+BY DEGREES (1): {12: 220}
+	RESULTS FOUND: {12: 220}
+ASSIGN CANDIDATE AND TEST: {12: 221} [{12: 40}, {12: 48}]
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {12: 221}
+		TARGET (221|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		-----------------------
+		(12|o:Node|Node) 0 0 0
+		IN CAND:   [221]
+		OUT CAND:  [221]
+		LOOP CAND: [221]
+
+BY DEGREES (1): {12: 221}
+	RESULTS FOUND: {12: 221}
+ASSIGN CANDIDATE AND TEST: {12: 222} [{12: 40}, {12: 48}, {12: 44}]
+REMAINING: []
+
+
+	*********** NO REMAINING CANDIDATES. TESTING {12: 222}
+		TARGET (222|o:PatternMatchCandidate|PatternMatchCandidate: ) 0 0 0
+		-----------------------
+		(12|o:Node|Node) 0 0 0
+		IN CAND:   [222]
+		OUT CAND:  [222]
+		LOOP CAND: [222]
+
+BY DEGREES (1): {12: 222}
+	RESULTS FOUND: {12: 222}
+PATTERN MATCH OK!
+Some((12|o:Node|Node)) -> Some((40|o:Node|Node))
+Some((12|o:Node|Node)) -> Some((48|o:Node|Node))
+Some((12|o:Node|Node)) -> Some((44|o:Node|Node))
+Some((12|o:Node|Node)) -> Some((36|o:Node|Node))
