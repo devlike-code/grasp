@@ -132,7 +132,7 @@
             "PatternMatchElement: u64;",
             "PatternMatchCandidate: s32;",
             "PatternMatchBinding: s32;",
-            "PatternMatchShow: u64;",
+            "PatternMatchShow: { choice: u64 };",
         ]
     ),
 

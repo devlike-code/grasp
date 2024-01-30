@@ -1,7 +1,9 @@
-use std::{env, fmt::Display, fs, str::FromStr, sync::Arc};
+use std::{borrow::BorrowMut, env, fmt::Display, fs, str::FromStr, sync::Arc};
 
 use imgui::{
-    Condition, DrawListMut, ImString, MouseButton, StyleColor, TreeNodeToken, WindowFlags,
+    sys::{igCloseButton, igGetWindowDrawList, igTabItemLabelAndCloseButton, ImDrawList},
+    Condition, DrawListMut, ImString, MouseButton, StyleColor, TreeNodeFlags, TreeNodeToken,
+    WindowFlags,
 };
 use itertools::Itertools;
 use log::error;
@@ -16,7 +18,10 @@ use mosaic::{
 
 use crate::{
     core::{
-        gui::{docking::GuiViewport, windowing::gui_set_window_focus},
+        gui::{
+            docking::{gui_str, GuiViewport},
+            windowing::gui_set_window_focus,
+        },
         math::{Rect2, Vec2},
         structures::grasp_queues,
     },
@@ -291,7 +296,6 @@ impl GraspEditorState {
             s: &GuiState,
         ) {
             if let Some(token) = s.ui.begin_popup("component-menu") {
-                println!("BEGIN POPUP");
                 if s.ui.menu_item("Delete") {
                     if let Some(tile_id) = queued_component_delete {
                         focused.document_mosaic.delete_tile(*tile_id);
@@ -331,6 +335,20 @@ impl GraspEditorState {
                             &format!("Entity {}##{}-header", selected_tile.id, selected_tile.id),
                             false,
                         ) {
+                            let is_locked =
+                                self.locked_components.contains(&selected_tile.component);
+                            let is_header_covered = s.ui.is_item_hovered();
+                            let is_header_clicked = s.ui.is_mouse_clicked(MouseButton::Right);
+
+                            component_popup(&self.queued_component_delete, focused_window, s);
+
+                            if !is_locked && is_header_covered && is_header_clicked {
+                                self.queued_component_delete = Some(selected_tile.id);
+
+                                s.ui.open_popup("component-menu");
+                                println!("COMPONENT MENU OPENED!");
+                            }
+
                             s.ui.separator();
                             for (part, tiles) in &selected_tile
                                 .get_full_archetype()
@@ -423,11 +441,6 @@ impl GraspEditorState {
                                 .filter_objects()
                                 .exclude_component("Node")
                             {
-                                let header_color = s.ui.push_style_color(
-                                    imgui::StyleColor::Header,
-                                    [34.0 / 255.0, 43.0 / 255.0, 90.0 / 255.0, 1.0],
-                                );
-
                                 let mut any_visible = false;
                                 for (component, _tiles) in &o
                                     .get_full_archetype()
@@ -450,8 +463,6 @@ impl GraspEditorState {
                                     &format!("[META] Entity {}##{}-header", o.id, o.id),
                                     false,
                                 ) {
-                                    header_color.end();
-
                                     for (component, tiles) in &o
                                         .get_full_archetype()
                                         .into_iter()
@@ -469,6 +480,30 @@ impl GraspEditorState {
                                                 if let Some(_subnode_token) =
                                                     tree(s, &component.to_string(), false)
                                                 {
+                                                    component_popup(
+                                                        &self.queued_component_delete,
+                                                        focused_window,
+                                                        s,
+                                                    );
+                                                    let is_locked = self
+                                                        .locked_components
+                                                        .contains(&tile.component);
+                                                    let is_header_covered = s.ui.is_item_hovered();
+                                                    let is_header_clicked =
+                                                        s.ui.is_item_clicked_with_button(
+                                                            MouseButton::Right,
+                                                        );
+
+                                                    if !is_locked
+                                                        && is_header_covered
+                                                        && is_header_clicked
+                                                    {
+                                                        self.queued_component_delete =
+                                                            Some(tile.id);
+
+                                                        s.ui.open_popup("component-menu");
+                                                        println!("COMPONENT MENU OPENED!");
+                                                    }
                                                     renderer(s, focused_window, tile.clone());
                                                 }
                                             } else if let Some(_subnode_token) =
@@ -665,13 +700,13 @@ pub fn selection_property_renderer(ui: &GuiState, window: &mut GraspEditorWindow
     }
 }
 
-pub fn selected_property_renderer(ui: &GuiState, window: &mut GraspEditorWindow, tile: Tile) {
-    if let Some(selection_owner) = find_selection_owner(&tile) {
-        ui.text(format!("Selection owner: {:?}", selection_owner.0));
-        selection_property_renderer(ui, window, selection_owner.0);
-    } else {
-        ui.text("Something is very wrong");
-    }
+pub fn selected_property_renderer(
+    ui: &GuiState,
+    window: &mut GraspEditorWindow,
+    selection_owner: Tile,
+) {
+    ui.text(format!("Selection owner: {:?}", selection_owner));
+    selection_property_renderer(ui, window, selection_owner);
 }
 
 fn draw_default_property_renderer(ui: &GuiState, window: &mut GraspEditorWindow, d: Tile) {

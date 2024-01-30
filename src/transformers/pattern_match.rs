@@ -14,15 +14,27 @@ use crate::{
         math::Vec2,
         structures::{pairs::PairCapability, ErrorCapability, ListCapability, ListTile, PairTile},
     },
-    editor_state::{foundation::TransformerState, windows::GraspEditorWindow},
+    editor_state::{
+        foundation::TransformerState, selection::SelectionTile, windows::GraspEditorWindow,
+    },
+    grasp_render::{
+        default_renderer_draw_arrow, default_renderer_draw_object, draw_arrow, draw_node,
+    },
     grasp_transitions::query_position_recursive,
-    querying::traversal::{TraversalOperator, Traverse},
-    utilities::{ColorQuery, PosQuery},
+    querying::{
+        traversal::{TraversalOperator, Traverse},
+        Collage, MosaicCollage, Traversal,
+    },
+    utilities::{ColorQuery, OffsetQuery, PosQuery},
     GuiState,
 };
 use mosaic::{
     capabilities::{ArchetypeSubject, SelectionCapability},
-    internals::{par, void, EntityId, Mosaic, MosaicCRUD, MosaicIO, MosaicTypelevelCRUD, Tile},
+    internals::{
+        par, pars, void, ComponentValuesBuilderSetter, EntityId, Mosaic, MosaicCRUD, MosaicIO,
+        MosaicTypelevelCRUD, Tile,
+    },
+    iterators::tile_getters::TileGetters,
 };
 use mosaic::{
     internals::TileFieldEmptyQuery,
@@ -687,9 +699,10 @@ pub fn pattern_match_result_renderer(
                     .include_component("PatternMatchShow")
                     .delete();
 
-                window
-                    .document_mosaic
-                    .new_object("PatternMatchShow", par(result.id as u64));
+                window.document_mosaic.new_object(
+                    "PatternMatchShow",
+                    pars().set("choice", result.id as u64).ok(),
+                );
             }
         }
     }
@@ -707,7 +720,7 @@ pub fn pattern_match_renderer(
         .include_component("PatternMatchShow")
         .next()
     {
-        let id = chosen_result.get("self").as_u64() as usize;
+        let id = chosen_result.get("choice").as_u64() as usize;
         if let Some(show) = window.document_mosaic.get(id) {
             if let Some(list) = ListTile::from_tile(show) {
                 let mut bindings = list
@@ -716,8 +729,8 @@ pub fn pattern_match_renderer(
                         if let Some(pair) = PairTile::from_tile(binding) {
                             let fst = pair.get_first();
                             let snd = pair.get_second();
-                            if fst.is_some() && snd.is_some() {
-                                Some((fst.unwrap(), snd.unwrap()))
+                            if let (Some(fst), Some(snd)) = (fst, snd) {
+                                Some((fst, snd))
                             } else {
                                 None
                             }
@@ -775,10 +788,6 @@ pub fn pattern_match_renderer(
                         .thickness(10.0)
                         .build();
 
-                    // painter
-                    //     .add_circle([snd.x, snd.y], 10.0, ImColor32::from_rgb(255, 0, 0))
-                    //     .build();
-
                     let is_selected = window.editor_data.selected.contains(&chosen_result);
                     let image = if is_selected { "[dot]" } else { "dot" };
 
@@ -810,13 +819,110 @@ pub fn pattern_match_renderer(
                     c3,
                     c4,
                 );
-            } else {
-                println!("Not a list");
             }
-        } else {
-            println!("Id {} not found", id);
         }
-    } else {
-        //println!("No PatternMatchShow component");
+    }
+}
+
+pub fn pattern_match_renderer2(
+    _s: &GuiState,
+    window: &mut GraspEditorWindow,
+    _input: Tile,
+    painter: &mut DrawListMut<'_>,
+) {
+    let mosaic = &window.document_mosaic;
+
+    if let Some(chosen_result) = mosaic
+        .get_all()
+        .include_component("PatternMatchShow")
+        .next()
+    {
+        let id = chosen_result.get("choice").as_u64() as usize;
+        if let Some(show) = window.document_mosaic.get(id) {
+            if let Some(list) = ListTile::from_tile(show) {
+                let mut bindings = list
+                    .iter()
+                    .flat_map(|binding| {
+                        if let Some(pair) = PairTile::from_tile(binding) {
+                            let fst = pair.get_first();
+                            let snd = pair.get_second();
+                            if let (Some(fst), Some(snd)) = (fst, snd) {
+                                Some((fst, snd))
+                            } else {
+                                None
+                            }
+                        } else {
+                            None
+                        }
+                    })
+                    .collect_vec();
+
+                bindings.sort_by_key(|a| a.0.clone());
+
+                let bindings_map: HashMap<Tile, Tile> = HashMap::from_iter(bindings.clone());
+
+                for (node, target) in &bindings {
+                    let mut done = HashSet::new();
+                    for arrow in node.iter().get_arrows_from() {
+                        if done.contains(&arrow.target_id()) {
+                            continue;
+                        }
+
+                        done.insert(arrow.target_id());
+
+                        if let Some(target_node2) = bindings_map.get(&arrow.target()) {
+                            if let Some(arrow) = target
+                                .iter()
+                                .get_arrows_from()
+                                .filter(|t| &t.target() == target_node2)
+                                .sorted_by_key(|a| a.id)
+                                .next()
+                            {
+                                draw_arrow(window, painter, &arrow, 4.0);
+                            }
+                        }
+                    }
+                }
+
+                for (index, (node, target)) in bindings_map
+                    .iter()
+                    .sorted_by_key(|t| (PosQuery(t.0).query().y * 100.0) as u32)
+                    .enumerate()
+                {
+                    for t in &[node, target] {
+                        let pos = window.get_position_with_offset_and_pan(PosQuery(t).query());
+                        painter
+                            .add_rect(
+                                [pos.x, pos.y - 10.0],
+                                [pos.x + 40.0, pos.y + 10.0],
+                                ImColor32::BLACK,
+                            )
+                            .filled(true)
+                            .build();
+                        painter
+                            .add_rect(
+                                [pos.x, pos.y - 10.0],
+                                [pos.x + 40.0, pos.y + 10.0],
+                                ImColor32::WHITE,
+                            )
+                            .filled(false)
+                            .build();
+
+                        painter.add_text(
+                            [pos.x + 20.0, pos.y - 8.0],
+                            ImColor32::WHITE,
+                            format!("{}", index),
+                        );
+                    }
+                }
+
+                for (key, value) in bindings_map {
+                    let pos = window.get_position_with_offset_and_pan(PosQuery(&key).query());
+                    draw_node(&key, pos, window, painter);
+                    let pos = window.get_position_with_offset_and_pan(PosQuery(&value).query());
+                    draw_node(&value, pos, window, painter);
+                }
+            }
+        }
     }
 }

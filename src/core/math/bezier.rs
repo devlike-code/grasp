@@ -73,6 +73,7 @@ pub fn gui_draw_bezier_arrow(
     quality: u32,
     window_pos: Vec2,
     offset: f32,
+    color: ImColor32,
 ) {
     gui_draw_bezier_with_end_arrow(
         draw_list,
@@ -81,6 +82,7 @@ pub fn gui_draw_bezier_arrow(
         thickness,
         window_pos,
         offset,
+        color,
     );
 }
 
@@ -113,6 +115,7 @@ pub fn gui_draw_bezier_with_end_arrow(
     thickness: f32,
     window_pos: Vec2,
     offset: f32,
+    color: ImColor32,
 ) {
     let ctrlp = gui_bezier_control_point(points[0], points[1], points[2]);
 
@@ -137,7 +140,7 @@ pub fn gui_draw_bezier_with_end_arrow(
     );
 
     draw_list
-        .add_polyline(ps, ImColor32::WHITE)
+        .add_polyline(ps, color)
         .thickness(thickness)
         .filled(false)
         .build();

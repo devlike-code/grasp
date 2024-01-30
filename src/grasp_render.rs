@@ -39,7 +39,30 @@ fn gui_set_cursor_pos(x: f32, y: f32) {
     }
 }
 
-fn default_renderer_draw_object(
+pub fn draw_node(
+    tile: &Tile,
+    pos: Vec2,
+    window: &mut GraspEditorWindow,
+    painter: &DrawListMut<'_>,
+) {
+    painter
+        .add_circle([pos.x, pos.y], 10.0, ImColor32::from_rgb(255, 0, 0))
+        .build();
+
+    let is_selected = window.editor_data.selected.contains(tile);
+    let image = if is_selected { "[dot]" } else { "dot" };
+
+    gui_draw_image(
+        image,
+        [20.0, 20.0],
+        [pos.x - window.rect.x, pos.y - window.rect.y],
+        0.0,
+        1.0,
+        None,
+    );
+}
+
+pub(crate) fn default_renderer_draw_object(
     tile: &Tile,
     pos: Vec2,
     window: &mut GraspEditorWindow,
@@ -140,7 +163,7 @@ pub fn angle_between_points(p1: Vec2, p2: Vec2) -> f32 {
     angle + consts::PI
 }
 
-fn default_renderer_draw_arrow(
+pub(crate) fn default_renderer_draw_arrow(
     tile: &Tile,
     pos: Vec2,
     window: &mut GraspEditorWindow,
@@ -236,6 +259,58 @@ fn default_renderer_draw_arrow(
     }
 }
 
+pub fn draw_arrow(
+    window: &GraspEditorWindow,
+    painter: &mut DrawListMut<'_>,
+    arrow: &Tile,
+    thickness: f32,
+) {
+    let target = arrow.target();
+    let mut offset = OffsetQuery(arrow).query();
+    let loop_width = SelfLoopQuery(arrow).query();
+    let p1 = window.get_position_with_offset_and_pan(query_position_recursive(&arrow.source()));
+    let arrow_end_offset = if target.is_object() { 15.0f32 } else { 11.0f32 };
+
+    if arrow.is_loop() {
+        if offset.len() <= 1.0 {
+            offset = Vec2::new(1.0, 1.0);
+        }
+
+        let p2 = p1 + offset;
+        let mid = p1.lerp(p2, 0.75);
+        let dp = p1 - p2;
+        let perp = Vec2::new(dp.y, -dp.x);
+        let d = loop_width + offset.len().sqrt();
+        let mid1 = mid + (d / dp.len()) * perp;
+        let mid2 = mid - (d / dp.len()) * perp;
+
+        gui_draw_bezier(painter, [p1, mid1, p2], thickness, 32);
+
+        gui_draw_bezier_arrow(
+            painter,
+            [p2, mid2, p1],
+            thickness,
+            32,
+            window.rect.min(),
+            arrow_end_offset,
+            ImColor32::from_rgba_f32s(1.0, 1.0, 1.0, 0.8),
+        );
+    } else {
+        let p2 = window.get_position_with_offset_and_pan(query_position_recursive(&target));
+        let mid = p1.lerp(p2, 0.5) + offset;
+
+        gui_draw_bezier_arrow(
+            painter,
+            [p1, mid, p2],
+            thickness,
+            32,
+            window.rect.min(),
+            arrow_end_offset,
+            ImColor32::from_rgba_f32s(1.0, 1.0, 1.0, 0.8),
+        );
+    }
+}
+
 pub fn default_renderer_draw(
     window: &mut GraspEditorWindow,
     s: &GuiState,
@@ -250,8 +325,6 @@ pub fn default_renderer_draw(
         .exclude_component("Position")
         .collect_vec();
 
-
-
     let arrows = window
         .document_mosaic
         .get_all()
@@ -259,48 +332,7 @@ pub fn default_renderer_draw(
         .collect_vec();
 
     for arrow in &arrows {
-        let target = arrow.target();
-        let mut offset = OffsetQuery(arrow).query();
-        let loop_width = SelfLoopQuery(arrow).query();
-        let p1 = window.get_position_with_offset_and_pan(query_position_recursive(&arrow.source()));
-        let arrow_end_offset = if target.is_object() { 15.0f32 } else { 11.0f32 };
-
-        if arrow.is_loop() {
-            if offset.len() <= 1.0 {
-                offset = Vec2::new(1.0, 1.0);
-            }
-
-            let p2 = p1 + offset;
-            let mid = p1.lerp(p2, 0.75);
-            let dp = p1 - p2;
-            let perp = Vec2::new(dp.y, -dp.x);
-            let d = loop_width + offset.len().sqrt();
-            let mid1 = mid + (d / dp.len()) * perp;
-            let mid2 = mid - (d / dp.len()) * perp;
-
-            gui_draw_bezier(&mut painter, [p1, mid1, p2], 2.0, 32);
-
-            gui_draw_bezier_arrow(
-                &mut painter,
-                [p2, mid2, p1],
-                2.0,
-                32,
-                window.rect.min(),
-                arrow_end_offset,
-            );
-        } else {
-            let p2 = window.get_position_with_offset_and_pan(query_position_recursive(&target));
-            let mid = p1.lerp(p2, 0.5) + offset;
-
-            gui_draw_bezier_arrow(
-                &mut painter,
-                [p1, mid, p2],
-                2.0,
-                32,
-                window.rect.min(),
-                arrow_end_offset,
-            );
-        }
+        draw_arrow(window, &mut painter, arrow, 2.0);
     }
 
     for arrow in &arrows {
@@ -367,7 +399,7 @@ pub fn default_renderer_draw(
         }
         _ => {}
     }
-    
+
     for obj in &meta {
         for (name, _tiles) in obj.get_full_archetype() {
             if let Some(renderer) = component_renderers.get(&name) {
@@ -375,5 +407,4 @@ pub fn default_renderer_draw(
             }
         }
     }
-
 }

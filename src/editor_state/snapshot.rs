@@ -80,6 +80,7 @@ impl GraspEditorState {
 
     pub fn snapshot(&self, _name: &str, networked: &dyn Networked, _mosaic: &Arc<Mosaic>) {
         let content = networked.prepare_content();
+        println!("{}", content);
         let mut lock = DOTS.lock().unwrap();
         lock.insert(networked.get_id(), content);
     }
