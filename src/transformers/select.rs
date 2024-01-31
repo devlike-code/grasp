@@ -23,7 +23,7 @@ pub fn find_selection_owner(selected_tile: &Tile) -> Option<SelectionTile> {
 }
 
 pub fn deselect(
-    _window: &GraspEditorWindow,
+    _window: &mut GraspEditorWindow,
     _ui: &GuiState,
     initial_state: &[Tile],
     _tile: &Tile,
@@ -54,7 +54,7 @@ pub fn on_selected_delete(window: &mut GraspEditorWindow, comp: String, selected
 }
 
 pub fn select(
-    window: &GraspEditorWindow,
+    window: &mut GraspEditorWindow,
     ui: &GuiState,
     initial_state: &[Tile],
     tile: &Tile,

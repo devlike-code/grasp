@@ -23,7 +23,7 @@ fn make_enum(name: &str, members: &[String]) -> String {
 }
 
 pub fn finite_state_transformer(
-    _window: &GraspEditorWindow,
+    _window: &mut GraspEditorWindow,
     _ui: &GuiState,
     initial_state: &[Tile],
     window: &Tile,

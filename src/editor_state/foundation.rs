@@ -42,7 +42,7 @@ pub enum TransformerState {
 }
 
 pub type TransformerFn =
-    Box<dyn Fn(&GraspEditorWindow, &GuiState, &[Tile], &Tile) -> TransformerState + 'static>;
+    Box<dyn Fn(&mut GraspEditorWindow, &GuiState, &[Tile], &Tile) -> TransformerState + 'static>;
 
 pub struct Transformer {
     pub transform_function: TransformerFn,

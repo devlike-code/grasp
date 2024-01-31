@@ -396,15 +396,17 @@ impl GraspEditorState {
             if let Some(window) = self
                 .window_list
                 .windows
-                .iter()
+                .iter_mut()
                 .find(|w| w.window_tile.id == window_index)
             {
                 if let Some(transformer) = self.transformer_functions.get(&transformer) {
+                    let selected_tiles = window.editor_data.selected.clone();
+                    let window_tile = window.window_tile.clone();
                     match (transformer.transform_function)(
                         window,
                         ui,
-                        &window.editor_data.selected,
-                        &window.window_tile,
+                        &selected_tiles,
+                        &window_tile,
                     ) {
                         TransformerState::Running => {}
                         TransformerState::Cancelled => {

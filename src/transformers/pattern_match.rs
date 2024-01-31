@@ -499,7 +499,7 @@ mod pattern_match_tests {
 }
 
 pub fn pattern_match_tool(
-    window: &GraspEditorWindow,
+    window: &mut GraspEditorWindow,
     ui: &GuiState,
     _initial_state: &[Tile],
     _tile: &Tile,
@@ -561,6 +561,7 @@ pub fn pattern_match_tool(
 
                         pick1.unwrap().iter().delete();
                         pick2.unwrap().iter().delete();
+                        window.editor_data.selected = vec![p.0];
                     }
                     Err(e) => {
                         warn!("PATTERN MATCH ERROR: {:?}!", e.to_string());

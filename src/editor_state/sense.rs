@@ -185,10 +185,9 @@ impl GraspEditorWindow {
                     .count();
 
                 if count_unselected == self.editor_data.selected.len() {
+                    let selected = self.editor_data.selected.clone();
                     let any = self.editor_data.selected.first().cloned().unwrap();
-                    select(self, &s, &self.editor_data.selected, &any);
-                    self.document_mosaic
-                        .make_selection(&self.editor_data.selected.as_slice());
+                    select(self, s, &selected, &any);
                 }
 
                 if let Some(sel) = self
