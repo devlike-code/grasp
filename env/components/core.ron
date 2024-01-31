@@ -29,6 +29,7 @@
             "Pick3: unit;",
             "Pick4: unit;",
             "Pick5: unit;",
+            "Dot: str;",
         ]
    ),
 
@@ -105,7 +106,7 @@
         display: "Validation",
         hidden: false,
         components: [
-            "HasComponent: str;",
+            "HasComponent: s32;",
             "NonEmptyLabel: unit;",
             "NoArrowsInto: unit;",
             "NoArrowsFrom: unit;",

@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use super::foundation::GraspEditorState;
 use futures::{SinkExt, StreamExt};
-use mosaic::internals::Mosaic;
+use mosaic::internals::{par, Mosaic, MosaicIO, Tile};
 use tokio::time::sleep;
 use warp::filters::ws::Message;
 use warp::{filters::ws::WebSocket, Filter};
@@ -84,5 +84,31 @@ impl Networked for Arc<Mosaic> {
 
     fn prepare_content(&self) -> String {
         self.dot(format!("Window_{}", self.id).as_str())
+    }
+}
+
+impl Networked for Tile {
+    fn get_id(&self) -> usize {
+        MIN_PORT + self.id
+    }
+
+    fn prepare_content(&self) -> String {
+        if self.component.is("Dot") {
+            self.get("self").as_str()
+        } else {
+            "".to_string()
+        }
+    }
+}
+
+pub trait NetworkCapability {
+    fn make_snapshot_step(&self, name: &str);
+}
+
+impl NetworkCapability for Arc<Mosaic> {
+    fn make_snapshot_step(&self, name: &str) {
+        let content = self.dot(name);
+        let mut dot = self.new_object("Dot", par(content));
+        dot.initialize_networked();
     }
 }

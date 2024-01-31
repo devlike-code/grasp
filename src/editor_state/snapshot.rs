@@ -1,7 +1,10 @@
 use std::sync::Arc;
 
 use layout::{backends::svg::SVGWriter, core::utils::save_to_file, topo::layout::VisualGraph};
-use mosaic::internals::Mosaic;
+use mosaic::{
+    internals::{Mosaic, MosaicIO},
+    iterators::component_selectors::ComponentSelectors,
+};
 
 use super::{
     foundation::GraspEditorState,
@@ -10,17 +13,17 @@ use super::{
 
 impl GraspEditorState {
     pub fn snapshot_all(&self, name: &str) {
-        self.open_snapshot(
-            format!("{}_COMPS", name).as_str(),
-            &self.component_mosaic,
-            &self.component_mosaic,
-        );
+        // self.open_snapshot(
+        //     format!("{}_COMPS", name).as_str(),
+        //     &self.component_mosaic,
+        //     &self.component_mosaic,
+        // );
 
-        self.open_snapshot(
-            format!("{}_TRANSFORM", name).as_str(),
-            &self.transformer_mosaic,
-            &self.transformer_mosaic,
-        );
+        // self.open_snapshot(
+        //     format!("{}_TRANSFORM", name).as_str(),
+        //     &self.transformer_mosaic,
+        //     &self.transformer_mosaic,
+        // );
 
         self.open_snapshot(
             format!("{}_EDITOR", name).as_str(),
@@ -34,6 +37,14 @@ impl GraspEditorState {
                 &window.document_mosaic,
                 &window.document_mosaic,
             );
+
+            for dot in window.document_mosaic.get_all().include_component("Dot") {
+                self.open_snapshot(
+                    format!("DOT_{}", dot.id).as_str(),
+                    &dot,
+                    &window.document_mosaic,
+                );
+            }
         }
     }
 
@@ -80,7 +91,6 @@ impl GraspEditorState {
 
     pub fn snapshot(&self, _name: &str, networked: &dyn Networked, _mosaic: &Arc<Mosaic>) {
         let content = networked.prepare_content();
-        println!("{}", content);
         let mut lock = DOTS.lock().unwrap();
         lock.insert(networked.get_id(), content);
     }

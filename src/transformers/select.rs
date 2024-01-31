@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use mosaic::{
     capabilities::{ArchetypeSubject, SelectionCapability},
-    internals::{par, pars, ComponentValuesBuilderSetter, MosaicIO, Tile, TileFieldEmptyQuery},
+    internals::{par, pars, ComponentValuesBuilderSetter, MosaicIO, Tile},
     iterators::tile_deletion::TileDeletion,
 };
 
@@ -68,7 +68,7 @@ pub fn select(
 
         let color = RandomColor::new()
             .luminosity(Luminosity::Light)
-            .alpha(0.5) // Optional
+            .alpha(0.5)
             .dictionary(ColorDictionary::new())
             .to_rgb_array();
 

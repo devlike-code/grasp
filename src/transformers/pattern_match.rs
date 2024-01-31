@@ -15,7 +15,10 @@ use crate::{
         structures::{pairs::PairCapability, ErrorCapability, ListCapability, ListTile, PairTile},
     },
     editor_state::{
-        foundation::TransformerState, selection::SelectionTile, windows::GraspEditorWindow,
+        foundation::TransformerState,
+        network::{NetworkCapability, Networked},
+        selection::SelectionTile,
+        windows::GraspEditorWindow,
     },
     grasp_render::{
         default_renderer_draw_arrow, default_renderer_draw_object, draw_arrow, draw_node,
@@ -62,12 +65,14 @@ fn find_candidates_by_degrees(
     let mut out_degree_mmap = ListOrderedMultimap::new();
     let mut loop_degree_mmap = ListOrderedMultimap::new();
 
+    let mosaic = &target.mosaic;
+
     for target_node in target.get_objects() {
         let loop_degree = target.get_self_loops(&target_node).len();
         let in_degree = target.in_degree(&target_node) - loop_degree;
         let out_degree = target.out_degree(&target_node) - loop_degree;
 
-        warn!(
+        println!(
             "\t\tTARGET {:?} {} {} {}",
             target_node, in_degree, out_degree, loop_degree
         );
@@ -86,20 +91,22 @@ fn find_candidates_by_degrees(
 
         state.loops.insert(target_node.id, loop_degree);
     }
-    warn!("\t\t-----------------------",);
+
+    println!("\t\t-----------------------",);
     for pattern_node in pattern.get_objects() {
         let loops = pattern.get_self_loops(&pattern_node);
         let loop_degree = loops.len();
         let in_degree = pattern.in_degree(&pattern_node) - loop_degree;
         let out_degree = pattern.out_degree(&pattern_node) - loop_degree;
 
-        warn!(
-            "\t\t{:?} {} {} {}",
+        println!(
+            "\t\tPATTERN {:?} {} {} {}",
             pattern_node, in_degree, out_degree, loop_degree
         );
         let in_candidates = in_degree_mmap.get_all(&in_degree).collect_vec();
         let out_candidates = out_degree_mmap.get_all(&out_degree).collect_vec();
         let loop_candidates = loop_degree_mmap.get_all(&loop_degree).collect_vec();
+
         warn!("\t\tIN CAND:   {:?}", in_candidates);
         warn!("\t\tOUT CAND:  {:?}", out_candidates);
         warn!("\t\tLOOP CAND: {:?}", loop_candidates);
@@ -109,7 +116,23 @@ fn find_candidates_by_degrees(
             .intersect(loop_candidates)
             .into_iter()
             .for_each(|target_node| {
-                state.candidates.append(pattern_node.id, *target_node);
+                if let Some(target) = mosaic.get(*target_node) {
+                    println!("CHECKING COMPONENTS ON: {:?}", target);
+                    let mut requirements_met = true;
+                    for requirement in pattern_node.get_components("HasComponent") {
+                        if target
+                            .get_component(&requirement.get("self").as_s32().to_string())
+                            .is_none()
+                        {
+                            requirements_met = false;
+                            break;
+                        }
+                    }
+
+                    if requirements_met {
+                        state.candidates.append(pattern_node.id, *target_node);
+                    }
+                }
             });
     }
 
@@ -244,6 +267,8 @@ pub fn pattern_match(match_process: &ProcedureTile) -> anyhow::Result<Tile> {
         }
     }
 
+    mosaic.make_snapshot_step("pm_candidates_filled");
+
     let keys = state.pattern_candidates.keys().cloned().collect_vec();
 
     let mut results = Vec::new();
@@ -255,6 +280,8 @@ pub fn pattern_match(match_process: &ProcedureTile) -> anyhow::Result<Tile> {
         &mut HashMap::new(),
         &mut results,
     );
+
+    mosaic.make_snapshot_step("pm_assigned_candidates_and_tested");
 
     for result in results {
         let bindings = mosaic.make_list();
@@ -286,6 +313,8 @@ pub fn pattern_match(match_process: &ProcedureTile) -> anyhow::Result<Tile> {
         match_process.add_result(&bindings);
     }
 
+    mosaic.make_snapshot_step("pm_created_bindings");
+
     transient.into_iter().delete();
     mosaic
         .get_all()
@@ -295,6 +324,9 @@ pub fn pattern_match(match_process: &ProcedureTile) -> anyhow::Result<Tile> {
         .get_all()
         .include_component("PatternMatchCandidate")
         .delete();
+
+    mosaic.make_snapshot_step("pm_cleanup_finished");
+
     Ok(match_process.0.clone())
 }
 
@@ -603,8 +635,6 @@ pub fn pattern_match_property_renderer(s: &GuiState, window: &mut GraspEditorWin
         if let Some(binding_list) = ListTile::from_tile(res.clone()) {
             for binding in binding_list.iter() {
                 if let Some(pair) = PairTile::from_tile(binding) {
-                    // println!("1: {:?}", pair.get_first());
-                    // println!("2: {:?}", pair.get_second());
                     if pair.get_first().is_none() || pair.get_second().is_none() {
                         ok = false;
                         break;
@@ -904,23 +934,23 @@ pub fn pattern_match_renderer(
                         let pos = window.get_position_with_offset_and_pan(PosQuery(t).query());
                         painter
                             .add_rect(
-                                [pos.x, pos.y - 10.0],
-                                [pos.x + 40.0, pos.y + 10.0],
+                                [pos.x, pos.y - 15.0],
+                                [pos.x + 40.0, pos.y + 15.0],
                                 ImColor32::BLACK,
                             )
                             .filled(true)
                             .build();
                         painter
                             .add_rect(
-                                [pos.x, pos.y - 10.0],
-                                [pos.x + 40.0, pos.y + 10.0],
+                                [pos.x, pos.y - 15.0],
+                                [pos.x + 40.0, pos.y + 15.0],
                                 ImColor32::WHITE,
                             )
                             .filled(false)
                             .build();
 
                         painter.add_text(
-                            [pos.x + 20.0, pos.y - 8.0],
+                            [pos.x + 20.0, pos.y - 7.0],
                             ImColor32::WHITE,
                             format!("{}", index),
                         );

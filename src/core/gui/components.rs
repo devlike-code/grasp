@@ -22,10 +22,6 @@ pub fn setup_component_renderers(instance: &mut GraspEditorState) {
 
     instance
         .hidden_property_renderers
-        .insert("Color".to_string());
-
-    instance
-        .hidden_property_renderers
         .insert("Procedure".to_string());
 
     instance
