@@ -35,3 +35,4 @@ ordered-multimap = "0.7.1"
 array_tool = "1.0.3"
 anyhow = { version = "1.0.75", features = [ "backtrace" ] }
 ron = "0.8.1"
+random_color = "0.8.0"

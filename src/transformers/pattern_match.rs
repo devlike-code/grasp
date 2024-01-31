@@ -708,7 +708,7 @@ pub fn pattern_match_result_renderer(
     }
 }
 
-pub fn pattern_match_renderer(
+pub fn pattern_match_renderer_laser(
     _s: &GuiState,
     window: &mut GraspEditorWindow,
     input: Tile,
@@ -824,7 +824,7 @@ pub fn pattern_match_renderer(
     }
 }
 
-pub fn pattern_match_renderer2(
+pub fn pattern_match_renderer(
     _s: &GuiState,
     window: &mut GraspEditorWindow,
     _input: Tile,
@@ -832,20 +832,20 @@ pub fn pattern_match_renderer2(
 ) {
     let mosaic = &window.document_mosaic;
 
-    painter
-        .add_rect(
-            [0.0, 0.0],
-            [window.rect.max().x, window.rect.max().y],
-            ImColor32::from_rgba_f32s(0.0, 0.0, 0.0, 0.75),
-        )
-        .filled(true)
-        .build();
-
     if let Some(chosen_result) = mosaic
         .get_all()
         .include_component("PatternMatchShow")
         .next()
     {
+        painter
+            .add_rect(
+                [0.0, 0.0],
+                [window.rect.max().x, window.rect.max().y],
+                ImColor32::from_rgba_f32s(0.0, 0.0, 0.0, 0.65),
+            )
+            .filled(true)
+            .build();
+
         let id = chosen_result.get("choice").as_u64() as usize;
         if let Some(show) = window.document_mosaic.get(id) {
             if let Some(list) = ListTile::from_tile(show) {

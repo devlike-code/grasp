@@ -9,7 +9,7 @@ use crate::{
     },
     transformers::{
         on_pattern_match_deleted, on_pattern_match_element_deleted, on_selected_delete,
-        pattern_match_property_renderer, pattern_match_renderer, pattern_match_renderer2,
+        pattern_match_property_renderer, pattern_match_renderer,
     },
 };
 
@@ -92,7 +92,7 @@ pub fn setup_component_renderers(instance: &mut GraspEditorState) {
 
     instance
         .component_entity_renderers
-        .insert("PatternMatch".into(), Box::new(pattern_match_renderer2));
+        .insert("PatternMatch".into(), Box::new(pattern_match_renderer));
 
     // instance
     //     .component_entity_renderers

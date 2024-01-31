@@ -6,7 +6,7 @@ use std::{
 use imgui::Key;
 use itertools::Itertools;
 use mosaic::{
-    capabilities::ArchetypeSubject,
+    capabilities::{ArchetypeSubject, SelectionCapability},
     internals::{pars, void, ComponentValuesBuilderSetter, MosaicIO, Tile, Value},
     iterators::{
         component_selectors::ComponentSelectors, tile_deletion::TileDeletion,
@@ -23,7 +23,7 @@ use crate::{
     editor_state::helpers::RequireWindowFocus,
     editor_state_machine::{EditorState, EditorStateTrigger, StateMachine},
     grasp_queues::WindowTileDeleteReactionRequestQueue,
-    transformers::find_selection_owner,
+    transformers::{find_selection_owner, select},
     utilities::QuadTreeFetch,
     GuiState,
 };
@@ -176,6 +176,21 @@ impl GraspEditorWindow {
                 && s.ui.io().key_ctrl
                 && !self.editor_data.selected.is_empty()
             {
+                let count_unselected = self
+                    .editor_data
+                    .selected
+                    .clone()
+                    .iter()
+                    .filter(|t| t.get_component("Selected").is_none())
+                    .count();
+
+                if count_unselected == self.editor_data.selected.len() {
+                    let any = self.editor_data.selected.first().cloned().unwrap();
+                    select(self, &s, &self.editor_data.selected, &any);
+                    self.document_mosaic
+                        .make_selection(&self.editor_data.selected.as_slice());
+                }
+
                 if let Some(sel) = self
                     .editor_data
                     .selected

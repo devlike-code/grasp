@@ -97,11 +97,20 @@ pub fn pick_n_renderer(n: u32) -> ComponentRenderer {
             painter.add_rect_filled_multicolor(
                 [min_xy.x - 60.0, min_xy.y - 60.0],
                 [max_xy.x + 60.0, max_xy.y + 60.0],
-                ImColor32::from_rgba_f32s(col.x, col.y, col.z, 0.2),
-                ImColor32::from_rgba_f32s(col.x, col.y, col.z, 0.2),
-                ImColor32::from_rgba_f32s(col.x, col.y, col.z, 0.2),
-                ImColor32::from_rgba_f32s(col.x, col.y, col.z, 0.2),
+                ImColor32::from_rgba_f32s(col.x, col.y, col.z, 0.05),
+                ImColor32::from_rgba_f32s((col.x + 30.0).min(255.0), col.y, col.z, 0.05),
+                ImColor32::from_rgba_f32s(col.x, (col.y + 30.0).min(255.0), col.z, 0.05),
+                ImColor32::from_rgba_f32s(col.x, col.y, (col.z + 30.0).min(255.0), 0.05),
             );
+
+            painter
+                .add_rect(
+                    [min_xy.x - 60.0, min_xy.y - 60.0],
+                    [max_xy.x + 60.0, max_xy.y + 60.0],
+                    ImColor32::WHITE,
+                )
+                .filled(false)
+                .build();
 
             painter.add_text(
                 [min_xy.x - 40.0, min_xy.y - 40.0],

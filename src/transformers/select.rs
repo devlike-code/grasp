@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use mosaic::{
     capabilities::{ArchetypeSubject, SelectionCapability},
-    internals::{par, MosaicIO, Tile, TileFieldEmptyQuery},
+    internals::{par, pars, ComponentValuesBuilderSetter, MosaicIO, Tile, TileFieldEmptyQuery},
     iterators::tile_deletion::TileDeletion,
 };
 
@@ -63,6 +63,25 @@ pub fn select(
         let mosaic = Arc::clone(&node.mosaic);
         let selection = mosaic.make_selection(initial_state);
 
+        use random_color::color_dictionary::ColorDictionary;
+        use random_color::{Luminosity, RandomColor};
+
+        let color = RandomColor::new()
+            .luminosity(Luminosity::Light)
+            .alpha(0.5) // Optional
+            .dictionary(ColorDictionary::new())
+            .to_rgb_array();
+
+        selection.add_component(
+            "Color",
+            pars()
+                .set("r", color[0] as f32 / 255.0f32)
+                .set("g", color[1] as f32 / 255.0f32)
+                .set("b", color[2] as f32 / 255.0f32)
+                .set("a", 0.5f32)
+                .ok(),
+        );
+
         deselect(window, ui, initial_state, tile);
 
         for selected in initial_state {
@@ -70,26 +89,6 @@ pub fn select(
         }
 
         let selection = SelectionTile::from_tile(selection);
-        let mut min = Vec2::new(10000.0, 10000.0);
-        let mut max = Vec2::new(-10000.0, -10000.0);
-
-        for selected in selection.iter() {
-            let pos = PosQuery(&selected).query();
-
-            if pos.x < min.x {
-                min.x = pos.x;
-            }
-            if pos.y < min.y {
-                min.y = pos.y;
-            }
-
-            if pos.x > max.x {
-                max.x = pos.x;
-            }
-            if pos.y > max.y {
-                max.y = pos.y;
-            }
-        }
     }
 
     TransformerState::Valid
