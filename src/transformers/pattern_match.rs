@@ -832,6 +832,15 @@ pub fn pattern_match_renderer2(
 ) {
     let mosaic = &window.document_mosaic;
 
+    painter
+        .add_rect(
+            [0.0, 0.0],
+            [window.rect.max().x, window.rect.max().y],
+            ImColor32::from_rgba_f32s(0.0, 0.0, 0.0, 0.75),
+        )
+        .filled(true)
+        .build();
+
     if let Some(chosen_result) = mosaic
         .get_all()
         .include_component("PatternMatchShow")
@@ -868,6 +877,7 @@ pub fn pattern_match_renderer2(
                             continue;
                         }
 
+                        draw_arrow(window, painter, &arrow, 2.0);
                         done.insert(arrow.target_id());
 
                         if let Some(target_node2) = bindings_map.get(&arrow.target()) {
