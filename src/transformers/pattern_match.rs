@@ -117,21 +117,7 @@ fn find_candidates_by_degrees(
             .into_iter()
             .for_each(|target_node| {
                 if let Some(target) = mosaic.get(*target_node) {
-                    println!("CHECKING COMPONENTS ON: {:?}", target);
-                    let mut requirements_met = true;
-                    for requirement in pattern_node.get_components("HasComponent") {
-                        if target
-                            .get_component(&requirement.get("self").as_s32().to_string())
-                            .is_none()
-                        {
-                            requirements_met = false;
-                            break;
-                        }
-                    }
-
-                    if requirements_met {
-                        state.candidates.append(pattern_node.id, *target_node);
-                    }
+                    state.candidates.append(pattern_node.id, *target_node);
                 }
             });
     }
@@ -283,7 +269,8 @@ pub fn pattern_match(match_process: &ProcedureTile) -> anyhow::Result<Tile> {
 
     mosaic.make_snapshot_step("pm_assigned_candidates_and_tested");
 
-    for result in results {
+    let mut to_remove = vec![];
+    for (i, result) in results.clone().iter().enumerate() {
         let bindings = mosaic.make_list();
         let mut values = HashSet::new();
         for v in result.values() {
@@ -295,22 +282,58 @@ pub fn pattern_match(match_process: &ProcedureTile) -> anyhow::Result<Tile> {
         }
 
         for (k, v) in result {
-            let _ = mosaic.get(k).map(|k| {
+
+            ////////////
+            let pk = mosaic.get(*k).unwrap();
+            let tv = mosaic.get(*v).unwrap();
+            for comp in pk.get_components("HasComponent") {
+                let comp_name = comp.get("self").as_s32().to_string();
+                println!("Pattern node {:?} has requirement {:?}", pk, comp_name);
+
+              
+                if tv.get_component(comp_name.as_str()).is_none() {
+                    println!("SKIPPING result {:?} -> {:?}", pk, tv);
+                    to_remove.push(i);
+                    pk.remove_components("PatternMatchElement");
+                    continue;
+                } else {
+                    println!(
+                        "Target NODE {:?} has Component {:?}",
+                        tv,
+                        tv.get_component(comp_name.as_str()).unwrap()
+                    );
+                }
+            }
+            ////////////              
+
+            let _ = mosaic.get(*k).map(|k| {
                 if k.get_component("PatternMatchElement").is_none() {
                     k.add_component("PatternMatchElement", par(match_process.0.id as u64));
                 }
             });
 
-            let _ = mosaic.get(v).map(|v| {
+            let _ = mosaic.get(*v).map(|v| {
                 if v.get_component("PatternMatchElement").is_none() {
                     v.add_component("PatternMatchElement", par(match_process.0.id as u64));
                 }
             });
-            let binding_pair = mosaic.make_pair(&k, &v);
+            let binding_pair = mosaic.make_pair(k, v);
             bindings.add_back(&binding_pair);
         }
-
+  
         match_process.add_result(&bindings);
+    }
+
+    println!("RESULTS!!!!!!!!!\n");
+    println!("{:?}", results);
+    println!("RESULTS!!!!!!!!!\n");
+
+    to_remove.sort_by(|a, b| b.partial_cmp(a).unwrap());
+
+    println!("{:?}", to_remove);
+
+    for index in to_remove.iter() {
+        results.remove(*index);
     }
 
     mosaic.make_snapshot_step("pm_created_bindings");
