@@ -85,7 +85,7 @@ pub(crate) fn default_renderer_draw_object(
         None,
     );
 
-    draw_label("Label", "", window, tile, pos, painter, s);
+    draw_label("Label", "", window, tile, pos, painter, ImColor32::WHITE, s);
 }
 
 pub fn angle_between_points(p1: Vec2, p2: Vec2) -> f32 {
@@ -128,7 +128,7 @@ pub(crate) fn default_renderer_draw_arrow(
         );
     }
 
-    draw_label("Label", "", window, tile, pos, painter, s);
+    draw_label("Label", "", window, tile, pos, painter, ImColor32::WHITE, s);
 }
 
 pub fn draw_label(
@@ -138,6 +138,7 @@ pub fn draw_label(
     tile: &Tile,
     pos: Vec2,
     painter: &DrawListMut<'_>,
+    color: ImColor32,
     s: &GuiState,
 ) {
     let mut cancel: bool = true;
@@ -209,7 +210,7 @@ pub fn draw_label(
         let label = SelfText(tile, component.to_string()).query();
         painter.add_text(
             [pos.x + offset.x, pos.y + offset.y],
-            ImColor32::WHITE,
+            color,
             format!("{}{}", prefix, label),
         );
     }

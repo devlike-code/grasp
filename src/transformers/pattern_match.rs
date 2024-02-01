@@ -873,9 +873,17 @@ pub fn has_component_renderer(
     painter: &mut DrawListMut<'_>,
 ) {
     for hc in tile.get_components("HasComponent") {
-        println!("TILE {:?} HAS COMPONENT RENDERER", tile);
         let pos = window.get_position_with_offset_and_pan(PosQuery(&tile).query());
-        draw_label("HasComponent", "has: ", window, &hc, pos, painter, s);
+        draw_label(
+            "HasComponent",
+            "has: ",
+            window,
+            &hc,
+            pos,
+            painter,
+            ImColor32::from_rgb(255, 165, 0),
+            s,
+        );
     }
 }
 
