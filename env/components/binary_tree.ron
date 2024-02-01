@@ -1,0 +1,11 @@
+[
+    ComponentCategory(
+        name: "BinaryTree",
+        display: "Binary Tree",
+        hidden: false,
+        components: [
+            "BinOp: s32;",
+            "Num: u32;",
+        ]
+    ),
+]

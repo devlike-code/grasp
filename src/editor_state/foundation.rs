@@ -63,6 +63,7 @@ pub struct GraspEditorState {
     pub refresh_quadtree_queue: QueueTile,
     pub locked_components: Vec<S32>,
     pub show_tabview: bool,
+    pub properties_hovered: bool,
     pub queued_component_delete: Option<usize>,
     pub transformer_functions: HashMap<String, Transformer>,
     pub pending_close_window_request: Option<Tile>,
@@ -144,6 +145,7 @@ impl GraspEditorState {
             component_mosaic,
             transformer_mosaic,
             show_tabview: false,
+            properties_hovered: false,
             queued_component_delete: None,
             locked_components: vec![
                 "Node".into(),

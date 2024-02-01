@@ -14,22 +14,10 @@ use crate::{
         math::Vec2,
         structures::{pairs::PairCapability, ErrorCapability, ListCapability, ListTile, PairTile},
     },
-    editor_state::{
-        foundation::TransformerState,
-        network::{NetworkCapability, Networked},
-        selection::SelectionTile,
-        windows::GraspEditorWindow,
-    },
-    grasp_render::{
-        default_renderer_draw_arrow, default_renderer_draw_object, draw_arrow, draw_label,
-        draw_node,
-    },
-    grasp_transitions::query_position_recursive,
-    querying::{
-        traversal::{TraversalOperator, Traverse},
-        Collage, MosaicCollage, Traversal,
-    },
-    utilities::{ColorQuery, OffsetQuery, PosQuery},
+    editor_state::{foundation::TransformerState, windows::GraspEditorWindow},
+    grasp_render::{draw_arrow, draw_label, draw_node},
+    querying::traversal::{TraversalOperator, Traverse},
+    utilities::{ColorQuery, PosQuery},
     GuiState,
 };
 use mosaic::{
@@ -174,11 +162,10 @@ fn assign_candidate_and_test(
 
 pub fn pattern_match(match_process: &ProcedureTile) -> anyhow::Result<Tile> {
     let mosaic = Arc::clone(&match_process.0.mosaic);
-    mosaic.new_type("PatternMatchCandidate: s32;")?;
-    mosaic.new_type("PatternMatchBinding: s32;")?;
 
     let pattern_param = match_process.get_argument("pattern").unwrap();
     let target_param = match_process.get_argument("target").unwrap();
+    let transitivity = match_process.get_argument("transitive").is_some();
 
     let pattern_tiles_iter = mosaic.get_selection(&pattern_param);
     let target_tiles_iter = mosaic.get_selection(&target_param);
@@ -229,7 +216,13 @@ pub fn pattern_match(match_process: &ProcedureTile) -> anyhow::Result<Tile> {
                         continue;
                     }
 
-                    if !reachability
+                    if transitivity {
+                        if !reachability
+                            .are_reachable(*start_candidate_in_target, *end_candidate_in_target)
+                        {
+                            continue;
+                        }
+                    } else if !reachability
                         .are_adjacent(*start_candidate_in_target, *end_candidate_in_target)
                     {
                         continue;
@@ -268,7 +261,6 @@ pub fn pattern_match(match_process: &ProcedureTile) -> anyhow::Result<Tile> {
 
     // mosaic.make_snapshot_step("pm_assigned_candidates_and_tested");
 
-    //let mut to_remove = vec![];
     for (i, result) in results.clone().iter().enumerate() {
         let mut values = HashSet::new();
 
@@ -317,12 +309,6 @@ pub fn pattern_match(match_process: &ProcedureTile) -> anyhow::Result<Tile> {
 
         match_process.add_result(&bindings);
     }
-
-    // println!("{:?}", to_remove);
-
-    // for index in to_remove.iter() {
-    //     results.remove(*index);
-    // }
 
     // mosaic.make_snapshot_step("pm_created_bindings");
 
@@ -587,13 +573,31 @@ pub fn pattern_match_tool(
 
             if ui.button_with_size("Run", [100.0, 20.0]) {
                 let p = window.document_mosaic.make_procedure("PatternMatch");
+                p.0.add_component("InProgress", void());
+                p.0.add_component("PatternMatch", void());
+
+                window.delete_tiles(
+                    &window
+                        .document_mosaic
+                        .get_all()
+                        .include_component("Procedure")
+                        .filter(|t| {
+                            t.get_component("PatternMatch").is_some()
+                                && t.get_component("InProgress").is_none()
+                        })
+                        .collect_vec(),
+                );
+
                 p.add_argument("pattern", &pick1.as_ref().unwrap().target());
                 p.add_argument("target", &pick2.as_ref().unwrap().target());
 
-                match pattern_match(&p) {
+                let pm = pattern_match(&p);
+                p.0.get_component("InProgress").unwrap().iter().delete();
+
+                match pm {
                     Ok(_) => {
                         warn!("PATTERN MATCH OK!");
-                        p.0.add_component("PatternMatch", void());
+
                         for result in p.get_results() {
                             let list = ListTile::from_tile(result).unwrap();
                             for binding in list.iter() {
@@ -615,6 +619,7 @@ pub fn pattern_match_tool(
                         );
                     }
                 }
+
                 if let Some(t) = token {
                     t.end()
                 }

@@ -123,7 +123,12 @@ impl GraspEditorState {
                         {
                             window.title_bar_drag = true;
                         } else if self.pending_close_window_request.is_none() {
-                            window.sense(s, front_window_id, caught_events);
+                            window.sense(
+                                s,
+                                front_window_id,
+                                caught_events,
+                                self.properties_hovered,
+                            );
                         }
                     }
 
@@ -310,9 +315,10 @@ impl GraspEditorState {
             s: &'a GuiState,
             t: &'a S,
             bullet: bool,
+            open: bool,
         ) -> Option<TreeNodeToken<'a>> {
             s.ui.tree_node_config(t.as_ref())
-                .default_open(true)
+                .default_open(open)
                 .bullet(bullet)
                 .push()
         }
@@ -324,6 +330,16 @@ impl GraspEditorState {
                 .size([300.0, viewport.size().y - 18.0], Condition::FirstUseEver)
                 .begin()
         {
+            let props_contains_mouse = {
+                let r1 = s.ui.window_pos();
+                let r2 = s.ui.window_size();
+                let r = Rect2::from_pos_size(r1.into(), r2.into());
+                let m = s.ui.io().mouse_pos;
+                r.contains(m.into())
+            };
+
+            self.properties_hovered = props_contains_mouse;
+
             if let Some(focused_window) = self.window_list.windows.front_mut() {
                 let mut selected = focused_window.editor_data.selected.clone();
                 selected = selected.into_iter().unique().collect_vec();
@@ -334,6 +350,7 @@ impl GraspEditorState {
                             s,
                             &format!("Entity {}##{}-header", selected_tile.id, selected_tile.id),
                             false,
+                            true,
                         ) {
                             let is_locked =
                                 self.locked_components.contains(&selected_tile.component);
@@ -356,16 +373,12 @@ impl GraspEditorState {
                                 .sorted_by(|a, b| (a.1.first().cmp(&b.1.first())))
                                 .collect_vec()
                             {
-                                if self.hidden_property_renderers.contains(part) {
-                                    continue;
-                                }
-
                                 for part_tile in tiles.iter().sorted_by(|a, b| a.id.cmp(&b.id)) {
                                     if let Some(renderer) =
                                         self.component_property_renderers.get(part)
                                     {
                                         if let Some(_subnode_token) =
-                                            tree(s, &part.to_string(), false)
+                                            tree(s, &part.to_string(), false, true)
                                         {
                                             renderer(s, focused_window, part_tile.clone());
                                         }
@@ -383,9 +396,12 @@ impl GraspEditorState {
                                                     == Datatype::UNIT
                                         };
 
-                                        if let Some(_subnode_token) =
-                                            tree(s, &part.to_string(), is_bullet)
-                                        {
+                                        if let Some(_subnode_token) = tree(
+                                            s,
+                                            &part.to_string(),
+                                            is_bullet,
+                                            self.hidden_property_renderers.contains(part),
+                                        ) {
                                             let is_locked = self
                                                 .locked_components
                                                 .contains(&part_tile.component);
@@ -434,7 +450,7 @@ impl GraspEditorState {
                     };
 
                     if is_meta_present {
-                        if let Some(_subnode_token) = tree(s, &"Meta", false) {
+                        if let Some(_subnode_token) = tree(s, &"Meta", false, true) {
                             for o in focused_window
                                 .document_mosaic
                                 .get_all()
@@ -454,14 +470,11 @@ impl GraspEditorState {
                                     }
                                 }
 
-                                if !any_visible {
-                                    continue;
-                                }
-
                                 if let Some(_subnode_token) = tree(
                                     s,
                                     &format!("[META] Entity {}##{}-header", o.id, o.id),
                                     false,
+                                    true,
                                 ) {
                                     for (component, tiles) in &o
                                         .get_full_archetype()
@@ -477,9 +490,13 @@ impl GraspEditorState {
                                             if let Some(renderer) =
                                                 self.component_property_renderers.get(component)
                                             {
-                                                if let Some(_subnode_token) =
-                                                    tree(s, &component.to_string(), false)
-                                                {
+                                                if let Some(_subnode_token) = tree(
+                                                    s,
+                                                    &component.to_string(),
+                                                    false,
+                                                    self.hidden_property_renderers
+                                                        .contains(component),
+                                                ) {
                                                     component_popup(
                                                         &self.queued_component_delete,
                                                         focused_window,
@@ -506,9 +523,12 @@ impl GraspEditorState {
                                                     }
                                                     renderer(s, focused_window, tile.clone());
                                                 }
-                                            } else if let Some(_subnode_token) =
-                                                tree(s, &component.to_string(), false)
-                                            {
+                                            } else if let Some(_subnode_token) = tree(
+                                                s,
+                                                &component.to_string(),
+                                                false,
+                                                self.hidden_property_renderers.contains(component),
+                                            ) {
                                                 let is_locked = self
                                                     .locked_components
                                                     .contains(&tile.component);
@@ -772,11 +792,13 @@ fn draw_property_value<T: Display + FromStr + ToByteArray>(
     let mut text = format!("{}", t);
     let previous_text = format!("{}", t);
 
+    let mut committed = false;
     match datatype {
         Datatype::S32 => {
-            state
+            committed = state
                 .ui
                 .input_text(format!("{}##{}", name, id), &mut text)
+                .auto_select_all(true)
                 .enter_returns_true(true)
                 .build();
 
@@ -787,21 +809,23 @@ fn draw_property_value<T: Display + FromStr + ToByteArray>(
 
         Datatype::STR => {
             let rect = state.ui.content_region_avail();
-            state
+            committed = state
                 .ui
                 .input_text_multiline(
                     format!("{}##{}", name, id),
                     &mut text,
                     [rect[0], rect[1].min(150.0)],
                 )
+                .auto_select_all(true)
                 .enter_returns_true(true)
                 .build();
         }
 
         _ => {
-            state
+            committed = state
                 .ui
                 .input_text(format!("{}##{}", name, id), &mut text)
+                .auto_select_all(true)
                 .enter_returns_true(true)
                 .build();
         }
@@ -812,6 +836,12 @@ fn draw_property_value<T: Display + FromStr + ToByteArray>(
         .columns(1, format!("##{}.{}-c1", tile.id, name), false);
     if let Ok(t) = text.parse::<T>() {
         if previous_text != text {
+            window.state = EditorState::PropertyChanging;
+            tile.clone().set(name, t);
+            window.changed = true;
+            window.request_quadtree_update();
+        } else if window.state == EditorState::PropertyChanging && committed {
+            window.state = EditorState::Idle;
             tile.clone().set(name, t);
             window.changed = true;
             window.request_quadtree_update();

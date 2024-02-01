@@ -1,0 +1,20 @@
+[
+    ComponentCategory(
+        name: "Algorithms",
+        display: "Algorithms",
+        hidden: false,
+        components: [
+            "Input: unit;",
+            "Var: s32;",
+            "Registry: u32;",
+            "StoreFrom: s32;",
+            "Proc: s32;",
+            "Load: { path: str, var: s32, };",
+            "Arith: { op: s32, var_a: s32, var_b: s32, var_result: s32 };",
+            "AddComponent: { var: s32, comp: s32, };",
+            "SetComponentField: { var: s32, field: s32, value: s32, };",
+            "DeleteComponent: { var: s32, comp: s32, };",
+            "DeleteTile: { var: s32 };",
+        ]
+    ),
+]

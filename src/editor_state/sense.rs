@@ -79,6 +79,7 @@ impl GraspEditorWindow {
         s: &GuiState,
         front_window_id: Option<usize>,
         caught_events: &mut Vec<u64>,
+        properties_hovered: bool,
     ) {
         fn trigger_rename(
             window: &mut GraspEditorWindow,
@@ -176,6 +177,7 @@ impl GraspEditorWindow {
             if s.ui.io().keys_down[*key]
                 && s.ui.io().key_ctrl
                 && !self.editor_data.selected.is_empty()
+                && is_focused
             {
                 let count_unselected = self
                     .editor_data
@@ -225,7 +227,7 @@ impl GraspEditorWindow {
             }
         }
 
-        if s.ui.is_key_pressed(Key::Escape) {
+        if s.ui.is_key_pressed(Key::Escape) && is_focused {
             for pick in &["Pick1", "Pick2", "Pick3", "Pick4", "Pick5"] {
                 self.document_mosaic
                     .get_all()
@@ -234,7 +236,11 @@ impl GraspEditorWindow {
             }
         }
 
-        if s.ui.is_key_down(Key::Delete) && self.state == EditorState::Idle && is_focused {
+        if s.ui.is_key_down(Key::Delete)
+            && self.state == EditorState::Idle
+            && is_focused
+            && !properties_hovered
+        {
             self.delete_tiles(&self.editor_data.selected);
             self.editor_data.selected.clear();
             self.request_quadtree_update();

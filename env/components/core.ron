@@ -18,6 +18,7 @@
         components: [
             "Node: unit;",
             "Arrow: unit;",
+            "InProgress: unit;",
             "EditorState: unit;",
             "Label: s32;",
             "Position: { x: f32, y: f32 };",
