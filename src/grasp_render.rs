@@ -14,9 +14,9 @@ use crate::editor_state_machine::StateMachine;
 
 use crate::grasp_transitions::query_position_recursive;
 
-use crate::utilities::Label;
 use crate::utilities::OffsetQuery;
 use crate::utilities::SelfLoopQuery;
+use crate::utilities::SelfText;
 use crate::GuiState;
 use imgui::sys::ImVec2;
 use imgui::DrawListMut;
@@ -69,8 +69,6 @@ pub(crate) fn default_renderer_draw_object(
     painter: &DrawListMut<'_>,
     s: &GuiState,
 ) {
-    let editor_mosaic = &window.editor_mosaic;
-
     painter
         .add_circle([pos.x, pos.y], 10.0, ImColor32::from_rgb(255, 0, 0))
         .build();
@@ -87,69 +85,7 @@ pub(crate) fn default_renderer_draw_object(
         None,
     );
 
-    let mut cancel: bool = true;
-    let mut trigger_end_drag = true;
-    let offset = tile
-        .get_component("Label")
-        .map(|l| OffsetQuery(&l).query())
-        .unwrap_or_default();
-
-    if window.state == EditorState::PropertyChanging
-        && window.editor_data.tile_changing == Some(tile.id)
-    {
-        if let Some(selected) = window.editor_data.selected.first() {
-            if tile.id == selected.id {
-                let cx = pos.x - window.rect.x + offset.x;
-                let cy = pos.y - window.rect.y + offset.y;
-                gui_set_cursor_pos(cx, cy);
-                let text = &mut window.editor_data.text;
-
-                s.ui.set_keyboard_focus_here();
-                s.ui.set_next_item_width(100.0);
-                if s.ui
-                    .input_text(format!("##{}-self", tile.id), text)
-                    .auto_select_all(true)
-                    .enter_returns_true(true)
-                    .build()
-                {
-                    if text.len() >= 32 {
-                        *text = text[0..32].to_string();
-                    }
-
-                    if let Ok(t) = text.parse::<S32>() {
-                        if window.editor_data.previous_text != *text {
-                            if let Some(mut label) = tile.clone().get_component("Label") {
-                                label.set("self", t);
-                                window.changed = true;
-                                editor_mosaic.request_quadtree_update();
-                            } else {
-                                cancel = false;
-                                trigger_end_drag = false;
-                            }
-                        }
-                    }
-                } else {
-                    cancel = false;
-                    trigger_end_drag = false;
-                }
-            }
-        }
-    } else {
-        trigger_end_drag = false;
-    }
-
-    if trigger_end_drag {
-        window.trigger(EndDrag);
-    }
-
-    if cancel {
-        let label = Label(tile).query();
-        painter.add_text(
-            [pos.x + offset.x, pos.y + offset.y],
-            ImColor32::WHITE,
-            label,
-        );
-    }
+    draw_label("Label", "", window, tile, pos, painter, s);
 }
 
 pub fn angle_between_points(p1: Vec2, p2: Vec2) -> f32 {
@@ -170,8 +106,6 @@ pub(crate) fn default_renderer_draw_arrow(
     painter: &DrawListMut<'_>,
     s: &GuiState,
 ) {
-    let editor_mosaic = &window.editor_mosaic;
-
     let is_selected = window.editor_data.selected.contains(tile);
     let image = if is_selected { "[arrow]" } else { "arrow" };
 
@@ -194,15 +128,30 @@ pub(crate) fn default_renderer_draw_arrow(
         );
     }
 
+    draw_label("Label", "", window, tile, pos, painter, s);
+}
+
+pub fn draw_label(
+    component: &str,
+    prefix: &str,
+    window: &mut GraspEditorWindow,
+    tile: &Tile,
+    pos: Vec2,
+    painter: &DrawListMut<'_>,
+    s: &GuiState,
+) {
     let mut cancel: bool = true;
     let mut trigger_end_drag = true;
+    let desc = tile
+        .get_component(component)
+        .unwrap_or_else(|| panic!("Need to have this: {}.", component));
     let offset = tile
-        .get_component("Label")
+        .get_component(component)
         .map(|l| OffsetQuery(&l).query())
         .unwrap_or_default();
 
     if window.state == EditorState::PropertyChanging
-        && window.editor_data.tile_changing == Some(tile.id)
+        && window.editor_data.tile_changing == Some(desc.id)
     {
         if let Some(selected) = window.editor_data.selected.first() {
             if tile.id == selected.id {
@@ -213,31 +162,38 @@ pub(crate) fn default_renderer_draw_arrow(
 
                 s.ui.set_keyboard_focus_here();
                 s.ui.set_next_item_width(100.0);
-                if s.ui
-                    .input_text(format!("##{}-self", tile.id), text)
-                    .auto_select_all(true)
-                    .enter_returns_true(true)
-                    .build()
                 {
-                    if text.len() >= 32 {
-                        *text = text[0..32].to_string();
-                    }
+                    let id = s.ui.push_id(format!("{}{}{}", tile.id, component, desc.id));
+                    if s.ui
+                        .input_text(
+                            "", //,
+                            text,
+                        )
+                        .auto_select_all(true)
+                        .enter_returns_true(true)
+                        .build()
+                    {
+                        if text.len() >= 32 {
+                            *text = text[0..32].to_string();
+                        }
 
-                    if let Ok(t) = text.parse::<S32>() {
-                        if window.editor_data.previous_text != *text {
-                            if let Some(mut label) = tile.clone().get_component("Label") {
-                                label.set("self", t);
-                                window.changed = true;
-                                editor_mosaic.request_quadtree_update();
-                            } else {
-                                cancel = false;
-                                trigger_end_drag = false;
+                        if let Ok(t) = text.parse::<S32>() {
+                            if window.editor_data.previous_text != *text {
+                                if let Some(mut label) = tile.clone().get_component(component) {
+                                    label.set("self", t);
+                                    window.changed = true;
+                                    window.editor_mosaic.request_quadtree_update();
+                                } else {
+                                    cancel = false;
+                                    trigger_end_drag = false;
+                                }
                             }
                         }
+                    } else {
+                        cancel = false;
+                        trigger_end_drag = false;
                     }
-                } else {
-                    cancel = false;
-                    trigger_end_drag = false;
+                    id.pop();
                 }
             }
         }
@@ -250,11 +206,11 @@ pub(crate) fn default_renderer_draw_arrow(
     }
 
     if cancel {
-        let label = Label(tile).query();
+        let label = SelfText(tile, component.to_string()).query();
         painter.add_text(
             [pos.x + offset.x, pos.y + offset.y],
             ImColor32::WHITE,
-            label,
+            format!("{}{}", prefix, label),
         );
     }
 }

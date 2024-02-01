@@ -2,7 +2,10 @@ use itertools::Itertools;
 use log::warn;
 use mosaic::{
     capabilities::ArchetypeSubject,
-    internals::{MosaicIO, Tile, TileFieldEmptyQuery, TileFieldQuery, TileFieldSetter, Value},
+    internals::{
+        pars, ComponentValuesBuilderSetter, MosaicIO, Tile, TileFieldEmptyQuery, TileFieldQuery,
+        TileFieldSetter, Value,
+    },
     iterators::{component_selectors::ComponentSelectors, tile_getters::TileGetters},
 };
 
@@ -179,6 +182,8 @@ impl GraspEditorWindow {
                     selected_pos_component.set("x", x + dp.x);
                     selected_pos_component.set("y", y + dp.y);
                 }
+            } else {
+                tile.add_component(component_name, pars().set("x", dp.x).set("y", dp.y).ok());
             }
         }
     }
@@ -216,21 +221,35 @@ impl GraspEditorWindow {
                 selected_pos = find_arrow_pos(tile);
             }
 
+            // TODO: unify this and hascomponent below
             if let Some(label) = tile.get_component("Label") {
                 let size = calc_text_size(label.get("self").as_s32().to_string());
 
-                if let Some(offset) = label.get_component("Offset") {
-                    let off = OffsetQuery(&offset).query();
-                    let label_region = self.build_label_area(Rect2 {
-                        x: selected_pos.x + off.x,
-                        y: selected_pos.y + off.y,
-                        width: size[0],
-                        height: size[1],
-                    });
+                let off = OffsetQuery(&label).query();
+                let label_region = self.build_label_area(Rect2 {
+                    x: selected_pos.x + off.x,
+                    y: selected_pos.y + off.y,
+                    width: size[0],
+                    height: size[1],
+                });
 
-                    let mut quadtree = self.quadtree.lock().unwrap();
-                    quadtree.insert(label_region, label.id);
-                }
+                let mut quadtree = self.quadtree.lock().unwrap();
+                quadtree.insert(label_region, label.id);
+            }
+
+            for comp in tile.get_components("HasComponent") {
+                let size = calc_text_size(format!("has: {}", comp.get("self").as_s32()));
+
+                let off = OffsetQuery(&comp).query();
+                let label_region = self.build_label_area(Rect2 {
+                    x: selected_pos.x + off.x,
+                    y: selected_pos.y + off.y,
+                    width: size[0],
+                    height: size[1],
+                });
+
+                let mut quadtree = self.quadtree.lock().unwrap();
+                quadtree.insert(label_region, comp.id);
             }
 
             if tile.is_object() {

@@ -83,16 +83,17 @@ impl GraspEditorWindow {
         fn trigger_rename(
             window: &mut GraspEditorWindow,
             tile: Tile,
+            comp: String,
             caught_events: &mut Vec<u64>,
         ) {
-            if let Some(Value::S32(label)) = tile
+            if let Some((id, Value::S32(label))) = tile
                 .iter()
                 .get_descriptors()
-                .include_component("Label")
+                .include_component(&comp)
                 .next()
-                .map(|tile| tile.get("self"))
+                .map(|tile| (tile.id, tile.get("self")))
             {
-                window.editor_data.tile_changing = Some(tile.id);
+                window.editor_data.tile_changing = Some(id);
                 window.editor_data.selected = vec![tile];
 
                 window.editor_data.text = label.to_string();
@@ -110,7 +111,7 @@ impl GraspEditorWindow {
         let is_label_region = under_cursor
             .first()
             .and_then(|f| self.document_mosaic.get(*f))
-            .map(|t| t.component.is("Label"))
+            .map(|t| t.component.is("Label") || t.component.is("HasComponent"))
             .unwrap_or(false);
         let pos: Vec2 = s.ui.io().mouse_pos.into();
 
@@ -249,12 +250,20 @@ impl GraspEditorWindow {
         } else if double_clicked_left && !under_cursor.is_empty() && is_focused && is_label_region {
             //
             let tile = under_cursor.fetch_tile(&self.document_mosaic).target();
-            trigger_rename(self, tile, caught_events);
+            let comp = under_cursor
+                .fetch_tile(&self.document_mosaic)
+                .component
+                .to_string();
+            trigger_rename(self, tile, comp, caught_events);
             //
         } else if double_clicked_left && !under_cursor.is_empty() && is_focused {
             //
             let tile = under_cursor.fetch_tile(&self.document_mosaic);
-            trigger_rename(self, tile, caught_events);
+            let comp = under_cursor
+                .fetch_tile(&self.document_mosaic)
+                .component
+                .to_string();
+            trigger_rename(self, tile, comp, caught_events);
             //
         } else if clicked_left && under_cursor.is_empty() && mouse_in_window
         //&& !is_context

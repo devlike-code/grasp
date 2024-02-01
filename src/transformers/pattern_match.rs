@@ -21,7 +21,8 @@ use crate::{
         windows::GraspEditorWindow,
     },
     grasp_render::{
-        default_renderer_draw_arrow, default_renderer_draw_object, draw_arrow, draw_node,
+        default_renderer_draw_arrow, default_renderer_draw_object, draw_arrow, draw_label,
+        draw_node,
     },
     grasp_transitions::query_position_recursive,
     querying::{
@@ -116,9 +117,7 @@ fn find_candidates_by_degrees(
             .intersect(loop_candidates)
             .into_iter()
             .for_each(|target_node| {
-                if let Some(target) = mosaic.get(*target_node) {
-                    state.candidates.append(pattern_node.id, *target_node);
-                }
+                state.candidates.append(pattern_node.id, *target_node);
             });
     }
 
@@ -253,7 +252,7 @@ pub fn pattern_match(match_process: &ProcedureTile) -> anyhow::Result<Tile> {
         }
     }
 
-    mosaic.make_snapshot_step("pm_candidates_filled");
+    // mosaic.make_snapshot_step("pm_candidates_filled");
 
     let keys = state.pattern_candidates.keys().cloned().collect_vec();
 
@@ -267,12 +266,12 @@ pub fn pattern_match(match_process: &ProcedureTile) -> anyhow::Result<Tile> {
         &mut results,
     );
 
-    mosaic.make_snapshot_step("pm_assigned_candidates_and_tested");
+    // mosaic.make_snapshot_step("pm_assigned_candidates_and_tested");
 
-    let mut to_remove = vec![];
+    //let mut to_remove = vec![];
     for (i, result) in results.clone().iter().enumerate() {
-        let bindings = mosaic.make_list();
         let mut values = HashSet::new();
+
         for v in result.values() {
             values.insert(v);
         }
@@ -281,31 +280,26 @@ pub fn pattern_match(match_process: &ProcedureTile) -> anyhow::Result<Tile> {
             continue;
         }
 
+        let mut ok = true;
         for (k, v) in result {
-
-            ////////////
             let pk = mosaic.get(*k).unwrap();
             let tv = mosaic.get(*v).unwrap();
+
             for comp in pk.get_components("HasComponent") {
                 let comp_name = comp.get("self").as_s32().to_string();
-                println!("Pattern node {:?} has requirement {:?}", pk, comp_name);
 
-              
-                if tv.get_component(comp_name.as_str()).is_none() {
-                    println!("SKIPPING result {:?} -> {:?}", pk, tv);
-                    to_remove.push(i);
-                    pk.remove_components("PatternMatchElement");
-                    continue;
-                } else {
-                    println!(
-                        "Target NODE {:?} has Component {:?}",
-                        tv,
-                        tv.get_component(comp_name.as_str()).unwrap()
-                    );
+                if tv.get_component(&comp_name).is_none() {
+                    ok = false;
                 }
             }
-            ////////////              
+        }
 
+        if !ok {
+            continue;
+        }
+
+        let bindings = mosaic.make_list();
+        for (k, v) in result {
             let _ = mosaic.get(*k).map(|k| {
                 if k.get_component("PatternMatchElement").is_none() {
                     k.add_component("PatternMatchElement", par(match_process.0.id as u64));
@@ -320,23 +314,17 @@ pub fn pattern_match(match_process: &ProcedureTile) -> anyhow::Result<Tile> {
             let binding_pair = mosaic.make_pair(k, v);
             bindings.add_back(&binding_pair);
         }
-  
+
         match_process.add_result(&bindings);
     }
 
-    println!("RESULTS!!!!!!!!!\n");
-    println!("{:?}", results);
-    println!("RESULTS!!!!!!!!!\n");
+    // println!("{:?}", to_remove);
 
-    to_remove.sort_by(|a, b| b.partial_cmp(a).unwrap());
+    // for index in to_remove.iter() {
+    //     results.remove(*index);
+    // }
 
-    println!("{:?}", to_remove);
-
-    for index in to_remove.iter() {
-        results.remove(*index);
-    }
-
-    mosaic.make_snapshot_step("pm_created_bindings");
+    // mosaic.make_snapshot_step("pm_created_bindings");
 
     transient.into_iter().delete();
     mosaic
@@ -348,7 +336,7 @@ pub fn pattern_match(match_process: &ProcedureTile) -> anyhow::Result<Tile> {
         .include_component("PatternMatchCandidate")
         .delete();
 
-    mosaic.make_snapshot_step("pm_cleanup_finished");
+    // mosaic.make_snapshot_step("pm_cleanup_finished");
 
     Ok(match_process.0.clone())
 }
@@ -878,6 +866,19 @@ pub fn pattern_match_renderer_laser(
     }
 }
 
+pub fn has_component_renderer(
+    s: &GuiState,
+    window: &mut GraspEditorWindow,
+    tile: Tile,
+    painter: &mut DrawListMut<'_>,
+) {
+    for hc in tile.get_components("HasComponent") {
+        println!("TILE {:?} HAS COMPONENT RENDERER", tile);
+        let pos = window.get_position_with_offset_and_pan(PosQuery(&tile).query());
+        draw_label("HasComponent", "has: ", window, &hc, pos, painter, s);
+    }
+}
+
 pub fn pattern_match_renderer(
     _s: &GuiState,
     window: &mut GraspEditorWindow,
@@ -959,7 +960,7 @@ pub fn pattern_match_renderer(
                             .add_rect(
                                 [pos.x, pos.y - 15.0],
                                 [pos.x + 40.0, pos.y + 15.0],
-                                ImColor32::BLACK,
+                                ImColor32::from_rgba_f32s(0.0, 0.0, 0.0, 0.7),
                             )
                             .filled(true)
                             .build();
@@ -967,13 +968,13 @@ pub fn pattern_match_renderer(
                             .add_rect(
                                 [pos.x, pos.y - 15.0],
                                 [pos.x + 40.0, pos.y + 15.0],
-                                ImColor32::WHITE,
+                                ImColor32::from_rgba_f32s(1.0, 1.0, 1.0, 0.3),
                             )
                             .filled(false)
                             .build();
 
                         painter.add_text(
-                            [pos.x + 20.0, pos.y - 7.0],
+                            [pos.x + 21.0, pos.y - 7.0],
                             ImColor32::WHITE,
                             format!("{}", index),
                         );

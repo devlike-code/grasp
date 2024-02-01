@@ -83,11 +83,11 @@ impl<'a> TileFieldEmptyQuery for SelfLoopQuery<'a> {
     }
 }
 
-pub struct Label<'a>(pub &'a Tile);
-impl<'a> TileFieldEmptyQuery for Label<'a> {
+pub struct SelfText<'a>(pub &'a Tile, pub String);
+impl<'a> TileFieldEmptyQuery for SelfText<'a> {
     type Output = String;
     fn query(&self) -> Self::Output {
-        if let Some(pos_component) = self.0.get_component("Label") {
+        if let Some(pos_component) = self.0.get_component(&self.1) {
             if let Value::S32(s) = pos_component.get("self") {
                 return s.to_string();
             }

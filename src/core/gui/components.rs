@@ -8,8 +8,8 @@ use crate::{
         },
     },
     transformers::{
-        on_pattern_match_deleted, on_pattern_match_element_deleted, on_selected_delete,
-        pattern_match_property_renderer, pattern_match_renderer,
+        has_component_renderer, on_pattern_match_deleted, on_pattern_match_element_deleted,
+        on_selected_delete, pattern_match_property_renderer, pattern_match_renderer,
     },
 };
 
@@ -90,9 +90,9 @@ pub fn setup_component_renderers(instance: &mut GraspEditorState) {
         .component_entity_renderers
         .insert("PatternMatch".into(), Box::new(pattern_match_renderer));
 
-    // instance
-    //     .component_entity_renderers
-    //     .insert("PatternMatch".into(), Box::new(pattern_match_renderer));
+    instance
+        .component_entity_renderers
+        .insert("HasComponent".into(), Box::new(has_component_renderer));
 
     instance.component_property_renderers.insert(
         "PatternMatch".into(),
@@ -120,8 +120,8 @@ pub fn setup_component_renderers(instance: &mut GraspEditorState) {
         .component_property_renderers
         .insert("Color".into(), Box::new(color_property_renderer));
 
-    instance.component_property_renderers.insert(
-        "SelectionOwner".into(),
-        Box::new(selected_property_renderer),
-    );
+    // instance.component_property_renderers.insert(
+    //     "SelectionOwner".into(),
+    //     Box::new(selected_property_renderer),
+    // );
 }
