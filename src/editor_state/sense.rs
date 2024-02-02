@@ -6,7 +6,7 @@ use std::{
 use imgui::Key;
 use itertools::Itertools;
 use mosaic::{
-    capabilities::{ArchetypeSubject, SelectionCapability},
+    capabilities::ArchetypeSubject,
     internals::{pars, void, ComponentValuesBuilderSetter, MosaicIO, Tile, Value},
     iterators::{
         component_selectors::ComponentSelectors, tile_deletion::TileDeletion,

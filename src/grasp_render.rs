@@ -131,6 +131,7 @@ pub(crate) fn default_renderer_draw_arrow(
     draw_label("Label", "", window, tile, pos, painter, ImColor32::WHITE, s);
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn draw_label(
     component: &str,
     prefix: &str,

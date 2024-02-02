@@ -1,9 +1,15 @@
-use std::{borrow::BorrowMut, env, fmt::Display, fs, str::FromStr, sync::Arc};
+use std::{
+    env,
+    fmt::Display,
+    fs::{self, File},
+    io::Write,
+    path::PathBuf,
+    str::FromStr,
+    sync::Arc,
+};
 
 use imgui::{
-    sys::{igCloseButton, igGetWindowDrawList, igTabItemLabelAndCloseButton, ImDrawList},
-    Condition, DrawListMut, ImString, MouseButton, StyleColor, TreeNodeFlags, TreeNodeToken,
-    WindowFlags,
+    Condition, DrawListMut, ImString, MouseButton, StyleColor, TreeNodeToken, WindowFlags,
 };
 use itertools::Itertools;
 use log::error;
@@ -18,16 +24,12 @@ use mosaic::{
 
 use crate::{
     core::{
-        gui::{
-            docking::{gui_str, GuiViewport},
-            windowing::gui_set_window_focus,
-        },
+        gui::{docking::GuiViewport, windowing::gui_set_window_focus},
         math::{Rect2, Vec2},
-        structures::grasp_queues,
+        structures::{grasp_queues, ErrorCapability},
     },
     editor_state_machine::EditorState,
     grasp_queues::CloseWindowRequestQueue,
-    transformers::find_selection_owner,
     GuiState,
 };
 
@@ -295,22 +297,6 @@ impl GraspEditorState {
     }
 
     fn show_properties(&mut self, s: &GuiState) {
-        fn component_popup(
-            queued_component_delete: &Option<usize>,
-            focused: &mut GraspEditorWindow,
-            s: &GuiState,
-        ) {
-            if let Some(token) = s.ui.begin_popup("component-menu") {
-                if s.ui.menu_item("Delete") {
-                    if let Some(tile_id) = queued_component_delete {
-                        focused.document_mosaic.delete_tile(*tile_id);
-                    }
-                }
-
-                token.end();
-            }
-        }
-
         fn tree<'a, S: AsRef<str>>(
             s: &'a GuiState,
             t: &'a S,
@@ -352,20 +338,6 @@ impl GraspEditorState {
                             false,
                             true,
                         ) {
-                            let is_locked =
-                                self.locked_components.contains(&selected_tile.component);
-                            let is_header_covered = s.ui.is_item_hovered();
-                            let is_header_clicked = s.ui.is_mouse_clicked(MouseButton::Right);
-
-                            component_popup(&self.queued_component_delete, focused_window, s);
-
-                            if !is_locked && is_header_covered && is_header_clicked {
-                                self.queued_component_delete = Some(selected_tile.id);
-
-                                s.ui.open_popup("component-menu");
-                                println!("COMPONENT MENU OPENED!");
-                            }
-
                             s.ui.separator();
                             for (part, tiles) in &selected_tile
                                 .get_full_archetype()
@@ -400,29 +372,8 @@ impl GraspEditorState {
                                             s,
                                             &part.to_string(),
                                             is_bullet,
-                                            self.hidden_property_renderers.contains(part),
+                                            !self.hidden_property_renderers.contains(part),
                                         ) {
-                                            let is_locked = self
-                                                .locked_components
-                                                .contains(&part_tile.component);
-                                            let is_header_covered = s.ui.is_item_hovered();
-                                            let is_header_clicked =
-                                                s.ui.is_mouse_clicked(MouseButton::Right);
-
-                                            component_popup(
-                                                &self.queued_component_delete,
-                                                focused_window,
-                                                s,
-                                            );
-
-                                            if !is_locked && is_header_covered && is_header_clicked
-                                            {
-                                                self.queued_component_delete = Some(part_tile.id);
-
-                                                s.ui.open_popup("component-menu");
-                                                println!("COMPONENT MENU OPENED!");
-                                            }
-
                                             draw_default_property_renderer(
                                                 s,
                                                 focused_window,
@@ -457,19 +408,6 @@ impl GraspEditorState {
                                 .filter_objects()
                                 .exclude_component("Node")
                             {
-                                let mut any_visible = false;
-                                for (component, _tiles) in &o
-                                    .get_full_archetype()
-                                    .into_iter()
-                                    .sorted_by(|a, b| (a.1.first().cmp(&b.1.first())))
-                                    .collect_vec()
-                                {
-                                    if !self.hidden_property_renderers.contains(component) {
-                                        any_visible = true;
-                                        break;
-                                    }
-                                }
-
                                 if let Some(_subnode_token) = tree(
                                     s,
                                     &format!("[META] Entity {}##{}-header", o.id, o.id),
@@ -483,10 +421,6 @@ impl GraspEditorState {
                                         .collect_vec()
                                     {
                                         for tile in tiles.iter().sorted_by(|a, b| a.id.cmp(&b.id)) {
-                                            if self.hidden_property_renderers.contains(component) {
-                                                continue;
-                                            }
-
                                             if let Some(renderer) =
                                                 self.component_property_renderers.get(component)
                                             {
@@ -494,40 +428,17 @@ impl GraspEditorState {
                                                     s,
                                                     &component.to_string(),
                                                     false,
-                                                    self.hidden_property_renderers
+                                                    !self
+                                                        .hidden_property_renderers
                                                         .contains(component),
                                                 ) {
-                                                    component_popup(
-                                                        &self.queued_component_delete,
-                                                        focused_window,
-                                                        s,
-                                                    );
-                                                    let is_locked = self
-                                                        .locked_components
-                                                        .contains(&tile.component);
-                                                    let is_header_covered = s.ui.is_item_hovered();
-                                                    let is_header_clicked =
-                                                        s.ui.is_item_clicked_with_button(
-                                                            MouseButton::Right,
-                                                        );
-
-                                                    if !is_locked
-                                                        && is_header_covered
-                                                        && is_header_clicked
-                                                    {
-                                                        self.queued_component_delete =
-                                                            Some(tile.id);
-
-                                                        s.ui.open_popup("component-menu");
-                                                        println!("COMPONENT MENU OPENED!");
-                                                    }
                                                     renderer(s, focused_window, tile.clone());
                                                 }
                                             } else if let Some(_subnode_token) = tree(
                                                 s,
                                                 &component.to_string(),
                                                 false,
-                                                self.hidden_property_renderers.contains(component),
+                                                !self.hidden_property_renderers.contains(component),
                                             ) {
                                                 let is_locked = self
                                                     .locked_components
@@ -580,6 +491,52 @@ impl GraspEditorState {
         }
     }
 
+    fn prepend_recent(file: PathBuf) {
+        let path = file.to_str().unwrap().to_string();
+        let mut recent = vec![];
+        if let Ok(recent_list) = fs::read_to_string("env\\recent.txt") {
+            recent = recent_list
+                .lines()
+                .map(|s| s.to_string())
+                .filter(|p| p != &path)
+                .collect_vec();
+        }
+
+        recent.insert(0, path.clone());
+
+        let mut f = File::create("env\\recent.txt").unwrap();
+        f.write_all(recent.join("\n").as_bytes()).unwrap();
+    }
+
+    fn open_file(&mut self, file: PathBuf) {
+        if fs::metadata(file.clone()).is_ok() {
+            self.new_window(Some(&file));
+            let window = self.window_list.windows.front().unwrap();
+            let window_mosaic = &window.document_mosaic;
+
+            Self::prepare_mosaic(
+                &window.component_mosaic,
+                &self.editor_mosaic,
+                Arc::clone(window_mosaic),
+            );
+
+            if window_mosaic.load(&fs::read(file.clone()).unwrap()).is_ok() {
+                Self::prepend_recent(file);
+                self.editor_mosaic.request_quadtree_update();
+            } else {
+                self.editor_mosaic.make_error(
+                    &format!(
+                        "Cannot open file path {}: invalid format",
+                        file.as_path().to_str().unwrap_or_default()
+                    ),
+                    None,
+                    None,
+                );
+                self.close_window(window.window_tile.clone());
+            }
+        }
+    }
+
     fn open_files(&mut self) {
         if let Some(files) = rfd::FileDialog::new()
             .add_filter("Mosaic", &["mos"])
@@ -587,18 +544,7 @@ impl GraspEditorState {
             .pick_files()
         {
             for file in files {
-                self.new_window(Some(&file));
-                let window = self.window_list.windows.front().unwrap();
-                let window_mosaic = &window.document_mosaic;
-
-                Self::prepare_mosaic(
-                    &window.component_mosaic,
-                    &self.editor_mosaic,
-                    Arc::clone(window_mosaic),
-                );
-
-                window_mosaic.load(&fs::read(file).unwrap()).unwrap();
-                self.editor_mosaic.request_quadtree_update();
+                self.open_file(file);
             }
         }
     }
@@ -612,6 +558,18 @@ impl GraspEditorState {
             if s.menu_item("Open") {
                 self.open_files();
             }
+
+            if let Some(_t) = s.begin_menu("Recent") {
+                if let Ok(recent_list) = fs::read_to_string("env\\recent.txt") {
+                    for entry in recent_list.lines().map(|s| s.to_string()) {
+                        if s.menu_item(&entry) {
+                            self.open_file(entry.into());
+                        }
+                    }
+                }
+            }
+
+            s.separator();
 
             if s.menu_item("Save") {
                 self.save_file();
@@ -711,6 +669,7 @@ pub fn color_property_renderer(ui: &GuiState, _window: &mut GraspEditorWindow, t
     tile.set("a", input[3]);
 }
 
+#[allow(dead_code)]
 pub fn selection_property_renderer(ui: &GuiState, window: &mut GraspEditorWindow, tile: Tile) {
     if let Some(color) = tile.get_component("Color") {
         assert!(tile.mosaic.is_tile_valid(&color));
@@ -720,6 +679,7 @@ pub fn selection_property_renderer(ui: &GuiState, window: &mut GraspEditorWindow
     }
 }
 
+#[allow(dead_code)]
 pub fn selected_property_renderer(
     ui: &GuiState,
     window: &mut GraspEditorWindow,
@@ -792,10 +752,9 @@ fn draw_property_value<T: Display + FromStr + ToByteArray>(
     let mut text = format!("{}", t);
     let previous_text = format!("{}", t);
 
-    let mut committed = false;
-    match datatype {
+    let committed = match datatype {
         Datatype::S32 => {
-            committed = state
+            let committed = state
                 .ui
                 .input_text(format!("{}##{}", name, id), &mut text)
                 .auto_select_all(true)
@@ -805,11 +764,13 @@ fn draw_property_value<T: Display + FromStr + ToByteArray>(
             if text.len() >= 32 {
                 text = text[0..32].to_string();
             }
+
+            committed
         }
 
         Datatype::STR => {
             let rect = state.ui.content_region_avail();
-            committed = state
+            let committed = state
                 .ui
                 .input_text_multiline(
                     format!("{}##{}", name, id),
@@ -819,16 +780,16 @@ fn draw_property_value<T: Display + FromStr + ToByteArray>(
                 .auto_select_all(true)
                 .enter_returns_true(true)
                 .build();
+
+            committed
         }
 
-        _ => {
-            committed = state
-                .ui
-                .input_text(format!("{}##{}", name, id), &mut text)
-                .auto_select_all(true)
-                .enter_returns_true(true)
-                .build();
-        }
+        _ => state
+            .ui
+            .input_text(format!("{}##{}", name, id), &mut text)
+            .auto_select_all(true)
+            .enter_returns_true(true)
+            .build(),
     };
 
     state

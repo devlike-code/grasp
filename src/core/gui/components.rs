@@ -3,9 +3,7 @@ use crate::{
     editor_state::{
         foundation::GraspEditorState,
         selection::{pick_n_renderer, selection_renderer},
-        view::{
-            color_property_renderer, selected_property_renderer, two_float_property_xy_renderer,
-        },
+        view::{color_property_renderer, two_float_property_xy_renderer},
     },
     transformers::{
         has_component_renderer, on_pattern_match_deleted, on_pattern_match_element_deleted,
@@ -119,9 +117,4 @@ pub fn setup_component_renderers(instance: &mut GraspEditorState) {
     instance
         .component_property_renderers
         .insert("Color".into(), Box::new(color_property_renderer));
-
-    // instance.component_property_renderers.insert(
-    //     "SelectionOwner".into(),
-    //     Box::new(selected_property_renderer),
-    // );
 }

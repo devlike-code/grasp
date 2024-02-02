@@ -23,8 +23,7 @@ use crate::{
 use mosaic::{
     capabilities::{ArchetypeSubject, SelectionCapability},
     internals::{
-        par, pars, void, ComponentValuesBuilderSetter, EntityId, Mosaic, MosaicCRUD, MosaicIO,
-        MosaicTypelevelCRUD, Tile,
+        par, pars, void, ComponentValuesBuilderSetter, EntityId, Mosaic, MosaicCRUD, MosaicIO, Tile,
     },
     iterators::tile_getters::TileGetters,
 };
@@ -53,8 +52,6 @@ fn find_candidates_by_degrees(
     let mut in_degree_mmap = ListOrderedMultimap::new();
     let mut out_degree_mmap = ListOrderedMultimap::new();
     let mut loop_degree_mmap = ListOrderedMultimap::new();
-
-    let mosaic = &target.mosaic;
 
     for target_node in target.get_objects() {
         let loop_degree = target.get_self_loops(&target_node).len();
@@ -261,7 +258,7 @@ pub fn pattern_match(match_process: &ProcedureTile) -> anyhow::Result<Tile> {
 
     // mosaic.make_snapshot_step("pm_assigned_candidates_and_tested");
 
-    for (i, result) in results.clone().iter().enumerate() {
+    for (_i, result) in results.clone().iter().enumerate() {
         let mut values = HashSet::new();
 
         for v in result.values() {
@@ -758,7 +755,7 @@ pub fn pattern_match_result_renderer(
 pub fn pattern_match_renderer_laser(
     _s: &GuiState,
     window: &mut GraspEditorWindow,
-    input: Tile,
+    _input: Tile,
     painter: &mut DrawListMut<'_>,
 ) {
     if let Some(chosen_result) = window

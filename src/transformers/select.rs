@@ -7,11 +7,9 @@ use mosaic::{
 };
 
 use crate::{
-    core::math::Vec2,
     editor_state::{
         foundation::TransformerState, selection::SelectionTile, windows::GraspEditorWindow,
     },
-    utilities::PosQuery,
     GuiState,
 };
 
@@ -87,8 +85,6 @@ pub fn select(
         for selected in initial_state {
             selected.add_component("Selected", par(selection.id as u64));
         }
-
-        let selection = SelectionTile::from_tile(selection);
     }
 
     TransformerState::Valid
