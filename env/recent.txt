@@ -1,2 +1,4 @@
+C:\Projects\grasp\arrow.mos
+C:\Projects\grasp\bintree.mos
 C:\Projects\grasp\pm2.mos
 C:\Projects\grasp\my_enum.mos

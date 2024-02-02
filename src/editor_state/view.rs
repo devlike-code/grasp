@@ -491,7 +491,7 @@ impl GraspEditorState {
         }
     }
 
-    fn prepend_recent(file: PathBuf) {
+    pub fn prepend_recent(file: PathBuf) {
         let path = file.to_str().unwrap().to_string();
         let mut recent = vec![];
         if let Ok(recent_list) = fs::read_to_string("env\\recent.txt") {

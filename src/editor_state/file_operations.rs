@@ -33,6 +33,9 @@ impl SaveFileCapability for GraspEditorWindow {
     fn save_file(&mut self) {
         if self.path.is_none() {
             self.save_file_as();
+            if let Some(path) = self.path.clone() {
+                GraspEditorState::prepend_recent(path);
+            }
         } else {
             let document = self.document_mosaic.save();
             fs::write(self.path.clone().unwrap(), document).unwrap();
