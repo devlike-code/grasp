@@ -65,7 +65,10 @@ impl GraspEditorState {
             }
         }
 
-        self.show_hierarchy(s);
+        if self.show_hierarchy {
+            self.show_hierarchy(s);
+        }
+        
         self.show_properties(s);
         self.show_menu_bar(s);
 
@@ -501,6 +504,11 @@ impl GraspEditorState {
             if let Some(_f) = s.begin_menu("View") {
                 self.show_view_menu(s);
             }
+
+            if let Some(_f) = s.begin_menu("Windows") {
+                self.show_windows_menu(s);
+            }
+
             m.end();
         }
     }
@@ -636,6 +644,52 @@ impl GraspEditorState {
                 window.grid_visible = !window.grid_visible;
             }
         }
+    }
+
+    fn show_windows_menu(&mut self, s: &GuiState) {
+        let hierarchy_on = if self.show_hierarchy { "X" } else { " " };
+
+        if s.ui.button(format!("[{}] Hierarchy", hierarchy_on)) {
+            self.show_hierarchy = !self.show_hierarchy;
+            if self.show_hierarchy {
+                self.show_hierarchy(s);
+            }
+        }
+
+        s.ui.separator();
+        s.ui.separator();
+
+        if s.ui.button("[+] New Window") {
+            self.new_window(None);
+        }
+
+        let items = self
+            .window_list
+            .named_windows
+            .iter()
+            .map(|w| w.as_str())
+            .collect_vec();
+
+        let mut i = if let Some(selected_window) = self.window_list.windows.front() {
+            self.window_list
+                .named_windows
+                .iter()
+                .position(|n| n == &selected_window.name)
+                .unwrap() as i32
+        } else {
+            -1i32
+        };
+        s.ui.set_next_item_width(-1.0);
+        let color =
+            s.ui.push_style_color(StyleColor::FrameBg, [0.1, 0.1, 0.15, 1.0]);
+
+        if s.ui.list_box("##window-list", &mut i, items.as_slice(), 20) {
+            let item: &str = items.get(i as usize).unwrap();
+            self.require_named_window_focus(item);
+            println!("Focus on {}", item);
+        }
+
+        color.end();
     }
 }
 
