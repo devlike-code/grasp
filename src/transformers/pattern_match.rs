@@ -530,7 +530,10 @@ pub fn pattern_match_tool(
     _initial_state: &[Tile],
     _tile: &Tile,
 ) -> TransformerState {
-    ui.window("Pattern Match")
+    let mut opened = true;
+    let state = ui
+        .window("Pattern Match")
+        .opened(&mut opened)
         .build(|| {
             let pick1 = window
                 .document_mosaic
@@ -635,7 +638,13 @@ pub fn pattern_match_tool(
 
             TransformerState::Running
         })
-        .unwrap_or(TransformerState::Running)
+        .unwrap_or(TransformerState::Running);
+
+    if !opened {
+        TransformerState::Cancelled
+    } else {
+        state
+    }
 }
 
 pub fn pattern_match_property_renderer(s: &GuiState, window: &mut GraspEditorWindow, input: Tile) {

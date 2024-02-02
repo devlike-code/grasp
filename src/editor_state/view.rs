@@ -9,7 +9,8 @@ use std::{
 };
 
 use imgui::{
-    Condition, DrawListMut, ImString, MouseButton, StyleColor, TreeNodeToken, WindowFlags,
+    sys::igBegin, Condition, DrawListMut, ImString, MouseButton, StyleColor, TreeNodeToken,
+    WindowFlags,
 };
 use itertools::Itertools;
 use log::error;
@@ -24,7 +25,10 @@ use mosaic::{
 
 use crate::{
     core::{
-        gui::{docking::GuiViewport, windowing::gui_set_window_focus},
+        gui::{
+            docking::{gui_str, GuiViewport},
+            windowing::gui_set_window_focus,
+        },
         math::{Rect2, Vec2},
         structures::{grasp_queues, ErrorCapability},
     },
@@ -88,6 +92,7 @@ impl GraspEditorState {
         let front_window_id = self.window_list.windows.front().map(|w| w.window_tile.id);
 
         for window_index in 0..len {
+            let mut opened = true;
             let (window_name, window_id, changed) = {
                 let window = self.window_list.windows.get(window_index).unwrap();
                 (window.name.clone(), window.window_tile.id, window.changed)
@@ -98,7 +103,7 @@ impl GraspEditorState {
             } else {
                 w = w.flags(WindowFlags::NO_COLLAPSE);
             }
-
+            w = w.opened(&mut opened);
             w.size_constraints([320.0, 240.0], [1024.0, 768.0])
                 .scroll_bar(false)
                 .size([700.0, 500.0], imgui::Condition::Appearing)
@@ -200,6 +205,15 @@ impl GraspEditorState {
                         grasp_queues::enqueue(CloseWindowRequestQueue, request);
                     }
                 });
+
+            if !opened {
+                // close was clicked
+                let window = self.window_list.windows.get_mut(window_index).unwrap();
+                let request = window
+                    .editor_mosaic
+                    .new_object("CloseWindowRequest", void());
+                grasp_queues::enqueue(CloseWindowRequestQueue, request);
+            }
 
             self.window_list
                 .windows
@@ -609,12 +623,6 @@ impl GraspEditorState {
 
         if s.menu_item(format!("[{}] Show Tab View", tabview_on)) {
             self.show_tabview = !self.show_tabview;
-        }
-
-        if s.menu_item(format!("[{}] Toggle Ruler", ruler_on)) {
-            if let Some(window) = self.window_list.windows.front_mut() {
-                window.ruler_visible = !window.ruler_visible;
-            }
         }
 
         if s.menu_item(format!("[{}] Toggle Debug Draw", debug_on)) {
