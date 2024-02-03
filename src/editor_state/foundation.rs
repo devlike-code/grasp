@@ -1,6 +1,6 @@
 use std::{
     collections::{HashMap, HashSet},
-    fs,
+    fs::{self},
     path::PathBuf,
     sync::{Arc, Mutex},
 };
@@ -16,9 +16,13 @@ use mosaic::{
 };
 use quadtree_rs::Quadtree;
 use select::deselect;
+use serde::{Deserialize, Serialize};
 
 use crate::{
-    core::{gui::components::setup_component_renderers, math::Rect2},
+    core::{
+        gui::components::{setup_component_renderers, setup_file_importers},
+        math::Rect2,
+    },
     editor_state::{helpers::RequireWindowFocus, windows::GraspEditorWindow},
     editor_state_machine::EditorState,
     grasp_editor_window_list::GraspEditorWindowList,
@@ -30,7 +34,7 @@ use crate::{
 use super::{
     categories::ComponentCategory,
     network::Networked,
-    view::{ComponentPropertyRenderer, ComponentRenderer, DeleteReaction},
+    view::{ComponentPropertyRenderer, ComponentRenderer, DeleteReaction, FileImporter},
 };
 
 #[derive(PartialEq, Eq, PartialOrd, Ord)]
@@ -38,7 +42,7 @@ pub enum TransformerState {
     #[allow(dead_code)]
     Running,
     Cancelled,
-    Valid,
+    Done,
 }
 
 pub type TransformerFn =
@@ -48,11 +52,45 @@ pub struct Transformer {
     pub transform_function: TransformerFn,
 }
 
+#[derive(Deserialize, Serialize, Clone, Copy, PartialEq, PartialOrd)]
+pub struct EditorOptions {
+    pub toggle_tabview: bool,
+    pub toggle_hierarchy: bool,
+    pub toggle_properties: bool,
+    pub toggle_errors: bool,
+}
+
+impl Default for EditorOptions {
+    fn default() -> Self {
+        let mut def = Self {
+            toggle_tabview: false,
+            toggle_hierarchy: false,
+            toggle_properties: false,
+            toggle_errors: false,
+        };
+
+        if let Ok(config_content) = fs::read_to_string("env\\config.ron") {
+            if let Ok(config) = ron::from_str::<EditorOptions>(&config_content) {
+                def = config;
+            }
+        }
+
+        def
+    }
+}
+
+impl EditorOptions {
+    pub fn save(&self) {
+        let _ = fs::write("env\\config.ron", ron::to_string(&self).unwrap().as_bytes());
+    }
+}
+
 #[allow(dead_code)]
 pub struct GraspEditorState {
     pub editor_mosaic: Arc<Mosaic>,
     pub component_mosaic: Arc<Mosaic>,
     pub transformer_mosaic: Arc<Mosaic>,
+    pub file_importers: HashMap<String, FileImporter>,
     pub component_delete_reactions: HashMap<String, DeleteReaction>,
     pub component_entity_renderers: HashMap<String, ComponentRenderer>,
     pub hidden_property_renderers: HashSet<String>,
@@ -62,8 +100,7 @@ pub struct GraspEditorState {
     pub new_tab_request_queue: QueueTile,
     pub refresh_quadtree_queue: QueueTile,
     pub locked_components: Vec<S32>,
-    pub show_tabview: bool,
-    pub show_hierarchy: bool,
+    pub editor_options: EditorOptions,
     pub properties_hovered: bool,
     pub queued_component_delete: Option<usize>,
     pub transformer_functions: HashMap<String, Transformer>,
@@ -141,12 +178,12 @@ impl GraspEditorState {
             editor_state_tile,
             new_tab_request_queue: new_window_request_queue,
             refresh_quadtree_queue,
+            file_importers: HashMap::default(),
             window_list: GraspEditorWindowList::new(&editor_mosaic),
             editor_mosaic,
             component_mosaic,
             transformer_mosaic,
-            show_tabview: false,
-            show_hierarchy: false,
+            editor_options: EditorOptions::default(),
             properties_hovered: false,
             queued_component_delete: None,
             locked_components: vec![
@@ -162,6 +199,7 @@ impl GraspEditorState {
         };
 
         setup_component_renderers(&mut instance);
+        setup_file_importers(&mut instance);
 
         instance.initialize_networked();
         instance.load_transformers();

@@ -158,7 +158,7 @@ impl GraspEditorWindow {
         }
     }
 
-    pub fn create_new_object(&mut self, pos: Vec2) {
+    pub fn create_new_object(&mut self, pos: Vec2) -> Tile {
         self.document_mosaic.new_type("Node: unit;").unwrap();
 
         let obj = self.document_mosaic.new_object("Node", void());
@@ -190,10 +190,12 @@ impl GraspEditorWindow {
 
         self.insert_into_quadtree(region, obj.clone());
         self.insert_into_quadtree(label_region, label_tile);
-        self.editor_data.selected = vec![obj];
+        self.editor_data.selected = vec![obj.clone()];
+
+        obj
     }
 
-    pub fn create_new_arrow(&mut self, source: &Tile, target: &Tile, middle_pos: Vec2) {
+    pub fn create_new_arrow(&mut self, source: &Tile, target: &Tile, middle_pos: Vec2) -> Tile {
         let arr = self
             .document_mosaic
             .new_arrow(source, target, "Arrow", void());
@@ -244,6 +246,7 @@ impl GraspEditorWindow {
         self.insert_into_quadtree(region, arr.clone());
         self.insert_into_quadtree(label_region, label_tile);
 
-        self.editor_data.selected = vec![arr];
+        self.editor_data.selected = vec![arr.clone()];
+        arr
     }
 }

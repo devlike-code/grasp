@@ -420,7 +420,7 @@ impl GraspEditorState {
                                 w.trigger(EditorStateTrigger::TransformerCancelled)
                             }
                         }
-                        TransformerState::Valid => {
+                        TransformerState::Done => {
                             if let Some(w) = self.window_list.get_by_id_mut(window_index) {
                                 self.pending_transform_window_request
                                     .as_ref()

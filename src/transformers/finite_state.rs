@@ -139,7 +139,7 @@ pub fn finite_state_transformer(
         }
     }
 
-    TransformerState::Valid
+    TransformerState::Done
 }
 
 #[allow(clippy::upper_case_acronyms)]

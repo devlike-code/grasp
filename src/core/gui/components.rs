@@ -5,11 +5,20 @@ use crate::{
         selection::{pick_n_renderer, selection_renderer},
         view::{color_property_renderer, two_float_property_xy_renderer},
     },
+    importers::cpp_importer,
     transformers::{
         has_component_renderer, on_pattern_match_deleted, on_pattern_match_element_deleted,
         on_selected_delete, pattern_match_property_renderer, pattern_match_renderer,
     },
 };
+
+pub fn setup_file_importers(instance: &mut GraspEditorState) {
+    for key in ["c", "cpp", "h", "hpp"] {
+        instance
+            .file_importers
+            .insert(key.to_string(), Box::new(cpp_importer));
+    }
+}
 
 pub fn setup_component_renderers(instance: &mut GraspEditorState) {
     for i in 1..=5 {

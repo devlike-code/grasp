@@ -58,10 +58,10 @@ fn find_candidates_by_degrees(
         let in_degree = target.in_degree(&target_node) - loop_degree;
         let out_degree = target.out_degree(&target_node) - loop_degree;
 
-        println!(
-            "\t\tTARGET {:?} {} {} {}",
-            target_node, in_degree, out_degree, loop_degree
-        );
+        // println!(
+        //     "\t\tTARGET {:?} {} {} {}",
+        //     target_node, in_degree, out_degree, loop_degree
+        // );
 
         for i in 0..=in_degree {
             in_degree_mmap.append(i, target_node.id);
@@ -78,24 +78,24 @@ fn find_candidates_by_degrees(
         state.loops.insert(target_node.id, loop_degree);
     }
 
-    println!("\t\t-----------------------",);
+    //println!("\t\t-----------------------",);
     for pattern_node in pattern.get_objects() {
         let loops = pattern.get_self_loops(&pattern_node);
         let loop_degree = loops.len();
         let in_degree = pattern.in_degree(&pattern_node) - loop_degree;
         let out_degree = pattern.out_degree(&pattern_node) - loop_degree;
 
-        println!(
-            "\t\tPATTERN {:?} {} {} {}",
-            pattern_node, in_degree, out_degree, loop_degree
-        );
+        // println!(
+        //     "\t\tPATTERN {:?} {} {} {}",
+        //     pattern_node, in_degree, out_degree, loop_degree
+        // );
         let in_candidates = in_degree_mmap.get_all(&in_degree).collect_vec();
         let out_candidates = out_degree_mmap.get_all(&out_degree).collect_vec();
         let loop_candidates = loop_degree_mmap.get_all(&loop_degree).collect_vec();
 
-        warn!("\t\tIN CAND:   {:?}", in_candidates);
-        warn!("\t\tOUT CAND:  {:?}", out_candidates);
-        warn!("\t\tLOOP CAND: {:?}", loop_candidates);
+        // warn!("\t\tIN CAND:   {:?}", in_candidates);
+        // warn!("\t\tOUT CAND:  {:?}", out_candidates);
+        // warn!("\t\tLOOP CAND: {:?}", loop_candidates);
 
         in_candidates
             .intersect(out_candidates)
@@ -117,10 +117,10 @@ fn assign_candidate_and_test(
     bindings: &mut HashMap<EntityId, EntityId>,
     results: &mut Vec<HashMap<EntityId, EntityId>>,
 ) {
-    warn!(
-        "ASSIGN CANDIDATE AND TEST: {:?} {:?}\nREMAINING: {:?}\n",
-        bindings, results, remaining_candidates
-    );
+    // warn!(
+    //     "ASSIGN CANDIDATE AND TEST: {:?} {:?}\nREMAINING: {:?}\n",
+    //     bindings, results, remaining_candidates
+    // );
     if let Some((head, tail)) = remaining_candidates.split_first() {
         for binding in state.pattern_candidates.get_all(head) {
             bindings.insert(*head, *binding);
@@ -128,10 +128,10 @@ fn assign_candidate_and_test(
             bindings.remove(head);
         }
     } else {
-        warn!(
-            "\n\t*********** NO REMAINING CANDIDATES. TESTING {:?}",
-            bindings
-        );
+        // warn!(
+        //     "\n\t*********** NO REMAINING CANDIDATES. TESTING {:?}",
+        //     bindings
+        // );
         let traversal = mosaic.traverse(
             bindings
                 .values()
@@ -142,7 +142,7 @@ fn assign_candidate_and_test(
 
         let candidates = find_candidates_by_degrees(pattern, &traversal).candidates;
         let candidates_found = candidates.keys_len();
-        warn!("\nBY DEGREES ({}): {:?}", candidates_found, candidates);
+        //warn!("\nBY DEGREES ({}): {:?}", candidates_found, candidates);
 
         if candidates_found == bindings.len() {
             results.push(HashMap::from_iter(
@@ -152,7 +152,7 @@ fn assign_candidate_and_test(
                     .collect_vec(),
             ));
 
-            warn!("\tRESULTS FOUND: {:?}", bindings,);
+            //warn!("\tRESULTS FOUND: {:?}", bindings,);
         }
     }
 }
@@ -287,7 +287,8 @@ pub fn pattern_match(match_process: &ProcedureTile) -> anyhow::Result<Tile> {
             continue;
         }
 
-        let bindings = mosaic.make_list();
+        let mut bindings_vec = vec![];
+
         for (k, v) in result {
             let _ = mosaic.get(*k).map(|k| {
                 if k.get_component("PatternMatchElement").is_none() {
@@ -301,10 +302,16 @@ pub fn pattern_match(match_process: &ProcedureTile) -> anyhow::Result<Tile> {
                 }
             });
             let binding_pair = mosaic.make_pair(k, v);
-            bindings.add_back(&binding_pair);
+            bindings_vec.push(binding_pair);
         }
 
-        match_process.add_result(&bindings);
+        if !bindings_vec.is_empty() {
+            let bindings = mosaic.make_list();
+            for binding in bindings_vec {
+                bindings.add_back(binding);
+            }
+            match_process.add_result(&bindings);
+        }
     }
 
     // mosaic.make_snapshot_step("pm_created_bindings");
@@ -606,8 +613,6 @@ pub fn pattern_match_tool(
                             }
                         }
 
-                        pick1.unwrap().iter().delete();
-                        pick2.unwrap().iter().delete();
                         window.editor_data.selected = vec![p.0];
                     }
                     Err(e) => {
@@ -624,7 +629,7 @@ pub fn pattern_match_tool(
                     t.end()
                 }
 
-                return TransformerState::Valid;
+                return TransformerState::Running;
             }
 
             if let Some(t) = token {
@@ -632,8 +637,23 @@ pub fn pattern_match_tool(
             }
 
             ui.same_line();
-            if ui.button_with_size("Cancel", [100.0, 20.0]) {
-                return TransformerState::Cancelled;
+            if ui.button_with_size("Clear", [100.0, 20.0]) {
+                window.delete_tiles(
+                    window
+                        .document_mosaic
+                        .get_all()
+                        .include_component("PatternMatch")
+                        .get_targets()
+                        .as_slice(),
+                );
+
+                window
+                    .document_mosaic
+                    .get_all()
+                    .include_component("PatternMatchShow")
+                    .delete();
+                pick1.unwrap().iter().delete();
+                pick2.unwrap().iter().delete();
             }
 
             TransformerState::Running
@@ -641,7 +661,7 @@ pub fn pattern_match_tool(
         .unwrap_or(TransformerState::Running);
 
     if !opened {
-        TransformerState::Cancelled
+        TransformerState::Done
     } else {
         state
     }

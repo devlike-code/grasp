@@ -9,7 +9,7 @@ use std::{
 };
 
 use imgui::{
-    sys::igBegin, Condition, DrawListMut, ImString, MouseButton, StyleColor, TreeNodeToken,
+    CollapsingHeader, Condition, DrawListMut, ImString, MouseButton, StyleColor, TreeNodeFlags,
     WindowFlags,
 };
 use itertools::Itertools;
@@ -25,10 +25,7 @@ use mosaic::{
 
 use crate::{
     core::{
-        gui::{
-            docking::{gui_str, GuiViewport},
-            windowing::gui_set_window_focus,
-        },
+        gui::{docking::GuiViewport, windowing::gui_set_window_focus},
         math::{Rect2, Vec2},
         structures::{grasp_queues, ErrorCapability},
     },
@@ -45,6 +42,7 @@ use super::{
     windows::GraspEditorWindow,
 };
 
+pub type FileImporter = Box<dyn Fn(&mut GraspEditorWindow, String, PathBuf) + Send + Sync>;
 pub type DeleteReaction = Box<dyn Fn(&mut GraspEditorWindow, String, &Tile) + Send + Sync>;
 
 pub type ComponentRenderer =
@@ -65,27 +63,23 @@ impl GraspEditorState {
             }
         }
 
-        if self.show_hierarchy {
+        if self.editor_options.toggle_hierarchy {
             self.show_hierarchy(s);
         }
-        
-        self.show_properties(s);
+
+        if self.editor_options.toggle_properties {
+            self.show_properties(s);
+        }
+
         self.show_menu_bar(s);
 
         let mut caught_events = vec![];
 
         self.show_windows(s, &mut caught_events);
 
-        self.show_errors(s);
-
-        // TODO: FIX LATER
-        // if self.pending_close_window_request.is_none()
-        //     && !caught_events.contains(&hash_input("double click left"))
-        //     && s.ui.is_mouse_double_clicked(imgui::MouseButton::Left)
-        //     && s.ui.get
-        // {
-        //     self.open_files();
-        // }
+        if self.editor_options.toggle_errors {
+            self.show_errors(s);
+        }
 
         caught_events.clear();
     }
@@ -319,11 +313,26 @@ impl GraspEditorState {
             t: &'a S,
             bullet: bool,
             open: bool,
-        ) -> Option<TreeNodeToken<'a>> {
-            s.ui.tree_node_config(t.as_ref())
-                .default_open(open)
-                .bullet(bullet)
-                .push()
+        ) -> Option<bool> {
+            let mut opened = true;
+            let mut flags = TreeNodeFlags::empty();
+            if bullet {
+                flags = flags.intersection(TreeNodeFlags::BULLET);
+            }
+
+            if open {
+                flags = flags.intersection(TreeNodeFlags::DEFAULT_OPEN);
+            }
+
+            let state = CollapsingHeader::new(t.as_ref())
+                .flags(flags)
+                .build_with_close_button(s.ui, &mut opened);
+
+            if state {
+                Some(opened)
+            } else {
+                None
+            }
         }
 
         let viewport = GuiViewport::get_main_viewport();
@@ -349,12 +358,10 @@ impl GraspEditorState {
 
                 if !selected.is_empty() {
                     for selected_tile in selected {
-                        if let Some(_node_token) = tree(
-                            s,
-                            &format!("Entity {}##{}-header", selected_tile.id, selected_tile.id),
-                            false,
-                            true,
-                        ) {
+                        let title =
+                            &format!("Entity {}##{}-header", selected_tile.id, selected_tile.id);
+
+                        if let Some(_) = tree(s, title, false, true) {
                             s.ui.separator();
                             for (part, tiles) in &selected_tile
                                 .get_full_archetype()
@@ -366,10 +373,10 @@ impl GraspEditorState {
                                     if let Some(renderer) =
                                         self.component_property_renderers.get(part)
                                     {
-                                        if let Some(_subnode_token) =
-                                            tree(s, &part.to_string(), false, true)
-                                        {
+                                        if let Some(_) = tree(s, &part.to_string(), false, true) {
                                             renderer(s, focused_window, part_tile.clone());
+                                        } else {
+                                            // delete component
                                         }
                                     } else {
                                         let is_bullet = {
@@ -385,7 +392,7 @@ impl GraspEditorState {
                                                     == Datatype::UNIT
                                         };
 
-                                        if let Some(_subnode_token) = tree(
+                                        if let Some(_) = tree(
                                             s,
                                             &part.to_string(),
                                             is_bullet,
@@ -400,6 +407,8 @@ impl GraspEditorState {
                                     }
                                 }
                             }
+                        } else {
+                            // delete entity
                         }
 
                         s.ui.spacing();
@@ -417,77 +426,75 @@ impl GraspEditorState {
                             > 0
                     };
 
-                    if is_meta_present {
-                        if let Some(_subnode_token) = tree(s, &"Meta", false, true) {
-                            for o in focused_window
-                                .document_mosaic
-                                .get_all()
-                                .filter_objects()
-                                .exclude_component("Node")
-                            {
-                                if let Some(_subnode_token) = tree(
-                                    s,
-                                    &format!("[META] Entity {}##{}-header", o.id, o.id),
-                                    false,
-                                    true,
-                                ) {
-                                    for (component, tiles) in &o
-                                        .get_full_archetype()
-                                        .into_iter()
-                                        .sorted_by(|a, b| (a.1.first().cmp(&b.1.first())))
-                                        .collect_vec()
-                                    {
-                                        for tile in tiles.iter().sorted_by(|a, b| a.id.cmp(&b.id)) {
-                                            if let Some(renderer) =
-                                                self.component_property_renderers.get(component)
-                                            {
-                                                if let Some(_subnode_token) = tree(
-                                                    s,
-                                                    &component.to_string(),
-                                                    false,
-                                                    !self
-                                                        .hidden_property_renderers
-                                                        .contains(component),
-                                                ) {
-                                                    renderer(s, focused_window, tile.clone());
-                                                }
-                                            } else if let Some(_subnode_token) = tree(
+                    if is_meta_present && s.ui.collapsing_header("Meta", TreeNodeFlags::empty()) {
+                        for o in focused_window
+                            .document_mosaic
+                            .get_all()
+                            .filter_objects()
+                            .exclude_component("Node")
+                        {
+                            if let Some(_) = tree(
+                                s,
+                                &format!("[META] Entity {}##{}-header", o.id, o.id),
+                                false,
+                                true,
+                            ) {
+                                for (component, tiles) in &o
+                                    .get_full_archetype()
+                                    .into_iter()
+                                    .sorted_by(|a, b| (a.1.first().cmp(&b.1.first())))
+                                    .collect_vec()
+                                {
+                                    for tile in tiles.iter().sorted_by(|a, b| a.id.cmp(&b.id)) {
+                                        if let Some(renderer) =
+                                            self.component_property_renderers.get(component)
+                                        {
+                                            if let Some(_) = tree(
                                                 s,
                                                 &component.to_string(),
                                                 false,
                                                 !self.hidden_property_renderers.contains(component),
                                             ) {
-                                                let is_locked = self
-                                                    .locked_components
-                                                    .contains(&tile.component);
-                                                let is_header_covered = s.ui.is_item_hovered();
-                                                let is_header_clicked =
-                                                    s.ui.is_item_clicked_with_button(
-                                                        MouseButton::Right,
-                                                    );
-
-                                                if !is_locked
-                                                    && is_header_covered
-                                                    && is_header_clicked
-                                                {
-                                                    self.queued_component_delete = Some(tile.id);
-                                                    s.ui.open_popup("component-menu");
-                                                }
-
-                                                draw_default_property_renderer(
-                                                    s,
-                                                    focused_window,
-                                                    tile.clone(),
-                                                );
+                                                renderer(s, focused_window, tile.clone());
+                                            } else {
+                                                // delete meta component
                                             }
+                                        } else if let Some(_) = tree(
+                                            s,
+                                            &component.to_string(),
+                                            false,
+                                            !self.hidden_property_renderers.contains(component),
+                                        ) {
+                                            let is_locked =
+                                                self.locked_components.contains(&tile.component);
+                                            let is_header_covered = s.ui.is_item_hovered();
+                                            let is_header_clicked = s
+                                                .ui
+                                                .is_item_clicked_with_button(MouseButton::Right);
+
+                                            if !is_locked && is_header_covered && is_header_clicked
+                                            {
+                                                self.queued_component_delete = Some(tile.id);
+                                                s.ui.open_popup("component-menu");
+                                            }
+
+                                            draw_default_property_renderer(
+                                                s,
+                                                focused_window,
+                                                tile.clone(),
+                                            );
+                                        } else {
+                                            // delete component
                                         }
                                     }
                                 }
-
-                                s.ui.spacing();
-                                s.ui.spacing();
-                                s.ui.separator();
+                            } else {
+                                // delete meta
                             }
+
+                            s.ui.spacing();
+                            s.ui.spacing();
+                            s.ui.separator();
                         }
                     }
                 }
@@ -559,6 +566,36 @@ impl GraspEditorState {
         }
     }
 
+    fn import_file(&mut self, file: PathBuf) {
+        if fs::metadata(file.clone()).is_ok() {
+            let extension = file
+                .clone()
+                .extension()
+                .map(|s| s.to_str().unwrap().to_string())
+                .unwrap_or_default();
+
+            if self.file_importers.contains_key(&extension) {
+                self.new_window(Some(&file));
+                let window = self.window_list.windows.front_mut().unwrap();
+                let window_mosaic = &window.document_mosaic;
+
+                Self::prepare_mosaic(
+                    &window.component_mosaic,
+                    &self.editor_mosaic,
+                    Arc::clone(window_mosaic),
+                );
+
+                self.file_importers.get(&extension).unwrap()(
+                    window,
+                    fs::read_to_string(file.clone()).unwrap(),
+                    file.clone(),
+                );
+                Self::prepend_recent(file);
+                self.editor_mosaic.request_quadtree_update();
+            }
+        }
+    }
+
     fn open_files(&mut self) {
         if let Some(files) = rfd::FileDialog::new()
             .add_filter("Mosaic", &["mos"])
@@ -567,6 +604,17 @@ impl GraspEditorState {
         {
             for file in files {
                 self.open_file(file);
+            }
+        }
+    }
+
+    fn import_files(&mut self) {
+        if let Some(files) = rfd::FileDialog::new()
+            .set_directory(env::current_dir().unwrap())
+            .pick_files()
+        {
+            for file in files {
+                self.import_file(file);
             }
         }
     }
@@ -581,11 +629,19 @@ impl GraspEditorState {
                 self.open_files();
             }
 
+            if s.menu_item("Import") {
+                self.import_files();
+            }
+
             if let Some(_t) = s.begin_menu("Recent") {
                 if let Ok(recent_list) = fs::read_to_string("env\\recent.txt") {
                     for entry in recent_list.lines().map(|s| s.to_string()) {
                         if s.menu_item(&entry) {
-                            self.open_file(entry.into());
+                            if entry.ends_with("mos") {
+                                self.open_file(entry.into());
+                            } else {
+                                self.import_file(entry.into());
+                            }
                         }
                     }
                 }
@@ -620,8 +676,12 @@ impl GraspEditorState {
     }
 
     fn show_view_menu(&mut self, s: &GuiState) {
-        let tabview_on = if self.show_tabview { "X" } else { " " };
-        let (grid_on, debug_on, ruler_on) = {
+        let tabview_on = if self.editor_options.toggle_tabview {
+            "X"
+        } else {
+            " "
+        };
+        let (grid_on, debug_on, _ruler_on) = {
             let front = self.window_list.windows.front();
             let grid_on = Self::xo(front.map(|m| m.grid_visible));
             let debug_on = Self::xo(front.map(|m| m.editor_data.debug));
@@ -630,7 +690,8 @@ impl GraspEditorState {
         };
 
         if s.menu_item(format!("[{}] Show Tab View", tabview_on)) {
-            self.show_tabview = !self.show_tabview;
+            self.editor_options.toggle_tabview = !self.editor_options.toggle_tabview;
+            self.editor_options.save();
         }
 
         if s.menu_item(format!("[{}] Toggle Debug Draw", debug_on)) {
@@ -642,24 +703,46 @@ impl GraspEditorState {
         if s.menu_item(format!("[{}] Toggle Grid", grid_on)) {
             if let Some(window) = self.window_list.windows.front_mut() {
                 window.grid_visible = !window.grid_visible;
+                self.editor_options.save();
             }
         }
     }
 
     fn show_windows_menu(&mut self, s: &GuiState) {
-        let hierarchy_on = if self.show_hierarchy { "X" } else { " " };
+        let hierarchy_on = if self.editor_options.toggle_hierarchy {
+            "X"
+        } else {
+            " "
+        };
+        if s.ui.menu_item(format!("[{}] Hierarchy", hierarchy_on)) {
+            self.editor_options.toggle_hierarchy = !self.editor_options.toggle_hierarchy;
+            self.editor_options.save();
+        }
 
-        if s.ui.button(format!("[{}] Hierarchy", hierarchy_on)) {
-            self.show_hierarchy = !self.show_hierarchy;
-            if self.show_hierarchy {
-                self.show_hierarchy(s);
-            }
+        let property_on = if self.editor_options.toggle_properties {
+            "X"
+        } else {
+            " "
+        };
+        if s.ui.menu_item(format!("[{}] Properties", property_on)) {
+            self.editor_options.toggle_properties = !self.editor_options.toggle_properties;
+            self.editor_options.save();
+        }
+
+        let errors_on = if self.editor_options.toggle_errors {
+            "X"
+        } else {
+            " "
+        };
+        if s.ui.menu_item(format!("[{}] Errors", errors_on)) {
+            self.editor_options.toggle_errors = !self.editor_options.toggle_errors;
+            self.editor_options.save();
         }
 
         s.ui.separator();
         s.ui.separator();
 
-        if s.ui.button("[+] New Window") {
+        if s.ui.menu_item("[+] New Window") {
             self.new_window(None);
         }
 

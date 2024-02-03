@@ -36,7 +36,7 @@ pub fn deselect(
         }
     }
 
-    TransformerState::Valid
+    TransformerState::Done
 }
 
 pub fn on_selected_delete(window: &mut GraspEditorWindow, comp: String, selected: &Tile) {
@@ -87,5 +87,5 @@ pub fn select(
         }
     }
 
-    TransformerState::Valid
+    TransformerState::Done
 }
