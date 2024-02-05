@@ -38,10 +38,74 @@ pub struct ASTType {
     pub qual_type: String,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+pub struct ASTTor {
+    #[serde(default)]
+    #[serde(alias = "hasConstParam")]
+    pub has_const_param: bool,
+    #[serde(default)]
+    #[serde(alias = "implicitHasConstParam")]
+    pub implicit_has_const_param: bool,
+    #[serde(default)]
+    #[serde(alias = "needsImplicit")]
+    pub needs_implicit: bool,
+    #[serde(default)]
+    pub simple: bool,
+    #[serde(default)]
+    pub trivial: bool,
+    #[serde(default)]
+    pub exists: bool,
+    #[serde(default)]
+    pub irrelevant: bool,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+pub struct ASTDefinition {
+    #[serde(default)]
+    #[serde(alias = "isAggregate")]
+    pub is_aggregate: bool,
+    #[serde(default)]
+    #[serde(alias = "isLiteral")]
+    pub is_literal: bool,
+    #[serde(default)]
+    #[serde(alias = "isPOD")]
+    pub is_pod: bool,
+    #[serde(default)]
+    #[serde(alias = "isStandardLayout")]
+    pub is_standard_layout: bool,
+    #[serde(default)]
+    #[serde(alias = "isTrivial")]
+    pub is_trivial: bool,
+    #[serde(default)]
+    #[serde(alias = "isTriviallyCopyable")]
+    pub is_trivially_copyable: bool,
+    #[serde(default)]
+    #[serde(alias = "copyAssign")]
+    pub copy_assign: ASTTor,
+    #[serde(default)]
+    #[serde(alias = "copyCtor")]
+    pub copy_ctor: ASTTor,
+    #[serde(default)]
+    #[serde(alias = "moveAssign")]
+    pub move_assign: ASTTor,
+    #[serde(default)]
+    #[serde(alias = "moveCtor")]
+    pub move_ctor: ASTTor,
+    #[serde(default)]
+    #[serde(alias = "defaultCtor")]
+    pub default_ctor: ASTTor,
+    #[serde(default)]
+    #[serde(alias = "dtor")]
+    pub dtor: ASTTor,
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ASTNode {
     #[serde(default)]
     pub id: String,
+    #[serde(default)]
+    #[serde(alias = "tagUsed")]
+    pub tag_used: String,
     #[serde(default)]
     pub kind: String,
     pub loc: Option<ASTCaret>,
@@ -69,8 +133,17 @@ pub struct ASTNode {
     #[serde(default)]
     pub inner: Vec<ASTNode>,
     #[serde(default)]
+    #[serde(alias = "isReferenced")]
+    pub is_refd: bool,
+    #[serde(default)]
     #[serde(alias = "referencedDecl")]
     pub ref_decl: Option<Box<ASTNode>>,
+    #[serde(default)]
+    #[serde(alias = "definitionData")]
+    pub definition_data: Option<ASTDefinition>,
+    #[serde(default)]
+    #[serde(alias = "completeDefinition")]
+    pub complete_definition: bool,
 }
 
 fn ast_recursive_descent(
@@ -137,7 +210,7 @@ fn ast_recursive_descent(
         .collect_vec();
 
     let child_count = children.len();
-    let dx = 700.0 / layer;
+    let dx = 200.0 / layer;
     let old_pos = pos.clone();
     pos.y += 100.0;
     if child_count > 1 {
@@ -164,22 +237,12 @@ fn ast_recursive_descent(
 pub fn cpp_importer(window: &mut GraspEditorWindow, content: String, path: PathBuf) {
     let cpp = path.canonicalize().unwrap().to_str().unwrap().to_string();
 
-    let tmp = cpp.as_str().replace("cpp", "cxx");
-
-    let _ = fs::write(
-        &tmp,
-        content
-            .lines()
-            .filter(|l| !l.starts_with("#include"))
-            .join("\n"),
-    );
-
     let clang = Command::new("clang++")
         .args([
             "-Xclang",
             "-ast-dump=json",
             "-Xclang",
-            "-ast-dump-filter=main",
+            "-ast-dump-filter=Foo",
             &cpp,
         ])
         .output()
@@ -212,19 +275,27 @@ pub fn cpp_importer(window: &mut GraspEditorWindow, content: String, path: PathB
     let _ = fs::write("tmp.json", json_fixed.as_bytes());
     let json: Vec<ASTNode> = serde_json::from_str(&json_fixed).unwrap();
 
-    let json = json
+    let mut x = 100.0f32;
+
+    let file = json
+        .clone()
         .into_iter()
-        .filter(|j| j.kind != "UsingShadowDecl" && j.name == "main")
+        .find(|j| j.name == "Foo")
+        .and_then(|n| n.loc.and_then(|n| n.file));
+
+    for json in json
+        .into_iter()
+        .filter(|j| j.kind != "UsingShadowDecl")
+        .filter(|j| j.loc.as_ref().and_then(|n| n.file.clone()) == file)
         .collect_vec()
-        .first()
-        .cloned()
-        .unwrap();
+    {
+        let pos = Vec2::new(x, 200.0);
+        let layer = 1.0f32;
+
+        let _ = ast_recursive_descent(window, &json, None, pos, layer);
+        x += 500.0;
+    }
     //println!("{:?}", json);
 
-    let _ = fs::write("tmp.ast", format!("{:?}", json).as_bytes());
-
-    let pos = Vec2::new(500.0, 200.0);
-    let layer = 1.0f32;
-
-    let _ = ast_recursive_descent(window, &json, None, pos, layer);
+    //let _ = fs::write("tmp.ast", format!("{:?}", json).as_bytes());
 }

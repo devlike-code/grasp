@@ -247,8 +247,8 @@ impl GraspEditorState {
                     .windows
                     .iter()
                     .find(|w| w.window_tile.id == id)
-                    .unwrap()
-                    .name
+                    .map(|w| w.name.clone())
+                    .unwrap_or_default()
                     .clone();
                 s.ui.text(&name);
                 s.ui.next_column();

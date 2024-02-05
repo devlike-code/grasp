@@ -1,12 +1,12 @@
 C:\Projects\armstrong.cpp
+C:\Projects\grasp\bintree.mos
+C:\Projects\grasp\pm2.mos
+C:\Projects\grasp\kajla.mos
 C:\Projects\vex.cpp
 C:\Projects\hello_world.cpp
 C:\Projects\quot.cpp
-C:\Projects\grasp\bintree.mos
 C:\Projects\grasp\bin.mos
 C:\Projects\grasp\pm3.mos
-C:\Projects\grasp\kajla.mos
 C:\Projects\grasp\test.mos
-C:\Projects\grasp\pm2.mos
 C:\Projects\grasp\arrow.mos
 C:\Projects\grasp\my_enum.mos
