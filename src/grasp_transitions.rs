@@ -223,7 +223,7 @@ impl GraspEditorWindow {
 
             // TODO: unify this and hascomponent below
             if let Some(label) = tile.get_component("Label") {
-                let size = calc_text_size(label.get("self").as_s32().to_string());
+                let size = calc_text_size(label.get("self").as_str());
 
                 let off = OffsetQuery(&label).query();
                 let label_region = self.build_label_area(Rect2 {

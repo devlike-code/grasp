@@ -175,14 +175,10 @@ pub fn draw_label(
                         .enter_returns_true(true)
                         .build()
                     {
-                        if text.len() >= 32 {
-                            *text = text[0..32].to_string();
-                        }
-
-                        if let Ok(t) = text.parse::<S32>() {
+                        if let Ok(t) = text.parse::<String>() {
                             if window.editor_data.previous_text != *text {
                                 if let Some(mut label) = tile.clone().get_component(component) {
-                                    label.set("self", t);
+                                    label.set("self", t.to_string());
                                     window.changed = true;
                                     window.editor_mosaic.request_quadtree_update();
                                 } else {

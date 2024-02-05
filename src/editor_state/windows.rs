@@ -170,7 +170,7 @@ impl GraspEditorWindow {
                 ("y".into(), Value::F32(pos.y)),
             ],
         );
-        let label_tile = obj.add_component("Label", par(""));
+        let label_tile = obj.add_component("Label", par("".to_string()));
         label_tile.add_component(
             "Offset",
             vec![

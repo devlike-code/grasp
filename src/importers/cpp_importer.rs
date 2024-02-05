@@ -122,7 +122,7 @@ fn ast_recursive_descent(
         parent_connect
             .get_component("Label")
             .unwrap()
-            .set("self", S32::from_str(label.as_str()).unwrap_or_default());
+            .set("self", label);
     }
 
     let children = job

@@ -87,7 +87,7 @@ impl GraspEditorWindow {
             comp: String,
             caught_events: &mut Vec<u64>,
         ) {
-            if let Some((id, Value::S32(label))) = tile
+            if let Some((id, Value::STR(label))) = tile
                 .iter()
                 .get_descriptors()
                 .include_component(&comp)

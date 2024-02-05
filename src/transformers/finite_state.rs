@@ -45,7 +45,7 @@ pub fn finite_state_transformer(
                     (
                         t.id,
                         t.get_component("Label")
-                            .map(|l| l.get("self").as_s32().to_string())
+                            .map(|l| l.get("self").as_str())
                             .unwrap_or_default(),
                     )
                 })
@@ -73,9 +73,7 @@ pub fn finite_state_transformer(
             .get_all()
             .filter_arrows()
             .flat_map(|t| {
-                let label = t
-                    .get_component("Label")
-                    .map(|l| l.get("self").as_s32().to_string());
+                let label = t.get_component("Label").map(|l| l.get("self").as_str());
 
                 transitions.push((
                     nodes.get(&t.source_id()).unwrap(),

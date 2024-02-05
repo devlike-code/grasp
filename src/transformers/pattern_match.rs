@@ -907,7 +907,7 @@ pub fn has_component_renderer(
         let pos = window.get_position_with_offset_and_pan(PosQuery(&tile).query());
         draw_label(
             "HasComponent",
-            "has: ",
+            "requires: ",
             window,
             &hc,
             pos,

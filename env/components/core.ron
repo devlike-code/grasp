@@ -20,7 +20,7 @@
             "Arrow: unit;",
             "InProgress: unit;",
             "EditorState: unit;",
-            "Label: s32;",
+            "Label: str;",
             "Position: { x: f32, y: f32 };",
             "Offset: { x: f32, y: f32 };",
             "SelfLoop: f32;",

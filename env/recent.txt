@@ -1,4 +1,5 @@
 C:\Projects\armstrong.cpp
+C:\Projects\vex.cpp
 C:\Projects\hello_world.cpp
 C:\Projects\quot.cpp
 C:\Projects\grasp\bintree.mos

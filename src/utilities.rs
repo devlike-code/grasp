@@ -90,6 +90,8 @@ impl<'a> TileFieldEmptyQuery for SelfText<'a> {
         if let Some(pos_component) = self.0.get_component(&self.1) {
             if let Value::S32(s) = pos_component.get("self") {
                 return s.to_string();
+            } else if let Value::STR(s) = pos_component.get("self") {
+                return s;
             }
         }
 
