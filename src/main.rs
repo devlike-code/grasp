@@ -64,7 +64,7 @@ async fn main() {
         grasp_editor_state.process_requests(&gui);
         grasp_editor_state.show(&gui);
 
-        //        ui.show_demo_window(&mut true);
+        //ui.show_demo_window(&mut true);
 
         *quit = *gui.quit.lock().unwrap();
     });

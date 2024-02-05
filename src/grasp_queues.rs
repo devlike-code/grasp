@@ -195,12 +195,15 @@ impl GraspEditorState {
         while let Some(request) =
             grasp_queues::dequeue(CloseWindowRequestQueue, &self.editor_mosaic)
         {
-            let window = self.window_list.get_focused().unwrap();
-            if window.changed {
-                self.pending_close_window_request = Some(request);
-                ui.open_popup("Unsaved changes");
+            if let Some(window) = self.window_list.get_focused() {
+                if window.changed {
+                    self.pending_close_window_request = Some(request);
+                    ui.open_popup("Unsaved changes");
+                } else {
+                    self.close_window(self.window_list.get_focused().unwrap().window_tile.clone());
+                    request.iter().delete();
+                }
             } else {
-                self.close_window(self.window_list.get_focused().unwrap().window_tile.clone());
                 request.iter().delete();
             }
         }

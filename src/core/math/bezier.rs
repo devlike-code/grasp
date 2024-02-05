@@ -60,10 +60,7 @@ fn gui_bezier_get_point(p0: Vec2, p1: Vec2, p2: Vec2, t: f32) -> Vec2 {
 }
 
 fn gui_bezier_control_point(p0: Vec2, b: Vec2, p2: Vec2) -> Vec2 {
-    let p = 2.0 * b - 0.5 * p0 - 0.5 * p2;
-    assert_eq!(b, gui_bezier_get_point(p0, p, p2, 0.5));
-
-    p
+    2.0 * b - 0.5 * p0 - 0.5 * p2
 }
 
 pub fn gui_draw_bezier_arrow(

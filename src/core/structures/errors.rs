@@ -11,7 +11,7 @@ impl ErrorCapability for Arc<Mosaic> {
         self.new_object(
             "Error",
             pars()
-                .set("message", message)
+                .set("message", message.to_string())
                 .set("window", window.map(|t| t.id as u64).unwrap_or(0u64))
                 .set("target", target.map(|t| t.id as u64).unwrap_or(0u64))
                 .ok(),

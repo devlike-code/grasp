@@ -652,8 +652,8 @@ pub fn pattern_match_tool(
                     .get_all()
                     .include_component("PatternMatchShow")
                     .delete();
-                pick1.unwrap().iter().delete();
-                pick2.unwrap().iter().delete();
+                pick1.map(|p| p.iter().delete());
+                pick2.map(|p| p.iter().delete());
             }
 
             TransformerState::Running
